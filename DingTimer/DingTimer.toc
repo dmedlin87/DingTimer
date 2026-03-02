@@ -1,0 +1,12 @@
+## Interface: 120001, 110207
+## Title: DingTimer
+## Notes: Chat XP/hr + Time-to-Level
+## Author: You
+## Version: 0.3.0
+## SavedVariables: DingTimerDB
+
+Util.lua
+Store.lua
+Core_DingTimer.lua
+UI_StatsWindow.lua
+DingTimer.lua
