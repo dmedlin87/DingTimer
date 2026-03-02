@@ -26,7 +26,6 @@ local FRAME_HEIGHT = 220
 
 -- Local state
 local graphFrame   = nil
-local graphTicker  = nil
 local barTextures  = {}
 local barHitFrames = {}
 local lineSegments = {}
@@ -409,21 +408,7 @@ function NS.InitGraphWindow()
   end
 
   -- Show/Hide lifecycle
-  graphFrame:SetScript("OnShow", function()
-    DingTimerDB.graphVisible = true
-    RedrawGraph()
-    if not graphTicker then
-      graphTicker = C_Timer.NewTicker(1, RedrawGraph)
-    end
-  end)
-
-  graphFrame:SetScript("OnHide", function()
-    DingTimerDB.graphVisible = false
-    if graphTicker then
-      graphTicker:Cancel()
-      graphTicker = nil
-    end
-  end)
+  NS.ManageFrameTicker(graphFrame, 1, RedrawGraph, "graphVisible")
 
   -- Allow closing with Escape key
   tinsert(UISpecialFrames, graphFrame:GetName())

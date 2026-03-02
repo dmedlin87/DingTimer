@@ -1,7 +1,6 @@
 local ADDON, NS = ...
 
 local statsFrame = nil
-local ticker = nil
 
 local function FormatNumber(num)
   if not num then return "0" end
@@ -149,21 +148,7 @@ function NS.InitStatsWindow()
 
   statsFrame:Hide()
   
-  statsFrame:SetScript("OnShow", function()
-    DingTimerDB.uiWindowVisible = true
-    UpdateValues()
-    if not ticker then
-      ticker = C_Timer.NewTicker(1, UpdateValues)
-    end
-  end)
-  
-  statsFrame:SetScript("OnHide", function()
-    DingTimerDB.uiWindowVisible = false
-    if ticker then
-      ticker:Cancel()
-      ticker = nil
-    end
-  end)
+  NS.ManageFrameTicker(statsFrame, 1, UpdateValues, "uiWindowVisible")
 end
 
 function NS.ToggleStatsWindow()
