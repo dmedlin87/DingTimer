@@ -61,13 +61,13 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 
 ## Quick Start
 
-| You want to...       | Do this                                        |
-| -------------------- | ---------------------------------------------- |
-| See your stats       | Left-click the minimap button or `/ding ui`    |
-| Change settings      | Right-click the minimap button or `/ding settings` |
-| View the XP graph    | `/ding graph`                                  |
-| Show the floating HUD | `/ding float on`                              |
-| Reset current session | `/ding reset`                                 |
+| You want to...        | Do this                                            |
+| --------------------- | -------------------------------------------------- |
+| See your stats        | Left-click the minimap button or `/ding ui`        |
+| Change settings       | Right-click the minimap button or `/ding settings` |
+| View the XP graph     | `/ding graph`                                      |
+| Show the floating HUD | `/ding float on`                                   |
+| Reset current session | `/ding reset`                                      |
 
 ---
 
@@ -92,40 +92,40 @@ All commands work with either `/ding` or `/dt`.
 
 | Command           | What it does                                          |
 | ----------------- | ----------------------------------------------------- |
-| `/ding mode full` | Chat prints `+XP`, `XP/hr`, and `TTL` on every gain  |
+| `/ding mode full` | Chat prints `+XP`, `XP/hr`, and `TTL` on every gain   |
 | `/ding mode ttl`  | Chat prints TTL only                                  |
 
 ### Rolling Window
 
 | Command                   | What it does                                                       |
 | ------------------------- | ------------------------------------------------------------------ |
-| `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation (minimum: 30s)  |
+| `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation (minimum: 30s)   |
 
 > **Example:** `/ding window 300` uses the last 5 minutes to calculate your XP/hr. Shorter windows react faster to pace changes; longer windows smooth out gaps.
 
 ### Float Commands
 
-| Command             | What it does               |
-| ------------------- | -------------------------- |
-| `/ding float on`    | Show the floating HUD      |
-| `/ding float off`   | Hide the floating HUD      |
-| `/ding float lock`  | Lock the HUD in place      |
+| Command              | What it does                |
+| -------------------- | --------------------------- |
+| `/ding float on`     | Show the floating HUD       |
+| `/ding float off`    | Hide the floating HUD       |
+| `/ding float lock`   | Lock the HUD in place       |
 | `/ding float unlock` | Allow the HUD to be dragged |
 
 > The floating frame hides automatically during combat and reappears when combat ends.
 
 ### Graph Commands
 
-| Command                       | What it does                                         |
-| ----------------------------- | ---------------------------------------------------- |
-| `/ding graph`                 | Toggle the graph window                              |
-| `/ding graph on`              | Show the graph                                       |
-| `/ding graph off`             | Hide the graph                                       |
+| Command                       | What it does                                            |
+| ----------------------------- | ------------------------------------------------------- |
+| `/ding graph`                 | Toggle the graph window                                 |
+| `/ding graph on`              | Show the graph                                          |
+| `/ding graph off`             | Hide the graph                                          |
 | `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
-| `/ding graph scale fixed`     | Y-axis locked at 100,000 XP/hr                       |
-| `/ding graph scale auto`      | Y-axis scales to 110% of your current max            |
-| `/ding graph lock`            | Lock graph position                                  |
-| `/ding graph unlock`          | Allow graph to be dragged                            |
+| `/ding graph scale fixed`     | Y-axis locked at 100,000 XP/hr                          |
+| `/ding graph scale auto`      | Y-axis scales to 110% of your current max               |
+| `/ding graph lock`            | Lock graph position                                     |
+| `/ding graph unlock`          | Allow graph to be dragged                               |
 
 ---
 
