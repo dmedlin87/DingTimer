@@ -137,18 +137,24 @@ local function RedrawGraph()
   local maxXPH = 0
   local sessionStart = NS.state.sessionStartTime or now
 
+  -- ⚡ Bolt: Optimize average line calculation from O(N*M) to O(N+M)
+  -- Since events are sorted by time, we can iterate them alongside the N bars
+  -- rather than starting from the beginning of the events list for each bar.
+  local evIdx = 1
+  local xp_up_to_t = 0
+
   for i = 1, N do
     local segIdx = currentSegIdx - (N - i)
     local xp = segments[segIdx] or 0
     local xph = (xp / S) * 3600
     
     local t_end = anchor + (segIdx + 1) * S
-    local xp_up_to_t = 0
-    for _, ev in ipairs(graphState.events) do
-      if ev.t <= t_end then
-        xp_up_to_t = xp_up_to_t + ev.xp
-      end
+
+    while graphState.events[evIdx] and graphState.events[evIdx].t <= t_end do
+      xp_up_to_t = xp_up_to_t + graphState.events[evIdx].xp
+      evIdx = evIdx + 1
     end
+
     local elapsed = t_end - sessionStart
     if elapsed < 1 then elapsed = 1 end
     local avgXph = (xp_up_to_t / elapsed) * 3600
