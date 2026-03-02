@@ -265,14 +265,7 @@ function NS.InitGraphWindow()
   graphFrame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
   graphFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
 
-  graphFrame:SetBackdrop({
-    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 },
-  })
-  graphFrame:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
-  graphFrame:SetBackdropBorderColor(0.2, 0.6, 0.8, 1)
+  NS.ApplyThemeToFrame(graphFrame)
 
   -- Dragging
   graphFrame:SetMovable(true)
