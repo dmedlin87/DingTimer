@@ -5,6 +5,7 @@ local ticker = nil
 
 local function FormatNumber(num)
   if not num then return "0" end
+  if num ~= num or num == math.huge or num == -math.huge then return "0" end
   local formatted = tostring(math.floor(num))
   local k
   while true do
