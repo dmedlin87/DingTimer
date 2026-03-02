@@ -8,7 +8,13 @@ function NS.InitStore()
     mode = "full",
     float = false,
     floatLocked = true,
-    schemaVersion = 3,
+    graphVisible = false,
+    graphPosition = nil,
+    graphWindowSeconds = 300,
+    graphScaleMode = "fixed",
+    graphFixedMaxXPH = 100000,
+    graphLocked = true,
+    schemaVersion = 4,
     meta = {
       addonVersion = "0.3.0",
       createdAt = GetTime(),
@@ -37,6 +43,14 @@ function NS.InitStore()
       
       -- Remove cpc data if it exists
       DingTimerDB.cpc = nil
+    end
+    if DingTimerDB.schemaVersion < 4 then
+      DingTimerDB.schemaVersion = 4
+      if DingTimerDB.graphVisible == nil       then DingTimerDB.graphVisible       = false     end
+      if DingTimerDB.graphWindowSeconds == nil  then DingTimerDB.graphWindowSeconds = 300       end
+      if DingTimerDB.graphScaleMode == nil     then DingTimerDB.graphScaleMode     = "fixed"   end
+      if DingTimerDB.graphFixedMaxXPH == nil   then DingTimerDB.graphFixedMaxXPH   = 100000    end
+      if DingTimerDB.graphLocked == nil        then DingTimerDB.graphLocked        = true      end
     end
   end
   

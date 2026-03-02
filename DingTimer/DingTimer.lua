@@ -22,6 +22,9 @@ f:SetScript("OnEvent", function(self, event, ...)
     if DingTimerDB.uiWindowVisible and NS.ToggleStatsWindow then
       NS.ToggleStatsWindow()
     end
+    if DingTimerDB.graphVisible and NS.SetGraphVisible then
+      NS.SetGraphVisible(true)
+    end
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " tracking started. (/ding help)")
     if DingTimerDB.enabled then
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " chat output enabled.")
@@ -86,6 +89,13 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  " .. NS.C.val .. "on | off" .. NS.C.r .. " - Toggles the floating UI frame on the screen.")
       NS.chat("  " .. NS.C.val .. "lock | unlock" .. NS.C.r .. " - Locks or unlocks the frame so you can drag it.")
       NS.chat("  Example: " .. NS.C.val .. "/ding float unlock" .. NS.C.r)
+    elseif arg == "graph" then
+      NS.chat(NS.C.base .. "=== DingTimer Help: graph ===" .. NS.C.r)
+      NS.chat("  " .. NS.C.val .. "on | off" .. NS.C.r .. " - Show or hide the XP bar chart.")
+      NS.chat("  " .. NS.C.val .. "zoom 3m|5m|15m|30m|60m" .. NS.C.r .. " - Set the rolling time window.")
+      NS.chat("  " .. NS.C.val .. "scale fixed|auto" .. NS.C.r .. " - Fixed sets a max XP/hr; auto scales to data.")
+      NS.chat("  " .. NS.C.val .. "lock | unlock" .. NS.C.r .. " - Lock or unlock the graph for dragging.")
+      NS.chat("  Default zoom is 5m. Default scale is fixed at 100,000 XP/hr.")
     else
       NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "/ding ui" .. NS.C.r .. " - Open the elegant stats window")
@@ -95,6 +105,9 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  " .. NS.C.val .. "/ding mode full | ttl" .. NS.C.r .. " - Change chat output style")
       NS.chat("  " .. NS.C.val .. "/ding float on | off" .. NS.C.r .. " - Toggle the floating UI frame")
       NS.chat("  " .. NS.C.val .. "/ding float lock | unlock" .. NS.C.r .. " - Lock or unlock floating frame dragging")
+      NS.chat("  " .. NS.C.val .. "/ding graph" .. NS.C.r .. " - Toggle the XP graph window")
+      NS.chat("  " .. NS.C.val .. "/ding graph zoom <level>" .. NS.C.r .. " - Set graph time window (3m, 5m, 15m, 30m, 60m)")
+      NS.chat("  " .. NS.C.val .. "/ding graph scale <mode>" .. NS.C.r .. " - Set Y-axis scale (fixed, auto)")
       NS.chat("  Type " .. NS.C.val .. "/ding help <command>" .. NS.C.r .. " for more details (e.g., /ding help mode)")
     end
     return
@@ -159,6 +172,47 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " floatLocked = " .. arg)
     else
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown float command. Use 'on', 'off', 'lock', or 'unlock'.")
+    end
+    return
+  end
+
+  if cmd == "graph" then
+    local sub, subarg = (arg or ""):match("^(%S*)%s*(.*)$")
+    sub = sub or ""
+
+    if sub == "" then
+      if NS.ToggleGraphWindow then NS.ToggleGraphWindow() end
+    elseif sub == "on" then
+      if NS.SetGraphVisible then NS.SetGraphVisible(true) end
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph shown.")
+    elseif sub == "off" then
+      if NS.SetGraphVisible then NS.SetGraphVisible(false) end
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph hidden.")
+    elseif sub == "zoom" then
+      if subarg == "" then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Current zoom: " .. NS.fmtTime(DingTimerDB.graphWindowSeconds or 300))
+        NS.chat("  Options: " .. NS.C.val .. "3m, 5m, 15m, 30m, 60m" .. NS.C.r)
+      elseif NS.SetGraphZoom and NS.SetGraphZoom(subarg) then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph zoom = " .. subarg)
+      else
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Invalid zoom. Use: 3m, 5m, 15m, 30m, 60m")
+      end
+    elseif sub == "scale" then
+      if subarg == "" then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Current scale: " .. (DingTimerDB.graphScaleMode or "fixed"))
+      elseif NS.SetGraphScale and NS.SetGraphScale(subarg) then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph scale = " .. subarg)
+      else
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Invalid scale. Use: fixed, auto")
+      end
+    elseif sub == "lock" then
+      DingTimerDB.graphLocked = true
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph locked.")
+    elseif sub == "unlock" then
+      DingTimerDB.graphLocked = false
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph unlocked.")
+    else
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown graph command. Use: on, off, zoom, scale, lock, unlock")
     end
     return
   end

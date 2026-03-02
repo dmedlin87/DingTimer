@@ -24,6 +24,7 @@ function NS.resetXPState()
   NS.state.moneyEvents = {}
   
   if NS.RefreshStatsWindow then NS.RefreshStatsWindow() end
+  if NS.GraphReset then NS.GraphReset() end
 end
 
 local function pruneEvents(evList, now, windowSeconds)
@@ -162,6 +163,7 @@ function NS.onXPUpdate()
   if delta > 0 then
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     table.insert(NS.state.events, { t = now, xp = delta })
+    if NS.GraphFeedXP then NS.GraphFeedXP(delta, now) end
   end
 
   local xph = NS.computeXPPerHour(now, DingTimerDB.windowSeconds or 600)

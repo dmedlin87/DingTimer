@@ -9,4 +9,5 @@ Util.lua
 Store.lua
 Core_DingTimer.lua
 UI_StatsWindow.lua
+UI_XPGraphWindow.lua
 DingTimer.lua

@@ -58,7 +58,9 @@ elseif ($Action -eq "clean") {
     }
 }
 elseif ($Action -eq "dist") {
-    $ZipFile = Join-Path $PSScriptRoot "$AddonName-v0.2.0.zip"
+    $TocFile = Join-Path $SourceDir "$AddonName.toc"
+    $Version = (Select-String -Path $TocFile -Pattern '^## Version:\s*(.+)').Matches[0].Groups[1].Value.Trim()
+    $ZipFile = Join-Path $PSScriptRoot "$AddonName-v$Version.zip"
     Write-Host "Creating distribution zip: $ZipFile" -ForegroundColor Cyan
     if (Test-Path $ZipFile) { Remove-Item $ZipFile }
     
