@@ -74,6 +74,9 @@ function NS.InitSettingsWindow()
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Session reset.")
   end)
 
+  -- Allow closing with Escape key
+  tinsert(UISpecialFrames, settingsFrame:GetName())
+
   settingsFrame:Hide()
 end
 
