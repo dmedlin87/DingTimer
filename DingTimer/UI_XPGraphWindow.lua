@@ -268,7 +268,7 @@ end
 function NS.InitGraphWindow()
   if graphFrame then return end
 
-  graphFrame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  graphFrame = CreateFrame("Frame", "DingTimerXPGraphWindow", UIParent, "BackdropTemplate")
   graphFrame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
   graphFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
 
@@ -418,6 +418,9 @@ function NS.InitGraphWindow()
       graphTicker = nil
     end
   end)
+
+  -- Allow closing with Escape key
+  tinsert(UISpecialFrames, graphFrame:GetName())
 
   graphFrame:Hide()
 end

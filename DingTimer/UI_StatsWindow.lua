@@ -144,6 +144,9 @@ function NS.InitStatsWindow()
   footer:SetPoint("BOTTOM", 0, 10)
   footer:SetText("Updates automatically. /ding ui to close.")
 
+  -- Allow closing with Escape key
+  tinsert(UISpecialFrames, statsFrame:GetName())
+
   statsFrame:Hide()
   
   statsFrame:SetScript("OnShow", function()
