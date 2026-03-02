@@ -1,0 +1,110 @@
+local ADDON, NS = ...
+
+local f = CreateFrame("Button", "DingTimerMinimapButton", Minimap)
+f:SetSize(32, 32)
+f:SetFrameStrata("MEDIUM")
+f:SetFrameLevel(8)
+
+local icon = f:CreateTexture(nil, "BACKGROUND")
+icon:SetTexture("Interface\\Icons\\Spell_Holy_Boh") -- Experience icon
+icon:SetSize(21, 21)
+icon:SetPoint("CENTER", -1, 1)
+
+local border = f:CreateTexture(nil, "OVERLAY")
+border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+border:SetSize(54, 54)
+border:SetPoint("TOPLEFT")
+
+f:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+f:RegisterForClicks("AnyUp")
+f:RegisterForDrag("LeftButton")
+
+local minimapShapes = {
+  ["ROUND"] = {true, true, true, true},
+  ["SQUARE"] = {false, false, false, false},
+  ["CORNER-TOPLEFT"] = {false, false, false, false},
+  ["CORNER-TOPRIGHT"] = {false, false, false, false},
+  ["CORNER-BOTTOMLEFT"] = {false, false, false, false},
+  ["CORNER-BOTTOMRIGHT"] = {false, false, false, false},
+  ["SIDE-LEFT"] = {false, true, false, true},
+  ["SIDE-RIGHT"] = {true, false, true, false},
+  ["SIDE-TOP"] = {false, false, true, true},
+  ["SIDE-BOTTOM"] = {true, true, false, false},
+  ["TRICORNER-TOPLEFT"] = {false, true, true, true},
+  ["TRICORNER-TOPRIGHT"] = {true, false, true, true},
+  ["TRICORNER-BOTTOMLEFT"] = {true, true, false, true},
+  ["TRICORNER-BOTTOMRIGHT"] = {true, true, true, false},
+}
+
+local function UpdatePosition()
+  local angle = math.rad(DingTimerDB.minimapAngle or 45)
+  local x = math.cos(angle)
+  local y = math.sin(angle)
+  local q = 1
+  
+  if x < 0 then q = q + 1 end
+  if y > 0 then q = q + 2 end
+  
+  local minimapShape = GetMinimapShape and GetMinimapShape() or "ROUND"
+  local quadTable = minimapShapes[minimapShape]
+  local isRound = quadTable and quadTable[q]
+  
+  -- Base radius off Minimap width, pushed out to sit on the outer rim
+  local radius = (Minimap:GetWidth() / 2) + 5
+  if not isRound then
+    local xdist = x * radius
+    local ydist = y * radius
+    
+    if math.abs(xdist) > radius then x = x * (radius / math.abs(xdist)) end
+    if math.abs(ydist) > radius then y = y * (radius / math.abs(ydist)) end
+  end
+  
+  f:SetPoint("CENTER", Minimap, "CENTER", x * radius, y * radius)
+end
+
+f:SetScript("OnDragStart", function()
+  f:SetScript("OnUpdate", function()
+    local cx, cy = Minimap:GetCenter()
+    local px, py = GetCursorPosition()
+    local scale = Minimap:GetEffectiveScale()
+    px, py = px / scale, py / scale
+    
+    local angle = math.deg(math.atan2(py - cy, px - cx))
+    DingTimerDB.minimapAngle = angle
+    UpdatePosition()
+  end)
+end)
+
+f:SetScript("OnDragStop", function()
+  f:SetScript("OnUpdate", nil)
+end)
+
+f:SetScript("OnClick", function(self, button)
+  if button == "LeftButton" then
+    if NS.ToggleStatsWindow then NS.ToggleStatsWindow() end
+  elseif button == "RightButton" then
+    if NS.ToggleSettingsWindow then NS.ToggleSettingsWindow() end
+  end
+end)
+
+f:SetScript("OnEnter", function(self)
+  GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+  GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
+  GameTooltip:AddLine("Left-click to open Stats Window", 1, 1, 1)
+  GameTooltip:AddLine("Right-click to open Settings", 1, 1, 1)
+  GameTooltip:Show()
+end)
+
+f:SetScript("OnLeave", function()
+  GameTooltip:Hide()
+end)
+
+function NS.InitMinimapButton()
+  if DingTimerDB.minimapHidden then
+    f:Hide()
+  else
+    f:Show()
+    UpdatePosition()
+  end
+end

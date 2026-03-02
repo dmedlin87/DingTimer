@@ -25,6 +25,9 @@ f:SetScript("OnEvent", function(self, event, ...)
     if DingTimerDB.graphVisible and NS.SetGraphVisible then
       NS.SetGraphVisible(true)
     end
+    if NS.InitMinimapButton then
+      NS.InitMinimapButton()
+    end
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " tracking started. (/ding help)")
     if DingTimerDB.enabled then
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " chat output enabled.")

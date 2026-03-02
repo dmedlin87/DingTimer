@@ -44,13 +44,16 @@ end
 
 local function computeRatePerHour(evList, now, windowSeconds, valueKey)
   pruneEvents(evList, now, windowSeconds)
-  if #evList < 2 then return 0 end
 
   local sum = 0
   for i = 1, #evList do sum = sum + evList[i][valueKey] end
 
-  local elapsed = now - evList[1].t
-  if elapsed <= 0 then return 0 end
+  local sessionStart = NS.state.sessionStartTime or now
+  local sessionElapsed = now - sessionStart
+
+  -- Use the full window size, or session elapsed if we haven't played that long yet
+  local elapsed = math.min(sessionElapsed, windowSeconds)
+  if elapsed <= 0 then elapsed = 1 end
 
   return (sum / elapsed) * 3600
 end

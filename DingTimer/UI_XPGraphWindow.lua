@@ -29,6 +29,7 @@ local graphFrame   = nil
 local graphTicker  = nil
 local barTextures  = {}
 local barHitFrames = {}
+local lineSegments = {}
 
 local graphState = {
   anchor = 0,
@@ -134,12 +135,27 @@ local function RedrawGraph()
   -- First pass: build bar data, find max XP/hr
   local barData = {}
   local maxXPH = 0
+  local sessionStart = NS.state.sessionStartTime or now
+
   for i = 1, N do
     local segIdx = currentSegIdx - (N - i)
     local xp = segments[segIdx] or 0
     local xph = (xp / S) * 3600
-    barData[i] = { xp = xp, xph = xph, segIdx = segIdx }
+    
+    local t_end = anchor + (segIdx + 1) * S
+    local xp_up_to_t = 0
+    for _, ev in ipairs(graphState.events) do
+      if ev.t <= t_end then
+        xp_up_to_t = xp_up_to_t + ev.xp
+      end
+    end
+    local elapsed = t_end - sessionStart
+    if elapsed < 1 then elapsed = 1 end
+    local avgXph = (xp_up_to_t / elapsed) * 3600
+
+    barData[i] = { xp = xp, xph = xph, avgXph = avgXph, segIdx = segIdx }
     if xph > maxXPH then maxXPH = xph end
+    if avgXph > maxXPH then maxXPH = avgXph end
   end
 
   -- Determine Y-axis scale
@@ -162,6 +178,8 @@ local function RedrawGraph()
   graphFrame.scaleLabel:SetText(scaleText)
 
   -- Second pass: position and color each bar
+  local prevXCenter, prevYAvg = nil, nil
+
   for i = 1, MAX_BARS do
     local bar = barTextures[i]
     local hit = barHitFrames[i]
@@ -213,12 +231,31 @@ local function RedrawGraph()
         timeRange = NS.fmtTime(math.max(0, agoStart)) .. " ago \226\128\147 " .. NS.fmtTime(math.max(0, agoEnd)) .. " ago",
         xpText    = FormatNumber(d.xp),
         xphText   = FormatNumber(math.floor(d.xph)),
+        avgXphText = FormatNumber(math.floor(d.avgXph)),
         isCurrent = (i == N),
       }
       hit:Show()
+      
+      -- Average Line
+      local xCenter = xPos + barWidth / 2
+      local avgHeightFrac = (scaleMax > 0) and math.min(d.avgXph / scaleMax, 1.0) or 0
+      local yAvg = avgHeightFrac * areaHeight
+
+      if i > 1 then
+        local line = lineSegments[i - 1]
+        line:SetStartPoint("BOTTOMLEFT", prevXCenter, prevYAvg)
+        line:SetEndPoint("BOTTOMLEFT", xCenter, yAvg)
+        line:Show()
+      end
+      
+      prevXCenter = xCenter
+      prevYAvg = yAvg
     else
       bar:Hide()
       hit:Hide()
+      if i > 1 and lineSegments[i - 1] then
+        lineSegments[i - 1]:Hide()
+      end
     end
   end
 end
@@ -250,11 +287,7 @@ function NS.InitGraphWindow()
   graphFrame:SetClampedToScreen(true)
 
   graphFrame:SetScript("OnDragStart", function(self)
-    if DingTimerDB.graphLocked then return end
-    if InCombatLockdown() then
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " can't move the graph in combat.")
-      return
-    end
+    if InCombatLockdown() then return end
     self:StartMoving()
   end)
 
@@ -312,7 +345,28 @@ function NS.InitGraphWindow()
   -- Footer hint (bottom-left)
   local footer = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   footer:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 12, 10)
-  footer:SetText("/ding graph zoom | scale")
+  footer:SetText("Zoom:")
+
+  local xPos = 50
+  for _, z in ipairs(ZOOM_LEVELS) do
+    local btn = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
+    btn:SetSize(35, 20)
+    btn:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", xPos, 6)
+    btn:SetText(z.label)
+    btn:SetScript("OnClick", function()
+      NS.SetGraphZoom(z.label)
+    end)
+    xPos = xPos + 38
+  end
+
+  -- Pre-allocate line segments
+  for i = 1, MAX_BARS - 1 do
+    local line = graphArea:CreateLine(nil, "OVERLAY")
+    line:SetColorTexture(1, 0.82, 0, 0.9) -- gold/yellow line
+    line:SetThickness(2)
+    line:Hide()
+    lineSegments[i] = line
+  end
 
   -- Pre-allocate bar textures and hit frames
   for i = 1, MAX_BARS do
@@ -335,6 +389,7 @@ function NS.InitGraphWindow()
       GameTooltip:AddLine(headerColor .. d.timeRange .. suffix .. "|r")
       GameTooltip:AddDoubleLine("XP Gained:", d.xpText, 0.7, 0.7, 0.7, 1, 1, 1)
       GameTooltip:AddDoubleLine("XP / Hour:", d.xphText, 0.7, 0.7, 0.7, 1, 1, 0)
+      GameTooltip:AddDoubleLine("Session Avg:", d.avgXphText, 0.7, 0.7, 0.7, 1, 0.82, 0)
       GameTooltip:Show()
     end)
 
