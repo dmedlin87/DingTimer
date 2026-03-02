@@ -1,19 +1,6 @@
 local ADDON, NS = ...
 
 local statsFrame = nil
-local ticker = nil
-
-local function FormatNumber(num)
-  if not num then return "0" end
-  if num ~= num or num == math.huge or num == -math.huge then return "0" end
-  local formatted = tostring(math.floor(num))
-  local k
-  while true do
-    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-    if k == 0 then break end
-  end
-  return formatted
-end
 
 local function GetXPData()
   local now = GetTime()
@@ -44,12 +31,12 @@ local function UpdateValues()
   statsFrame.valTime:SetText(NS.fmtTime(sessionTime))
   
   local xp, maxXP, xph, ttl = GetXPData()
-  statsFrame.valXPH:SetText(FormatNumber(xph) .. " / hr")
+  statsFrame.valXPH:SetText(NS.FormatNumber(xph) .. " / hr")
   statsFrame.valTTL:SetText(NS.fmtTime(ttl))
   
   -- Use actual session XP tracker (events get pruned)
   local totalSessionXP = NS.state.sessionXP or 0
-  statsFrame.valSessionXP:SetText(FormatNumber(totalSessionXP))
+  statsFrame.valSessionXP:SetText(NS.FormatNumber(totalSessionXP))
 
   local sessionMoney, mph = GetMoneyData()
   statsFrame.valSessionMoney:SetText(NS.fmtMoney(sessionMoney))
@@ -149,21 +136,7 @@ function NS.InitStatsWindow()
 
   statsFrame:Hide()
   
-  statsFrame:SetScript("OnShow", function()
-    DingTimerDB.uiWindowVisible = true
-    UpdateValues()
-    if not ticker then
-      ticker = C_Timer.NewTicker(1, UpdateValues)
-    end
-  end)
-  
-  statsFrame:SetScript("OnHide", function()
-    DingTimerDB.uiWindowVisible = false
-    if ticker then
-      ticker:Cancel()
-      ticker = nil
-    end
-  end)
+  NS.ManageFrameTicker(statsFrame, 1, UpdateValues, "uiWindowVisible")
 end
 
 function NS.ToggleStatsWindow()

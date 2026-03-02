@@ -9,6 +9,18 @@ NS.C = {
   r    = "|r",
 }
 
+function NS.FormatNumber(num)
+  if not num then return "0" end
+  if num ~= num or num == math.huge or num == -math.huge then return "0" end
+  local formatted = tostring(math.floor(num))
+  local k
+  while true do
+    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+    if k == 0 then break end
+  end
+  return formatted
+end
+
 function NS.chat(msg)
   if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
     DEFAULT_CHAT_FRAME:AddMessage(msg)
@@ -74,4 +86,28 @@ function NS.ttlDeltaText(ttl, lastTTL)
     -- ↑
     return string.format(" (%s %s)", "\226\134\145", NS.fmtTime(diff))
   end
+end
+
+function NS.ManageFrameTicker(frame, interval, callback, dbVisibilityKey)
+  local ticker = nil
+
+  frame:SetScript("OnShow", function()
+    if dbVisibilityKey then
+      DingTimerDB[dbVisibilityKey] = true
+    end
+    callback()
+    if not ticker then
+      ticker = C_Timer.NewTicker(interval, callback)
+    end
+  end)
+
+  frame:SetScript("OnHide", function()
+    if dbVisibilityKey then
+      DingTimerDB[dbVisibilityKey] = false
+    end
+    if ticker then
+      ticker:Cancel()
+      ticker = nil
+    end
+  end)
 end

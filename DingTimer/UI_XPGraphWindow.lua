@@ -26,7 +26,6 @@ local FRAME_HEIGHT = 220
 
 -- Local state
 local graphFrame   = nil
-local graphTicker  = nil
 local barTextures  = {}
 local barHitFrames = {}
 local lineSegments = {}
@@ -40,18 +39,6 @@ local graphState = {
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
-
-local function FormatNumber(num)
-  if not num then return "0" end
-  if num ~= num or num == math.huge or num == -math.huge then return "0" end
-  local formatted = tostring(math.floor(num))
-  local k
-  while true do
-    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", "%1,%2")
-    if k == 0 then break end
-  end
-  return formatted
-end
 
 local function computeBarCount(windowSeconds)
   local raw = math.floor(windowSeconds / MIN_SEGMENT_SECONDS)
@@ -178,9 +165,9 @@ local function RedrawGraph()
 
   local scaleText
   if DingTimerDB.graphScaleMode == "auto" then
-    scaleText = "Auto: " .. FormatNumber(math.floor(scaleMax)) .. " max"
+    scaleText = "Auto: " .. NS.FormatNumber(math.floor(scaleMax)) .. " max"
   else
-    scaleText = "Fixed: " .. FormatNumber(math.floor(scaleMax)) .. " max"
+    scaleText = "Fixed: " .. NS.FormatNumber(math.floor(scaleMax)) .. " max"
   end
   graphFrame.scaleLabel:SetText(scaleText)
 
@@ -236,9 +223,9 @@ local function RedrawGraph()
       local agoEnd   = now - segEnd
       hit.tipData = {
         timeRange = NS.fmtTime(math.max(0, agoStart)) .. " ago \226\128\147 " .. NS.fmtTime(math.max(0, agoEnd)) .. " ago",
-        xpText    = FormatNumber(d.xp),
-        xphText   = FormatNumber(math.floor(d.xph)),
-        avgXphText = FormatNumber(math.floor(d.avgXph)),
+        xpText    = NS.FormatNumber(d.xp),
+        xphText   = NS.FormatNumber(math.floor(d.xph)),
+        avgXphText = NS.FormatNumber(math.floor(d.avgXph)),
         isCurrent = (i == N),
       }
       hit:Show()
@@ -409,21 +396,7 @@ function NS.InitGraphWindow()
   end
 
   -- Show/Hide lifecycle
-  graphFrame:SetScript("OnShow", function()
-    DingTimerDB.graphVisible = true
-    RedrawGraph()
-    if not graphTicker then
-      graphTicker = C_Timer.NewTicker(1, RedrawGraph)
-    end
-  end)
-
-  graphFrame:SetScript("OnHide", function()
-    DingTimerDB.graphVisible = false
-    if graphTicker then
-      graphTicker:Cancel()
-      graphTicker = nil
-    end
-  end)
+  NS.ManageFrameTicker(graphFrame, 1, RedrawGraph, "graphVisible")
 
   -- Allow closing with Escape key
   tinsert(UISpecialFrames, graphFrame:GetName())
