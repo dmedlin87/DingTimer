@@ -75,3 +75,27 @@ function NS.ttlDeltaText(ttl, lastTTL)
     return string.format(" (%s %s)", "\226\134\145", NS.fmtTime(diff))
   end
 end
+
+function NS.ManageFrameTicker(frame, interval, callback, dbVisibilityKey)
+  local ticker = nil
+
+  frame:SetScript("OnShow", function()
+    if dbVisibilityKey then
+      DingTimerDB[dbVisibilityKey] = true
+    end
+    callback()
+    if not ticker then
+      ticker = C_Timer.NewTicker(interval, callback)
+    end
+  end)
+
+  frame:SetScript("OnHide", function()
+    if dbVisibilityKey then
+      DingTimerDB[dbVisibilityKey] = false
+    end
+    if ticker then
+      ticker:Cancel()
+      ticker = nil
+    end
+  end)
+end
