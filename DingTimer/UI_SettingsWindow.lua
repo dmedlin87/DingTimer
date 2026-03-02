@@ -69,9 +69,25 @@ function NS.InitSettingsWindow()
     end
   end)
 
-  CreateButton(-220, "Reset Session", function()
-    NS.resetXPState()
-    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Session reset.")
+  local resetState = 0
+  local resetTimer
+  local resetBtn
+  resetBtn = CreateButton(-220, "Reset Session", function()
+    if resetState == 0 then
+      resetState = 1
+      resetBtn:SetText("|cffff4040Confirm Reset|r")
+      if resetTimer then resetTimer:Cancel() end
+      resetTimer = C_Timer.NewTimer(3, function()
+        resetState = 0
+        resetBtn:SetText("Reset Session")
+      end)
+    else
+      resetState = 0
+      if resetTimer then resetTimer:Cancel() end
+      resetBtn:SetText("Reset Session")
+      NS.resetXPState()
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Session reset.")
+    end
   end)
 
   -- Allow closing with Escape key
