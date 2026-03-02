@@ -111,3 +111,19 @@ function NS.ManageFrameTicker(frame, interval, callback, dbVisibilityKey)
     end
   end)
 end
+
+function NS.ApplyThemeToFrame(frame, isTransparent)
+  frame:SetBackdrop({
+    bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 }
+  })
+  if isTransparent then
+    frame:SetBackdropColor(0, 0, 0, 0.6)
+    frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+  else
+    frame:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
+    frame:SetBackdropBorderColor(0.2, 0.6, 0.8, 1)
+  end
+end
