@@ -12,7 +12,7 @@
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
 ![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)
-![WoW](https://img.shields.io/badge/WoW-Retail%20%7C%20Dragonflight-orange?style=flat-square)
+![WoW](https://img.shields.io/badge/WoW-Retail%20%7C%20Midnight-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
 
@@ -263,6 +263,7 @@ Deleting `DingTimerDB` from your SavedVariables folder resets everything to defa
 
 | Version                  | Status                    |
 | ------------------------ | ------------------------- |
+| Retail (Midnight)        | Supported                 |
 | Retail (The War Within)  | Supported                 |
 | Dragonflight             | Supported                 |
 | Classic / Era            | Not currently supported   |
