@@ -1,0 +1,38 @@
+dofile("tests/mocks.lua")
+LoadAddonFile("DingTimer/Util.lua")
+
+it("NS.fmtTime returns '??' for invalid inputs", function()
+    assert_equal("??", NS.fmtTime(nil))
+    assert_equal("??", NS.fmtTime(0))
+    assert_equal("??", NS.fmtTime(-5))
+    assert_equal("??", NS.fmtTime(math.huge))
+end)
+
+it("NS.fmtTime formats seconds only (< 120s)", function()
+    assert_equal("1s",   NS.fmtTime(1))
+    assert_equal("59s",  NS.fmtTime(59))
+    assert_equal("60s",  NS.fmtTime(60))
+    assert_equal("119s", NS.fmtTime(119))
+end)
+
+it("NS.fmtTime formats minutes and seconds (>= 120s, < 1h)", function()
+    assert_equal("2m 0s",   NS.fmtTime(120))
+    assert_equal("2m 30s",  NS.fmtTime(150))
+    assert_equal("59m 59s", NS.fmtTime(3599))
+end)
+
+it("NS.fmtTime formats hours and minutes (>= 1h)", function()
+    assert_equal("1h 0m",  NS.fmtTime(3600))
+    assert_equal("1h 1m",  NS.fmtTime(3660))
+    assert_equal("1h 1m",  NS.fmtTime(3690))
+    assert_equal("2h 30m", NS.fmtTime(9000))
+    assert_equal("24h 0m", NS.fmtTime(86400))
+end)
+
+it("NS.fmtTime rounds fractions correctly", function()
+    assert_equal("1s",    NS.fmtTime(0.5))
+    assert_equal("1s",    NS.fmtTime(1.4))
+    assert_equal("2m 0s", NS.fmtTime(119.5))
+end)
+
+run_tests()
