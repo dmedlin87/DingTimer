@@ -12,13 +12,11 @@ NS.C = {
 function NS.FormatNumber(num)
   if not num then return "0" end
   if num ~= num or num == math.huge or num == -math.huge then return "0" end
-  local formatted = tostring(math.floor(num))
-  local k
-  while true do
-    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-    if k == 0 then break end
-  end
-  return formatted
+  local n = math.floor(num)
+  local absNum = tostring(math.abs(n))
+  local neg = (n < 0) and "-" or ""
+  local formatted = string.reverse(string.gsub(string.reverse(absNum), "(%d%d%d)", "%1,")):gsub("^,", "")
+  return neg .. formatted
 end
 
 function NS.chat(msg)
