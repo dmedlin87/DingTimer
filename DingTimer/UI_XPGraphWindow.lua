@@ -274,6 +274,7 @@ function NS.InitGraphWindow()
   graphFrame:SetClampedToScreen(true)
 
   graphFrame:SetScript("OnDragStart", function(self)
+    if DingTimerDB.graphLocked then return end
     if InCombatLockdown() then return end
     self:StartMoving()
   end)
