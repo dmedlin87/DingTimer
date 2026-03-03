@@ -56,7 +56,8 @@ function NS.InitSettingsWindow()
   CreateCheckbox(-80, "Show Floating Text", "float", function(checked) NS.setFloatVisible(checked) end)
   CreateCheckbox(-110, "Lock Floating Text", "floatLocked")
   CreateCheckbox(-140, "Show XP Graph", "graphVisible", function(checked) NS.SetGraphVisible(checked) end)
-  CreateCheckbox(-170, "Hide Minimap Button", "minimapHidden", function(checked) 
+  CreateCheckbox(-170, "Lock XP Graph", "graphLocked")
+  CreateCheckbox(-200, "Hide Minimap Button", "minimapHidden", function(checked)
     if DingTimerMinimapButton then
       if checked then DingTimerMinimapButton:Hide() else DingTimerMinimapButton:Show() end 
     end
@@ -65,7 +66,7 @@ function NS.InitSettingsWindow()
   local resetState = 0
   local resetTimer
   local resetBtn
-  resetBtn = CreateButton(-220, "Reset Session", function()
+  resetBtn = CreateButton(-250, "Reset Session", function()
     if resetState == 0 then
       resetState = 1
       resetBtn:SetText("|cffff4040Confirm Reset|r")

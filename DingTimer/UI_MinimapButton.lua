@@ -93,6 +93,7 @@ f:SetScript("OnEnter", function(self)
   GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
   GameTooltip:AddLine("Left-click to open Stats Window", 1, 1, 1)
   GameTooltip:AddLine("Right-click to open Settings", 1, 1, 1)
+  GameTooltip:AddLine("Drag to move this button", 0.7, 0.7, 0.7)
   GameTooltip:Show()
 end)
 
