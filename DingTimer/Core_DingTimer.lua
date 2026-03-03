@@ -2,6 +2,7 @@ local ADDON, NS = ...
 
 NS.state = {
   sessionStartTime = 0,
+  levelStart = 0,
   lastXP = 0,
   lastMax = 0,
   lastTTL = nil,
@@ -14,6 +15,7 @@ NS.state = {
 
 function NS.resetXPState()
   NS.state.sessionStartTime = GetTime()
+  NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
   NS.state.lastXP = UnitXP("player") or 0
   NS.state.lastMax = UnitXPMax("player") or 0
   NS.state.lastTTL = nil

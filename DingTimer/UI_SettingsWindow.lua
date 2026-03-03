@@ -79,6 +79,9 @@ function NS.InitSettingsWindow()
       resetState = 0
       if resetTimer then resetTimer:Cancel() end
       resetBtn:SetText("Reset Session")
+      if NS.RecordSession then
+        NS.RecordSession("MANUAL_RESET")
+      end
       NS.resetXPState()
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Session reset.")
     end

@@ -2,14 +2,16 @@
 ## Title: DingTimer
 ## Notes: Chat XP/hr + Time-to-Level
 ## Author: You
-## Version: 0.3.0
+## Version: 0.4.0
 ## SavedVariables: DingTimerDB
 
 Util.lua
+Insights.lua
 Store.lua
 Core_DingTimer.lua
 UI_StatsWindow.lua
 UI_XPGraphWindow.lua
+UI_InsightsWindow.lua
 UI_SettingsWindow.lua
 UI_MinimapButton.lua
 DingTimer.lua

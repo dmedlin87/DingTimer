@@ -11,7 +11,7 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.4.0-blue?style=flat-square)
 ![WoW](https://img.shields.io/badge/WoW-Retail%20%7C%20Midnight-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
@@ -34,6 +34,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **Time To Level (TTL)** — Live countdown to your next ding, updated every second
 - **Money Per Hour** — Track your gold income alongside your XP gains
 - **XP Graph** — Visual bar chart showing your XP/hr over time with trend coloring and a session average overlay
+- **Session Insights** — Per-character history with best/median rates, trend tracking, and recent-session breakdowns
 - **Floating Text** — A sleek HUD element showing TTL and XP/hr at all times
 - **Stats Window** — A full dashboard with all six tracked metrics in one place
 - **Settings Window** — GUI for all options, no slash command memorization required
@@ -66,6 +67,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | See your stats        | Left-click the minimap button or `/ding ui`        |
 | Change settings       | Right-click the minimap button or `/ding settings` |
 | View the XP graph     | `/ding graph`                                      |
+| Open Session Insights | `/ding insights`                                   |
 | Show the floating HUD | `/ding float on`                                   |
 | Reset current session | `/ding reset`                                      |
 
@@ -84,6 +86,7 @@ All commands work with either `/ding` or `/dt`.
 | `/ding ui`              | Toggle the stats window                       |
 | `/ding stats`           | Same as above                                 |
 | `/ding settings`        | Open the settings window                      |
+| `/ding insights`        | Toggle the Session Insights window            |
 | `/ding reset`           | Reset current session data                    |
 | `/ding on`              | Enable chat output                            |
 | `/ding off`             | Disable chat output                           |
@@ -126,6 +129,14 @@ All commands work with either `/ding` or `/dt`.
 | `/ding graph scale auto`      | Y-axis scales to 110% of your current max               |
 | `/ding graph lock`            | Lock graph position                                     |
 | `/ding graph unlock`          | Allow graph to be dragged                               |
+
+### Insights Commands
+
+| Command                     | What it does                                          |
+| --------------------------- | ----------------------------------------------------- |
+| `/ding insights`            | Toggle the Session Insights window                    |
+| `/ding insights clear`      | Clear insights history for your current character     |
+| `/ding insights keep <n>`   | Keep between 5 and 100 sessions (default: 30)         |
 
 ---
 
@@ -197,6 +208,18 @@ A scrolling bar chart of your XP/hr over time, updated every second.
 
 ---
 
+### Session Insights Window
+
+A dedicated analysis window for long-term improvement over multiple leveling sessions.
+
+- Tracks history per character profile (`realm:name:class`)
+- Shows median XP/hr, best XP/hr, average time in level, and trend percent
+- Includes a mini trend chart built from your most recent sessions
+- Lists the latest 10 sessions with level range, duration, XP/hr, money, zone, and trigger reason
+- Supports history controls via `/ding insights clear` and `/ding insights keep <n>`
+
+---
+
 ### Settings Window
 
 A full GUI for all major options:
@@ -251,7 +274,7 @@ DingTimer stores all data in `DingTimerDB` (saved per character). This includes:
 - All settings and toggle states
 - Window positions for all frames
 - Current session XP and money events
-- Historical sessions (last 10 kept)
+- Historical sessions per character profile (last 30 kept by default)
 - Graph data (up to 1 hour of events)
 - Minimap button angle
 

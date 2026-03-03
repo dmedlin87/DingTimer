@@ -8,6 +8,7 @@ f:RegisterEvent("PLAYER_XP_UPDATE")
 f:RegisterEvent("PLAYER_LEVEL_UP")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("PLAYER_MONEY")
+f:RegisterEvent("PLAYER_LOGOUT")
 
 f:SetScript("OnEvent", function(self, event, ...)
   local arg1 = ...
@@ -24,6 +25,9 @@ f:SetScript("OnEvent", function(self, event, ...)
     end
     if DingTimerDB.graphVisible and NS.SetGraphVisible then
       NS.SetGraphVisible(true)
+    end
+    if DingTimerDB.insightsWindowVisible and NS.SetInsightsVisible then
+      NS.SetInsightsVisible(true)
     end
     if NS.InitMinimapButton then
       NS.InitMinimapButton()
@@ -56,10 +60,17 @@ f:SetScript("OnEvent", function(self, event, ...)
     
     NS.chat(header)
     NS.chat(stats)
-    
+
+    if NS.RecordSession then
+      NS.RecordSession("LEVEL_UP")
+    end
     NS.resetXPState()
   elseif event == "PLAYER_MONEY" then
     NS.onMoneyUpdate()
+  elseif event == "PLAYER_LOGOUT" then
+    if NS.RecordSession then
+      NS.RecordSession("LOGOUT")
+    end
   elseif event == "PLAYER_REGEN_ENABLED" then
     -- Catch up on visibility if it was toggled during combat
     NS.setFloatVisible(DingTimerDB.float)
@@ -99,12 +110,19 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  " .. NS.C.val .. "scale fixed|auto" .. NS.C.r .. " - Fixed sets a max XP/hr; auto scales to data.")
       NS.chat("  " .. NS.C.val .. "lock | unlock" .. NS.C.r .. " - Lock or unlock the graph for dragging.")
       NS.chat("  Default zoom is 5m. Default scale is fixed at 100,000 XP/hr.")
+    elseif arg == "insights" then
+      NS.chat(NS.C.base .. "=== DingTimer Help: insights ===" .. NS.C.r)
+      NS.chat("  " .. NS.C.val .. "/ding insights" .. NS.C.r .. " - Toggle the Session Insights window.")
+      NS.chat("  " .. NS.C.val .. "/ding insights clear" .. NS.C.r .. " - Clear history for this character profile.")
+      NS.chat("  " .. NS.C.val .. "/ding insights keep <n>" .. NS.C.r .. " - Keep between 5 and 100 sessions (default 30).")
+      NS.chat("  Example: " .. NS.C.val .. "/ding insights keep 30" .. NS.C.r)
     else
       NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "/ding ui" .. NS.C.r .. " - Open the elegant stats window")
       NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the settings window")
       NS.chat("  " .. NS.C.val .. "/ding on | off" .. NS.C.r .. " - Enable or disable chat output")
       NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session data")
+      NS.chat("  " .. NS.C.val .. "/ding insights" .. NS.C.r .. " - Open Session Insights")
       NS.chat("  " .. NS.C.val .. "/ding window <seconds>" .. NS.C.r .. " - Set the time window for tracking calculation (e.g., 600)")
       NS.chat("  " .. NS.C.val .. "/ding mode full | ttl" .. NS.C.r .. " - Change chat output style")
       NS.chat("  " .. NS.C.val .. "/ding float on | off" .. NS.C.r .. " - Toggle the floating UI frame")
@@ -140,8 +158,64 @@ SlashCmdList.DINGTIMER = function(msg)
   end
 
   if cmd == "reset" then
+    if NS.RecordSession then
+      NS.RecordSession("MANUAL_RESET")
+    end
     NS.resetXPState()
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
+    return
+  end
+
+  if cmd == "insights" then
+    local sub, subarg = (arg or ""):match("^(%S*)%s*(.*)$")
+    sub = sub or ""
+    subarg = subarg or ""
+
+    if sub == "" then
+      if NS.ToggleInsightsWindow then NS.ToggleInsightsWindow() end
+      return
+    end
+
+    if sub == "clear" then
+      if NS.ClearProfileSessions then
+        NS.ClearProfileSessions()
+      end
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+      return
+    end
+
+    if sub == "keep" then
+      if subarg == "" then
+        local keep = (DingTimerDB.xp and DingTimerDB.xp.keepSessions) or 30
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights keep = " .. tostring(keep))
+        return
+      end
+
+      local n = tonumber(subarg)
+      if not n then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Please provide a number (e.g., /ding insights keep 30).")
+        return
+      end
+
+      if n < 5 or n > 100 then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights keep must be between 5 and 100.")
+        return
+      end
+
+      DingTimerDB.xp = DingTimerDB.xp or {}
+      DingTimerDB.xp.keepSessions = math.floor(n)
+      if NS.GetProfileStore and NS.TrimSessions then
+        local profile = NS.GetProfileStore(true)
+        NS.TrimSessions(profile, DingTimerDB.xp.keepSessions)
+      end
+      if NS.RefreshInsightsWindow then
+        NS.RefreshInsightsWindow()
+      end
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights keep = " .. tostring(DingTimerDB.xp.keepSessions))
+      return
+    end
+
+    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown insights command. Use: clear, keep")
     return
   end
 
