@@ -142,12 +142,13 @@ SlashCmdList.DINGTIMER = function(msg)
   if cmd == "window" then
     local n = tonumber(arg)
     if n then
-      if n >= 30 then
+      if n >= 30 and n <= 86400 then
+        -- 🛡️ Sentinel: Cap window at 24 hours (86400s) to prevent unbounded memory growth from unpruned events (DoS risk)
         DingTimerDB.windowSeconds = n
         NS.resetXPState()
         NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " windowSeconds = " .. n)
       else
-        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " window must be >= 30 seconds.")
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " window must be between 30 and 86400 seconds (24h).")
       end
     else
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Please provide a number (e.g., /ding window 600).")
