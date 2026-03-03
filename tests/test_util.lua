@@ -1,75 +1,66 @@
-dofile("tests/mocks.lua")
-LoadAddonFile("DingTimer/Util.lua")
+require("tests.mocks")
 
-local ARROW_DOWN = "\226\134\147"
-local ARROW_UP   = "\226\134\145"
+local NS = LoadAddonFile("DingTimer/Util.lua")
 
--- Mock NS.fmtTime to isolate the logic.
-local original_fmtTime = NS.fmtTime
+print("Running tests for Util.lua...")
 
-it("NS.ttlDeltaText handles nil inputs", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    assert_equal("", NS.ttlDeltaText(nil, 100))
-    assert_equal("", NS.ttlDeltaText(100, nil))
-    assert_equal("", NS.ttlDeltaText(nil, nil))
-    NS.fmtTime = original_fmtTime
-end)
+-- test NS.fmtTime
+assertEqual("??", NS.fmtTime(nil), "fmtTime(nil)")
+assertEqual("??", NS.fmtTime(-10), "fmtTime(-10)")
+assertEqual("??", NS.fmtTime(0), "fmtTime(0)")
+assertEqual("??", NS.fmtTime(math.huge), "fmtTime(huge)")
 
-it("NS.ttlDeltaText handles math.huge inputs", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    assert_equal("", NS.ttlDeltaText(math.huge, 100))
-    assert_equal("", NS.ttlDeltaText(100, math.huge))
-    assert_equal("", NS.ttlDeltaText(math.huge, math.huge))
-    NS.fmtTime = original_fmtTime
-end)
+assertEqual("5s", NS.fmtTime(5), "fmtTime(5)")
+assertEqual("119s", NS.fmtTime(119), "fmtTime(119)")
+assertEqual("2m 0s", NS.fmtTime(120), "fmtTime(120)")
+assertEqual("2m 5s", NS.fmtTime(125), "fmtTime(125)")
+assertEqual("59m 59s", NS.fmtTime(3599), "fmtTime(3599)")
 
-it("NS.ttlDeltaText handles small differences (< 2)", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    assert_equal("", NS.ttlDeltaText(100, 100))
-    assert_equal("", NS.ttlDeltaText(100.4, 100))
-    assert_equal("", NS.ttlDeltaText(100, 101))
-    assert_equal("", NS.ttlDeltaText(101, 100))
-    NS.fmtTime = original_fmtTime
-end)
+assertEqual("1h 0m", NS.fmtTime(3600), "fmtTime(3600)")
+assertEqual("1h 5m", NS.fmtTime(3900), "fmtTime(3900)")
+assertEqual("2h 30m", NS.fmtTime(9000), "fmtTime(9000)")
 
-it("NS.ttlDeltaText formats improving TTL (diff < 0)", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    -- TTL drops by 5 seconds
-    local expected = string.format(" (%s fmt_5)", ARROW_DOWN)
-    assert_equal(expected, NS.ttlDeltaText(100, 105))
 
-    -- TTL drops by 2 minutes (120 seconds)
-    local expected2 = string.format(" (%s fmt_120)", ARROW_DOWN)
-    assert_equal(expected2, NS.ttlDeltaText(100, 220))
-    NS.fmtTime = original_fmtTime
-end)
+-- test NS.fmtMoney
+assertEqual("0|cffeda55fc|r", NS.fmtMoney(nil), "fmtMoney(nil)")
+assertEqual("0|cffeda55fc|r", NS.fmtMoney(0), "fmtMoney(0)")
+assertEqual("5|cffeda55fc|r", NS.fmtMoney(5), "fmtMoney(5)")
+assertEqual("12|cffc7c7cfs|r 34|cffeda55fc|r", NS.fmtMoney(1234), "fmtMoney(1234)")
+assertEqual("1|cffffd700g|r 23|cffc7c7cfs|r 45|cffeda55fc|r", NS.fmtMoney(12345), "fmtMoney(12345)")
+assertEqual("10|cffffd700g|r 0|cffc7c7cfs|r 0|cffeda55fc|r", NS.fmtMoney(100000), "fmtMoney(100000)")
+assertEqual("|cffff4040-|r1|cffffd700g|r 23|cffc7c7cfs|r 45|cffeda55fc|r", NS.fmtMoney(-12345), "fmtMoney(-12345)")
 
-it("NS.ttlDeltaText formats worsening TTL (diff > 0)", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    -- TTL increases by 5 seconds
-    local expected = string.format(" (%s fmt_5)", ARROW_UP)
-    assert_equal(expected, NS.ttlDeltaText(105, 100))
+-- test NS.ttlColor
+assertEqual(NS.C.val, NS.ttlColor(100, nil), "ttlColor(nil lastTTL)")
+assertEqual(NS.C.val, NS.ttlColor(100, math.huge), "ttlColor(huge lastTTL)")
+assertEqual(NS.C.mid, NS.ttlColor(100, 100), "ttlColor(same)")
+assertEqual(NS.C.mid, NS.ttlColor(100, 101), "ttlColor(small diff -1)")
+assertEqual(NS.C.mid, NS.ttlColor(100, 99), "ttlColor(small diff +1)")
+assertEqual(NS.C.xp, NS.ttlColor(100, 105), "ttlColor(improved)") -- down = improved = green = xp
+assertEqual(NS.C.bad, NS.ttlColor(105, 100), "ttlColor(worsened)") -- up = worsened = red = bad
 
-    -- TTL increases by 1 hour (3600 seconds)
-    local expected2 = string.format(" (%s fmt_3600)", ARROW_UP)
-    assert_equal(expected2, NS.ttlDeltaText(3700, 100))
-    NS.fmtTime = original_fmtTime
-end)
+-- test NS.ttlDeltaText
+assertEqual("", NS.ttlDeltaText(nil, 100), "ttlDeltaText(nil ttl)")
+assertEqual("", NS.ttlDeltaText(math.huge, 100), "ttlDeltaText(huge ttl)")
+assertEqual("", NS.ttlDeltaText(100, nil), "ttlDeltaText(nil lastTTL)")
+assertEqual("", NS.ttlDeltaText(100, math.huge), "ttlDeltaText(huge lastTTL)")
+assertEqual("", NS.ttlDeltaText(100, 100), "ttlDeltaText(same)")
+assertEqual("", NS.ttlDeltaText(100, 101), "ttlDeltaText(small diff)")
+assertEqual("", NS.ttlDeltaText(100, 101.9), "ttlDeltaText(dead-zone upper bound)")
 
-it("NS.ttlDeltaText properly rounds the difference", function()
-    NS.fmtTime = function(seconds) return "fmt_" .. tostring(seconds) end
-    -- diff is 1.5 -> rounds to 2
-    local expected = string.format(" (%s fmt_2)", ARROW_UP)
-    assert_equal(expected, NS.ttlDeltaText(101.5, 100))
+-- diff = ttl - lastTTL
+-- if diff < 0 it's an improvement (down arrow), meaning ttl is smaller than lastTTL
+local diff_down = NS.ttlDeltaText(100, 150)
+assertStringMatch("\226\134\147", diff_down, "down arrow in " .. tostring(diff_down))
+assertStringMatch("50s", diff_down, "50s in " .. tostring(diff_down))
 
-    -- diff is -1.5. In lua math.floor(-1.5 + 0.5) is math.floor(-1.0) == -1.
-    -- Absolute is 1, so it returns empty string!
-    assert_equal("", NS.ttlDeltaText(100, 101.5))
+-- if diff > 0 it's a worsening (up arrow), meaning ttl is bigger than lastTTL
+local diff_up = NS.ttlDeltaText(150, 100)
+assertStringMatch("\226\134\145", diff_up, "up arrow in " .. tostring(diff_up))
+assertStringMatch("50s", diff_up, "50s in " .. tostring(diff_up))
 
-    local expected2 = string.format(" (%s fmt_2)", ARROW_DOWN)
-    assert_equal(expected2, NS.ttlDeltaText(100, 102.5))
-    NS.fmtTime = original_fmtTime
-end)
+local rounded_down = NS.ttlDeltaText(100, 101.5)
+assertStringMatch("\226\134\147", rounded_down, "down arrow in rounded_down")
+assertStringMatch("2s", rounded_down, "2s in rounded_down")
 
--- Run tests
-run_tests()
+print("All tests passed!")

@@ -64,15 +64,33 @@ function UnregisterStateDriver() end
 
 UIParent = {}
 
--- Addon Loading Mock (supports 1 or 2 args)
-function LoadAddonFile(path, NS)
+-- Addon Loading Mock
+-- Supported forms:
+--   LoadAddonFile(path)
+--   LoadAddonFile(path, NS)
+--   LoadAddonFile(path, addonName, NS)
+function LoadAddonFile(path, addonOrNS, maybeNS)
+    local addonName = "DingTimer"
+    local NS = nil
+
+    if type(addonOrNS) == "table" then
+        NS = addonOrNS
+    elseif type(addonOrNS) == "string" and type(maybeNS) == "table" then
+        addonName = addonOrNS
+        NS = maybeNS
+    elseif type(addonOrNS) == "string" and maybeNS == nil then
+        addonName = addonOrNS
+    end
+
     if not NS then
         if not _G.NS then _G.NS = {} end
         NS = _G.NS
     end
+
     local f, err = loadfile(path)
     if not f then error(err) end
-    f("DingTimer", NS)
+    f(addonName, NS)
+    return NS
 end
 
 -- assert_eq/assert_near for Core tests
@@ -80,6 +98,12 @@ function assert_eq(actual, expected, message)
     if actual ~= expected then
         error(string.format("%s: expected %s, got %s",
             message or "Assertion failed", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+function assert_true(value, message)
+    if not value then
+        error(message or "Assertion failed: expected true", 2)
     end
 end
 
@@ -103,6 +127,20 @@ function assert_equal(expected, actual, msg)
     if expected ~= actual then
         error(string.format("Expected '%s', got '%s'%s",
             tostring(expected), tostring(actual),
+            msg and (" - " .. msg) or ""), 2)
+    end
+end
+
+-- Compatibility aliases used by older test files
+function assertEqual(expected, actual, msg)
+    assert_equal(expected, actual, msg)
+end
+
+function assertStringMatch(needle, haystack, msg)
+    local ok = type(haystack) == "string" and string.find(haystack, needle, 1, true) ~= nil
+    if not ok then
+        error(string.format("Expected '%s' to contain '%s'%s",
+            tostring(haystack), tostring(needle),
             msg and (" - " .. msg) or ""), 2)
     end
 end

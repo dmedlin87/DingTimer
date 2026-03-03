@@ -75,14 +75,16 @@ function NS.ttlDeltaText(ttl, lastTTL)
   if not ttl or ttl == math.huge or not lastTTL or lastTTL == math.huge then
     return ""
   end
-  local diff = math.floor((ttl - lastTTL) + 0.5)
+  local diff = ttl - lastTTL
   if math.abs(diff) < 2 then return "" end
+
+  local seconds = math.floor(math.abs(diff) + 0.5)
   if diff < 0 then
     -- ↓ (using character codes for reliability)
-    return string.format(" (%s %s)", "\226\134\147", NS.fmtTime(-diff))
+    return string.format(" (%s %s)", "\226\134\147", NS.fmtTime(seconds))
   else
     -- ↑
-    return string.format(" (%s %s)", "\226\134\145", NS.fmtTime(diff))
+    return string.format(" (%s %s)", "\226\134\145", NS.fmtTime(seconds))
   end
 end
 

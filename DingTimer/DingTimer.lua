@@ -102,6 +102,7 @@ SlashCmdList.DINGTIMER = function(msg)
     else
       NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "/ding ui" .. NS.C.r .. " - Open the elegant stats window")
+      NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the settings window")
       NS.chat("  " .. NS.C.val .. "/ding on | off" .. NS.C.r .. " - Enable or disable chat output")
       NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session data")
       NS.chat("  " .. NS.C.val .. "/ding window <seconds>" .. NS.C.r .. " - Set the time window for tracking calculation (e.g., 600)")
@@ -118,6 +119,11 @@ SlashCmdList.DINGTIMER = function(msg)
 
   if cmd == "ui" or cmd == "stats" then
     if NS.ToggleStatsWindow then NS.ToggleStatsWindow() end
+    return
+  end
+
+  if cmd == "settings" then
+    if NS.ToggleSettingsWindow then NS.ToggleSettingsWindow() end
     return
   end
 
