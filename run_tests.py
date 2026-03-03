@@ -1,5 +1,6 @@
 import ctypes
 import ctypes.util
+import os
 import sys
 from pathlib import Path
 
@@ -37,25 +38,63 @@ class LuaRunner:
         self.lua.lua_tolstring.restype = ctypes.c_char_p
 
     def _load_lua_lib(self):
+        windows_dirs = []
+        if os.name == "nt":
+            local_appdata = os.environ.get("LOCALAPPDATA", "")
+            program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+            program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+            windows_dirs = [
+                os.path.join(local_appdata, "Programs", "Lua", "bin"),
+                os.path.join(local_appdata, "Programs", "LuaJIT", "bin"),
+                os.path.join(program_files, "Lua", "bin"),
+                os.path.join(program_files_x86, "Lua", "bin"),
+                os.path.join(program_files, "LuaJIT", "bin"),
+                os.path.join(program_files_x86, "LuaJIT", "bin"),
+            ]
+            windows_dirs = [d for d in windows_dirs if d and os.path.isdir(d)]
+            for d in windows_dirs:
+                try:
+                    os.add_dll_directory(d)
+                except Exception:
+                    pass
+
+        absolute_candidates = []
+        if windows_dirs:
+            for d in windows_dirs:
+                absolute_candidates.extend(
+                    [
+                        os.path.join(d, "lua54.dll"),
+                        os.path.join(d, "lua53.dll"),
+                        os.path.join(d, "lua5.4.dll"),
+                        os.path.join(d, "lua5.3.dll"),
+                        os.path.join(d, "lua51.dll"),
+                        os.path.join(d, "lua.dll"),
+                    ]
+                )
+
         dynamic_candidates = [
             ctypes.util.find_library("lua5.4"),
             ctypes.util.find_library("lua54"),
             ctypes.util.find_library("lua5.3"),
             ctypes.util.find_library("lua53"),
+            ctypes.util.find_library("lua5.1"),
+            ctypes.util.find_library("lua51"),
             ctypes.util.find_library("lua"),
         ]
         static_fallbacks = [
             "liblua5.4.so.0",
             "liblua5.3.so.0",
+            "liblua5.1.so.0",
             "lua54.dll",
             "lua53.dll",
             "lua5.4.dll",
             "lua5.3.dll",
+            "lua51.dll",
             "lua.dll",
         ]
         candidates = []
         seen = set()
-        for name in dynamic_candidates + static_fallbacks:
+        for name in absolute_candidates + dynamic_candidates + static_fallbacks:
             if name and name not in seen:
                 candidates.append(name)
                 seen.add(name)

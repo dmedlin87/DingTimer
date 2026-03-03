@@ -23,7 +23,7 @@ DingTimerDB = {
   mode = "full",
   float = false,
   xp = {
-    keepSessions = 2,
+    keepSessions = 5,
     profiles = {},
   },
 }
@@ -62,7 +62,7 @@ local skipped = NS.RecordSession("MANUAL_RESET")
 assert_true(skipped == nil, "empty sessions should be skipped")
 assert_eq(#profile.sessions, 1, "skipped record should not add rows")
 
-for i = 1, 3 do
+for i = 1, 7 do
   SetTime(400 + (i * 20))
   SetLevel(40 + i)
   NS.resetXPState()
@@ -72,8 +72,8 @@ for i = 1, 3 do
   NS.RecordSession("MANUAL_RESET")
 end
 
-assert_eq(#profile.sessions, 2, "retention should keep only the latest 2 sessions")
-assert_eq(profile.sessions[1].xpGained, 200, "oldest retained session should be the middle insert")
-assert_eq(profile.sessions[2].xpGained, 300, "newest retained session should be the latest insert")
+assert_eq(#profile.sessions, 5, "retention should keep only the latest 5 sessions")
+assert_eq(profile.sessions[1].xpGained, 300, "oldest retained session should be the first kept insert")
+assert_eq(profile.sessions[5].xpGained, 700, "newest retained session should be the latest insert")
 
 print("Insights recording tests passed!")

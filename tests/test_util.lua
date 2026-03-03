@@ -60,7 +60,10 @@ assertStringMatch("\226\134\145", diff_up, "up arrow in " .. tostring(diff_up))
 assertStringMatch("50s", diff_up, "50s in " .. tostring(diff_up))
 
 local rounded_down = NS.ttlDeltaText(100, 101.5)
-assertStringMatch("\226\134\147", rounded_down, "down arrow in rounded_down")
-assertStringMatch("2s", rounded_down, "2s in rounded_down")
+assertEqual("", rounded_down, "rounded_down remains in dead-zone")
+
+local rounded_down_outside_deadzone = NS.ttlDeltaText(100, 102.1)
+assertStringMatch("\226\134\147", rounded_down_outside_deadzone, "down arrow outside dead-zone")
+assertStringMatch("2s", rounded_down_outside_deadzone, "2s outside dead-zone")
 
 print("All tests passed!")
