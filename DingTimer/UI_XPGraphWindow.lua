@@ -76,9 +76,16 @@ local function aggregateSegments(now, W, S, N, anchor)
   local firstVisibleIdx = currentSegIdx - N + 1
   local segments = {}
 
-  for _, ev in ipairs(graphState.events) do
+  -- ⚡ Bolt: Iterate backwards and break early. Events are sorted chronologically.
+  -- Rather than iterating over up to 60 minutes of history (O(N)), we stop parsing
+  -- the moment we reach an event older than the visible graph bounds.
+  for i = #graphState.events, 1, -1 do
+    local ev = graphState.events[i]
     local segIdx = getSegmentIndex(ev.t, anchor, S)
-    if segIdx >= firstVisibleIdx and segIdx <= currentSegIdx then
+    if segIdx < firstVisibleIdx then
+      break -- Events are chronologically ordered, so older events will also be < firstVisibleIdx
+    end
+    if segIdx <= currentSegIdx then
       segments[segIdx] = (segments[segIdx] or 0) + ev.xp
     end
   end
