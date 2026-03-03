@@ -33,6 +33,7 @@ local lineSegments = {}
 local graphState = {
   anchor = 0,
   events = {},
+  totalXP = 0,
   dirty = false,
 }
 
@@ -59,6 +60,7 @@ local function pruneGraphEvents(now)
   local events = graphState.events
   local i = 1
   while events[i] and events[i].t < cutoff do
+    graphState.totalXP = graphState.totalXP - events[i].xp
     i = i + 1
   end
   if i > 1 then
@@ -132,24 +134,18 @@ local function RedrawGraph()
   local maxXPH = 0
   local sessionStart = NS.state.sessionStartTime or now
 
-  -- ⚡ Bolt: Optimize average line calculation from O(N*M) to O(N+M)
-  -- Since events are sorted by time, we can iterate them alongside the N bars
-  -- rather than starting from the beginning of the events list for each bar.
-  local evIdx = 1
-  local xp_up_to_t = 0
+  -- ⚡ Bolt: Optimize average line calculation from O(N+M) to O(N)
+  -- By maintaining graphState.totalXP and taking advantage of chronological sorting
+  -- and precomputed segment values, we can calculate `xp_up_to_t` iteratively
+  -- going backwards from N down to 1 in O(N) time without iterating over events.
+  local xp_up_to_t = graphState.totalXP
 
-  for i = 1, N do
+  for i = N, 1, -1 do
     local segIdx = currentSegIdx - (N - i)
     local xp = segments[segIdx] or 0
     local xph = (xp / S) * 3600
     
     local t_end = anchor + (segIdx + 1) * S
-
-    while graphState.events[evIdx] and graphState.events[evIdx].t <= t_end do
-      xp_up_to_t = xp_up_to_t + graphState.events[evIdx].xp
-      evIdx = evIdx + 1
-    end
-
     local elapsed = t_end - sessionStart
     if elapsed < 1 then elapsed = 1 end
     local avgXph = (xp_up_to_t / elapsed) * 3600
@@ -157,6 +153,8 @@ local function RedrawGraph()
     barData[i] = { xp = xp, xph = xph, avgXph = avgXph, segIdx = segIdx }
     if xph > maxXPH then maxXPH = xph end
     if avgXph > maxXPH then maxXPH = avgXph end
+
+    xp_up_to_t = xp_up_to_t - xp
   end
 
   -- Determine Y-axis scale
@@ -412,12 +410,14 @@ end
 function NS.GraphFeedXP(delta, timestamp)
   if delta <= 0 then return end
   table.insert(graphState.events, { t = timestamp, xp = delta })
+  graphState.totalXP = graphState.totalXP + delta
   graphState.dirty = true
 end
 
 function NS.GraphReset()
   graphState.anchor = GetTime()
   graphState.events = {}
+  graphState.totalXP = 0
   graphState.dirty = true
 
   if graphFrame and graphFrame:IsShown() then
