@@ -29,6 +29,15 @@ function NS.InitStore()
   if not DingTimerDB then
     DingTimerDB = defaults
   else
+    -- 🛡️ Sentinel: Global bounds check for windowSeconds to prevent DoS from maliciously modified or corrupted SavedVariables
+    if DingTimerDB.windowSeconds then
+      if DingTimerDB.windowSeconds < 30 then
+        DingTimerDB.windowSeconds = 30
+      elseif DingTimerDB.windowSeconds > 86400 then
+        DingTimerDB.windowSeconds = 86400
+      end
+    end
+
     if not DingTimerDB.schemaVersion or DingTimerDB.schemaVersion < 3 then
       DingTimerDB.schemaVersion = 3
       DingTimerDB.meta = defaults.meta
