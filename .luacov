@@ -1,0 +1,10 @@
+return {
+  include = {
+    ".*[\\/]DingTimer[\\/].*%.lua$",
+  },
+  exclude = {
+    ".*[\\/]tests[\\/].*",
+  },
+  statsfile = "luacov.stats.out",
+  reportfile = "luacov.report.out",
+}

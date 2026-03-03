@@ -307,6 +307,18 @@ Please include a description of what changed and why.
 
 ---
 
+## Coverage
+
+Run Lua coverage from repo root:
+
+```powershell
+.\coverage.ps1
+```
+
+This generates `luacov.report.out` and `luacov.stats.out` in the project root.
+
+---
+
 ## License
 
 MIT — do whatever you want with it, just don't blame me if your /played skyrockets because you got addicted to optimizing your XP/hr.

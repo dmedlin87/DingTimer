@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $false)]
-    [string]$Action = "install", # install, link, clean, dist
+    [string]$Action = "install", # install, link, clean, dist, coverage
 
     [Parameter(Mandatory = $false)]
     [string]$WowPath = "C:\Program Files (x86)\World of Warcraft",
@@ -68,7 +68,18 @@ elseif ($Action -eq "dist") {
     Compress-Archive -Path $SourceDir -DestinationPath $ZipFile
     Write-Host "Created $ZipFile" -ForegroundColor Green
 }
+elseif ($Action -eq "coverage") {
+    $CoverageScript = Join-Path $PSScriptRoot "coverage.ps1"
+    Confirm-Path $CoverageScript
+
+    Write-Host "Running Lua coverage..." -ForegroundColor Cyan
+    & $CoverageScript -Clean
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+    Write-Host "Coverage complete." -ForegroundColor Green
+}
 else {
     Write-Host "Unknown action: $Action" -ForegroundColor Red
-    Write-Host "Use: .\manage.ps1 -Action [install|link|clean|dist] -Flavor [retail|classic|classic_era]"
+    Write-Host "Use: .\manage.ps1 -Action [install|link|clean|dist|coverage] -Flavor [retail|classic|classic_era]"
 }
