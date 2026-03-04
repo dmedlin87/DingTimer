@@ -202,6 +202,10 @@ function NS.onMoneyUpdate()
     NS.state.sessionMoney = (NS.state.sessionMoney or 0) + delta
   end
   
+  -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden
+  local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  pruneEvents(NS.state.moneyEvents, now, windowSeconds)
+
   if delta > 0 then
     table.insert(NS.state.moneyEvents, { t = now, money = delta })
   end

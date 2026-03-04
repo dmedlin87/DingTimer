@@ -409,6 +409,10 @@ end
 
 function NS.GraphFeedXP(delta, timestamp)
   if delta <= 0 then return end
+
+  -- 🛡️ Sentinel: Prune unbounded XP events to prevent memory exhaustion DoS when UI is hidden
+  pruneGraphEvents(timestamp)
+
   table.insert(graphState.events, { t = timestamp, xp = delta })
   graphState.totalXP = graphState.totalXP + delta
   graphState.dirty = true
