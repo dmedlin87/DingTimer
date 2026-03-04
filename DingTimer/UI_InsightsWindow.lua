@@ -232,14 +232,29 @@ function NS.InitInsightsWindow()
     rowTexts[i] = fs
   end
 
+  local clearState = 0
+  local clearTimer
   local clearBtn = CreateFrame("Button", nil, insightsFrame, "UIPanelButtonTemplate")
   clearBtn:SetSize(120, 24)
   clearBtn:SetPoint("BOTTOMLEFT", insightsFrame, "BOTTOMLEFT", 16, 10)
   clearBtn:SetText("Clear History")
   clearBtn:SetScript("OnClick", function()
-    if NS.ClearProfileSessions then
-      NS.ClearProfileSessions()
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+    if clearState == 0 then
+      clearState = 1
+      clearBtn:SetText("|cffff4040Confirm Clear|r")
+      if clearTimer then clearTimer:Cancel() end
+      clearTimer = C_Timer.NewTimer(3, function()
+        clearState = 0
+        clearBtn:SetText("Clear History")
+      end)
+    else
+      clearState = 0
+      if clearTimer then clearTimer:Cancel() end
+      clearBtn:SetText("Clear History")
+      if NS.ClearProfileSessions then
+        NS.ClearProfileSessions()
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+      end
     end
   end)
 
