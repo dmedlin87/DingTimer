@@ -28,7 +28,8 @@ function NS.chat(msg)
 end
 
 function NS.fmtTime(seconds)
-  if not seconds or seconds <= 0 or seconds == math.huge then return "??" end
+  -- 🛡️ Sentinel: Validate numeric inputs to prevent NaN/Infinity from crashing UI logic (DoS risk)
+  if not seconds or seconds ~= seconds or seconds <= 0 or seconds == math.huge then return "??" end
   local s = math.floor(seconds + 0.5)
   if s < 120 then
     return string.format("%ds", s)
