@@ -77,6 +77,14 @@ function NS.InitStatsWindow()
   -- Close button
   local closeBtn = CreateFrame("Button", nil, statsFrame, "UIPanelCloseButton")
   closeBtn:SetPoint("TOPRIGHT", -4, -4)
+  closeBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine("Close", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  closeBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
   
   -- Header
   local header = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
