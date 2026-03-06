@@ -37,7 +37,7 @@ function NS.InitSettingsWindow()
   sep:SetSize(280, 1)
   sep:SetPoint("TOP", 0, -35)
 
-  local function CreateCheckbox(y, label, dbKey, callback)
+  local function CreateCheckbox(y, label, dbKey, callback, tooltipText)
     local cb = CreateFrame("CheckButton", nil, settingsFrame, "ChatConfigCheckButtonTemplate")
     cb:SetPoint("TOPLEFT", 20, y)
     cb:SetScript("OnShow", function(self) self:SetChecked(DingTimerDB[dbKey]) end)
@@ -45,6 +45,18 @@ function NS.InitSettingsWindow()
       DingTimerDB[dbKey] = self:GetChecked()
       if callback then callback(self:GetChecked()) end
     end)
+
+    if tooltipText then
+      cb:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(tooltipText, nil, nil, nil, nil, true)
+        GameTooltip:Show()
+      end)
+      cb:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+      end)
+    end
+
     local text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("LEFT", cb, "RIGHT", 5, 0)
     text:SetText(label)
@@ -60,16 +72,16 @@ function NS.InitSettingsWindow()
     return btn
   end
 
-  CreateCheckbox(-50, "Enable Chat Output", "enabled")
-  CreateCheckbox(-80, "Show Floating Text", "float", function(checked) NS.setFloatVisible(checked) end)
-  CreateCheckbox(-110, "Lock Floating Text", "floatLocked")
-  CreateCheckbox(-140, "Show XP Graph", "graphVisible", function(checked) NS.SetGraphVisible(checked) end)
-  CreateCheckbox(-170, "Lock XP Graph", "graphLocked")
+  CreateCheckbox(-50, "Enable Chat Output", "enabled", nil, "Prints XP/hr, TTL, and level-up summaries to your chat window.")
+  CreateCheckbox(-80, "Show Floating Text", "float", function(checked) NS.setFloatVisible(checked) end, "Displays a minimal HUD showing your time to level above your character.")
+  CreateCheckbox(-110, "Lock Floating Text", "floatLocked", nil, "Prevents the floating HUD from being dragged.")
+  CreateCheckbox(-140, "Show XP Graph", "graphVisible", function(checked) NS.SetGraphVisible(checked) end, "Displays a scrolling bar chart of your XP/hr history.")
+  CreateCheckbox(-170, "Lock XP Graph", "graphLocked", nil, "Prevents the XP graph window from being dragged.")
   CreateCheckbox(-200, "Hide Minimap Button", "minimapHidden", function(checked)
     if DingTimerMinimapButton then
       if checked then DingTimerMinimapButton:Hide() else DingTimerMinimapButton:Show() end 
     end
-  end)
+  end, "Removes the DingTimer button from the minimap ring.")
 
   local resetState = 0
   local resetTimer
