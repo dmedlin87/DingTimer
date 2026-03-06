@@ -9,3 +9,7 @@
 ## 2025-01-28 - Optimizing O(N*M) Graph Aggregation
 **Learning:** A visually bounded graph loop (O(N) iteration over bars) can contain an unbounded O(M) nested loop if processing time-series data without state caching. A loop processing `up to t_end` over time-series data requires scanning O(M) elements on every frame if starting from index 1.
 **Action:** Use the `total` or full aggregate state as a starting constraint, then process chronologically sorted data backwards (subtracting from the total rather than adding from zero). This drops loop complexity from O(N*M) to O(N).
+
+## 2024-05-19 - O(1) Sliding Window Calculation
+**Learning:** Chronologically sorted time-series data with a sliding window (e.g. for XP or Money per hour calculations) can be optimized by maintaining a continuous running total during insertion and pruning. This avoids full O(N) re-evaluations on every calculation tick.
+**Action:** When calculating rates over a sliding window array, initialize a running total. Increment it when inserting a new event and decrement it when an event is pruned.
