@@ -11,6 +11,8 @@ NS.state = {
   lastMoney = 0,
   events = {}, -- {t=GetTime(), xp=delta}
   moneyEvents = {}, -- {t=GetTime(), money=delta}
+  windowXP = 0,
+  windowMoney = 0,
 }
 
 function NS.resetXPState()
@@ -24,14 +26,20 @@ function NS.resetXPState()
   NS.state.lastMoney = GetMoney() or 0
   NS.state.events = {}
   NS.state.moneyEvents = {}
+  NS.state.windowXP = 0
+  NS.state.windowMoney = 0
   
   if NS.RefreshStatsWindow then NS.RefreshStatsWindow() end
   if NS.GraphReset then NS.GraphReset() end
 end
 
-local function pruneEvents(evList, now, windowSeconds)
+local function pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
   local i = 1
   while evList[i] and (now - evList[i].t) > windowSeconds do
+    -- ⚡ Bolt: Maintain a running total to prevent O(N) calculations downstream
+    if sumKey and valueKey and NS.state[sumKey] then
+      NS.state[sumKey] = NS.state[sumKey] - evList[i][valueKey]
+    end
     i = i + 1
   end
   if i > 1 then
@@ -44,11 +52,15 @@ local function pruneEvents(evList, now, windowSeconds)
   end
 end
 
-local function computeRatePerHour(evList, now, windowSeconds, valueKey)
-  pruneEvents(evList, now, windowSeconds)
+local function computeRatePerHour(evList, now, windowSeconds, valueKey, sumKey)
+  pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
 
   local sum = 0
-  for i = 1, #evList do sum = sum + evList[i][valueKey] end
+  if sumKey and NS.state[sumKey] then
+    sum = NS.state[sumKey]
+  else
+    for i = 1, #evList do sum = sum + evList[i][valueKey] end
+  end
 
   local sessionStart = NS.state.sessionStartTime or now
   local sessionElapsed = now - sessionStart
@@ -61,11 +73,11 @@ local function computeRatePerHour(evList, now, windowSeconds, valueKey)
 end
 
 function NS.computeXPPerHour(now, windowSeconds)
-  return computeRatePerHour(NS.state.events, now, windowSeconds, "xp")
+  return computeRatePerHour(NS.state.events, now, windowSeconds, "xp", "windowXP")
 end
 
 function NS.computeMoneyPerHour(now, windowSeconds)
-  return computeRatePerHour(NS.state.moneyEvents, now, windowSeconds, "money")
+  return computeRatePerHour(NS.state.moneyEvents, now, windowSeconds, "money", "windowMoney")
 end
 
 -- Floating text
@@ -161,6 +173,7 @@ function NS.onXPUpdate()
   if delta > 0 then
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     table.insert(NS.state.events, { t = now, xp = delta })
+    NS.state.windowXP = (NS.state.windowXP or 0) + delta
     if NS.GraphFeedXP then NS.GraphFeedXP(delta, now) end
   end
 
@@ -204,9 +217,10 @@ function NS.onMoneyUpdate()
   
   -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden
   local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
-  pruneEvents(NS.state.moneyEvents, now, windowSeconds)
+  pruneEvents(NS.state.moneyEvents, now, windowSeconds, "windowMoney", "money")
 
   if delta > 0 then
     table.insert(NS.state.moneyEvents, { t = now, money = delta })
+    NS.state.windowMoney = (NS.state.windowMoney or 0) + delta
   end
 end
