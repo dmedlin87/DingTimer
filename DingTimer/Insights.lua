@@ -2,7 +2,10 @@ local ADDON, NS = ...
 
 local function clampKeepSessions(n)
   n = math.floor(tonumber(n) or 30)
-  if n < 5 then
+  -- 🛡️ Sentinel: Validate for NaN and Infinity to prevent validation bypass
+  if n ~= n or n == math.huge or n == -math.huge then
+    n = 30
+  elseif n < 5 then
     n = 5
   elseif n > 100 then
     n = 100
