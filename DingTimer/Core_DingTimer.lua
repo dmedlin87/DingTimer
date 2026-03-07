@@ -187,6 +187,10 @@ function NS.onXPUpdate()
   NS.state.lastXP = xp
   NS.state.lastMax = maxXP
 
+  -- 🛡️ Sentinel: Prune unbounded XP events to prevent memory exhaustion DoS when UI is hidden
+  local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  pruneEvents(NS.state.events, now, windowSeconds, "windowXP", "xp")
+
   if delta > 0 then
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     table.insert(NS.state.events, { t = now, xp = delta })
