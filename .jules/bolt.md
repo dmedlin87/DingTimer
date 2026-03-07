@@ -13,3 +13,7 @@
 ## 2024-05-19 - O(1) Sliding Window Calculation
 **Learning:** Chronologically sorted time-series data with a sliding window (e.g. for XP or Money per hour calculations) can be optimized by maintaining a continuous running total during insertion and pruning. This avoids full O(N) re-evaluations on every calculation tick.
 **Action:** When calculating rates over a sliding window array, initialize a running total. Increment it when inserting a new event and decrement it when an event is pruned.
+
+## 2024-05-28 - Optimize string formatting to avoid regex
+**Learning:** In Lua 5.1 environments, sequential string concatenation combined with `string.match("^%s*(.-)%s*$")` for whitespace trimming is significantly slower than building the string exactly as needed via `string.format()`.
+**Action:** Use `string.format()` over multiple concatenations (`..`) to avoid intermediate string allocations, and conditionally build strings to completely bypass expensive regex whitespace trimming functions like `string.match`.
