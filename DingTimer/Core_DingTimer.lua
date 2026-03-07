@@ -112,6 +112,23 @@ function NS.ensureFloat()
     DingTimerDB.floatPosition = { point = point, relativePoint = relativePoint, xOfs = xOfs, yOfs = yOfs }
   end)
 
+  floatFrame:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
+    if DingTimerDB.floatLocked then
+      GameTooltip:AddLine("HUD is Locked", 0.8, 0.2, 0.2)
+      GameTooltip:AddLine("Unlock via Settings or /ding float unlock", 0.7, 0.7, 0.7, true)
+    else
+      GameTooltip:AddLine("Drag to move", 1, 1, 1)
+      GameTooltip:AddLine("Lock via Settings or /ding float lock", 0.7, 0.7, 0.7, true)
+    end
+    GameTooltip:Show()
+  end)
+
+  floatFrame:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+
   if DingTimerDB.floatPosition then
     local pos = DingTimerDB.floatPosition
     floatFrame:ClearAllPoints()
