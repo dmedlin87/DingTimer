@@ -60,6 +60,10 @@ function NS.InitSettingsWindow()
     local text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("LEFT", cb, "RIGHT", 5, 0)
     text:SetText(label)
+
+    -- Expand the hit rectangle to include the label text so users can click the text to toggle the checkbox
+    cb:SetHitRectInsets(0, -text:GetStringWidth() - 5, 0, 0)
+
     return cb
   end
 

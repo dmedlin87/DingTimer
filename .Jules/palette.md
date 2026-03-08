@@ -9,3 +9,7 @@
 ## 2025-02-13 - Adding Discoverability to Settings Checkboxes
 **Learning:** Settings forms with many standalone checkboxes can lack discoverability and fail to explain the impact of the toggles clearly. Appending tooltips securely improves discoverability and avoids visually cluttering the UI. `GameTooltip:SetText(text, nil, nil, nil, nil, true)` uses a trailing `true` parameter to safely word-wrap descriptive long text, automatically adapting the width for accessibility purposes.
 **Action:** Always consider assigning concise and descriptive tooltips to custom checkbox controls in WoW Settings interfaces, specifically utilizing the word-wrap flag `true` to ensure long descriptions are properly accessible to users.
+
+## 2025-02-14 - Expanding Hit Areas for Better Usability
+**Learning:** Checkboxes in WoW Addon UI frames often have hit areas strictly limited to the small 16x16 pixel square graphic, which violates Fitts's Law and forces users to make overly precise clicks.
+**Action:** Use `SetHitRectInsets(0, -text:GetStringWidth() - 5, 0, 0)` on the CheckButton element to programmatically expand the clickable area to include the accompanying label text, making the setting significantly easier to toggle.
