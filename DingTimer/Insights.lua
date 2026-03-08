@@ -183,7 +183,11 @@ function NS.RecordSession(reason)
 end
 
 function NS.GetInsightsSummary(limit)
-  local rowLimit = math.max(1, math.floor(tonumber(limit) or 10))
+  local limitNum = tonumber(limit) or 10
+  if limitNum ~= limitNum or limitNum == math.huge or limitNum == -math.huge then
+    limitNum = 10
+  end
+  local rowLimit = math.max(1, math.floor(limitNum))
   local profile = NS.GetProfileStore(false)
   local sessions = (profile and profile.sessions) or {}
   local count = #sessions
@@ -201,7 +205,10 @@ function NS.GetInsightsSummary(limit)
   for i = 1, count do
     local s = sessions[i]
     local xph = tonumber(s.avgXph) or 0
+    if xph ~= xph or xph == math.huge or xph == -math.huge then xph = 0 end
     local dur = tonumber(s.durationSec) or 0
+    if dur ~= dur or dur == math.huge or dur == -math.huge then dur = 0 end
+
     xphValues[#xphValues + 1] = xph
     if dur > 0 then
       durations[#durations + 1] = dur
@@ -216,7 +223,9 @@ function NS.GetInsightsSummary(limit)
   if chartWindow > 0 then
     local start = count - chartWindow + 1
     for i = start, count do
-      chartValues[#chartValues + 1] = tonumber(sessions[i].avgXph) or 0
+      local val = tonumber(sessions[i].avgXph) or 0
+      if val ~= val or val == math.huge or val == -math.huge then val = 0 end
+      chartValues[#chartValues + 1] = val
     end
   end
 
@@ -228,10 +237,14 @@ function NS.GetInsightsSummary(limit)
     local newTotal = 0
 
     for i = windowStart, windowStart + pairCount - 1 do
-      prevTotal = prevTotal + (tonumber(sessions[i].avgXph) or 0)
+      local val = tonumber(sessions[i].avgXph) or 0
+      if val ~= val or val == math.huge or val == -math.huge then val = 0 end
+      prevTotal = prevTotal + val
     end
     for i = windowStart + pairCount, windowStart + (pairCount * 2) - 1 do
-      newTotal = newTotal + (tonumber(sessions[i].avgXph) or 0)
+      local val = tonumber(sessions[i].avgXph) or 0
+      if val ~= val or val == math.huge or val == -math.huge then val = 0 end
+      newTotal = newTotal + val
     end
 
     local prevAvg = prevTotal / pairCount
