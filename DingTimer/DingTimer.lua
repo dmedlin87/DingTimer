@@ -97,6 +97,7 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat(NS.C.base .. "=== DingTimer Help: window ===" .. NS.C.r)
       NS.chat("  Sets the rolling time window (in seconds) used to calculate your XP/hr.")
       NS.chat("  A smaller window reacts faster; a larger window provides a smoother average.")
+      NS.chat("  Updating the window no longer resets your current session.")
       NS.chat("  Example: " .. NS.C.val .. "/ding window 600" .. NS.C.r .. " (for a 10-minute average)")
     elseif arg == "float" then
       NS.chat(NS.C.base .. "=== DingTimer Help: float ===" .. NS.C.r)
@@ -107,9 +108,11 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat(NS.C.base .. "=== DingTimer Help: graph ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "on | off" .. NS.C.r .. " - Show or hide the XP bar chart.")
       NS.chat("  " .. NS.C.val .. "zoom 3m|5m|15m|30m|60m" .. NS.C.r .. " - Set the rolling time window.")
-      NS.chat("  " .. NS.C.val .. "scale fixed|auto" .. NS.C.r .. " - Fixed sets a max XP/hr; auto scales to data.")
+      NS.chat("  " .. NS.C.val .. "scale visible|session|fixed" .. NS.C.r .. " - Fit to visible bars, fit to retained history, or use a fixed cap.")
+      NS.chat("  " .. NS.C.val .. "fit" .. NS.C.r .. " - Shortcut for visible scale.")
+      NS.chat("  " .. NS.C.val .. "max <xp/hr>" .. NS.C.r .. " - Set the fixed Y-axis cap.")
       NS.chat("  " .. NS.C.val .. "lock | unlock" .. NS.C.r .. " - Lock or unlock the graph for dragging.")
-      NS.chat("  Default zoom is 5m. Default scale is fixed at 100,000 XP/hr.")
+      NS.chat("  The graph is resizable from the lower-right corner.")
     elseif arg == "insights" then
       NS.chat(NS.C.base .. "=== DingTimer Help: insights ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "/ding insights" .. NS.C.r .. " - Toggle the Session Insights window.")
@@ -129,7 +132,8 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  " .. NS.C.val .. "/ding float lock | unlock" .. NS.C.r .. " - Lock or unlock floating frame dragging")
       NS.chat("  " .. NS.C.val .. "/ding graph" .. NS.C.r .. " - Toggle the XP graph window")
       NS.chat("  " .. NS.C.val .. "/ding graph zoom <level>" .. NS.C.r .. " - Set graph time window (3m, 5m, 15m, 30m, 60m)")
-      NS.chat("  " .. NS.C.val .. "/ding graph scale <mode>" .. NS.C.r .. " - Set Y-axis scale (fixed, auto)")
+      NS.chat("  " .. NS.C.val .. "/ding graph scale <mode>" .. NS.C.r .. " - Set Y-axis scale (visible, session, fixed)")
+      NS.chat("  " .. NS.C.val .. "/ding graph max <xp/hr>" .. NS.C.r .. " - Set the fixed graph cap")
       NS.chat("  Type " .. NS.C.val .. "/ding help <command>" .. NS.C.r .. " for more details (e.g., /ding help mode)")
     end
     return
@@ -222,10 +226,7 @@ SlashCmdList.DINGTIMER = function(msg)
   if cmd == "window" then
     local n = tonumber(arg)
     if n then
-      if n >= 30 and n <= 86400 then
-        -- 🛡️ Sentinel: Cap window at 24 hours (86400s) to prevent unbounded memory growth from unpruned events (DoS risk)
-        DingTimerDB.windowSeconds = n
-        NS.resetXPState()
+      if NS.SetRollingWindowSeconds and NS.SetRollingWindowSeconds(n) then
         NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " windowSeconds = " .. n)
       else
         NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " window must be between 30 and 86400 seconds (24h).")
@@ -283,11 +284,34 @@ SlashCmdList.DINGTIMER = function(msg)
       end
     elseif sub == "scale" then
       if subarg == "" then
-        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Current scale: " .. (DingTimerDB.graphScaleMode or "fixed"))
+        local mode = NS.NormalizeGraphScaleMode and NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode) or (DingTimerDB.graphScaleMode or "visible")
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Current scale: " .. mode)
+        NS.chat("  Fixed max: " .. NS.C.val .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000) .. NS.C.r)
       elseif NS.SetGraphScale and NS.SetGraphScale(subarg) then
-        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph scale = " .. subarg)
+        local mode = NS.NormalizeGraphScaleMode and NS.NormalizeGraphScaleMode(subarg) or subarg
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph scale = " .. mode)
       else
-        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Invalid scale. Use: fixed, auto")
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Invalid scale. Use: visible, session, fixed")
+      end
+    elseif sub == "fit" then
+      if NS.SetGraphScale then
+        NS.SetGraphScale("visible")
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph scale = visible")
+      end
+    elseif sub == "max" then
+      if subarg == "" then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph fixed max = " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
+      else
+        local maxValue = tonumber(subarg)
+        if not maxValue then
+          NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Please provide a number (e.g., /ding graph max 250000).")
+        elseif NS.SetGraphFixedMax then
+          local applied = NS.SetGraphFixedMax(maxValue)
+          if NS.SetGraphScale then
+            NS.SetGraphScale("fixed")
+          end
+          NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph fixed max = " .. NS.FormatNumber(applied))
+        end
       end
     elseif sub == "lock" then
       DingTimerDB.graphLocked = true
@@ -296,7 +320,7 @@ SlashCmdList.DINGTIMER = function(msg)
       DingTimerDB.graphLocked = false
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph unlocked.")
     else
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown graph command. Use: on, off, zoom, scale, lock, unlock")
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown graph command. Use: on, off, zoom, scale, fit, max, lock, unlock")
     end
     return
   end

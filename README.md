@@ -11,7 +11,7 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-0.4.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)
 ![WoW](https://img.shields.io/badge/WoW-Retail%20%7C%20Midnight-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
@@ -33,14 +33,14 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **XP Per Hour** — Rolling-window calculation that adapts to your current pace, not your average from an hour ago
 - **Time To Level (TTL)** — Live countdown to your next ding, updated every second
 - **Money Per Hour** — Track your gold income alongside your XP gains
-- **XP Graph** — Visual bar chart showing your XP/hr over time with trend coloring and a session average overlay
+- **XP Graph 2.0** — Resizable bar chart with visible/session/fixed scale modes, summary cards, grid labels, and a session average overlay
 - **Session Insights** — Per-character history with best/median rates, trend tracking, and recent-session breakdowns
-- **Floating Text** — A sleek HUD element showing TTL and XP/hr at all times
-- **Stats Window** — A full dashboard with all six tracked metrics in one place
-- **Settings Window** — GUI for all options, no slash command memorization required
+- **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, and session pace
+- **Stats Dashboard** — A richer dashboard with progress, eight live metrics, and quick-launch actions
+- **Control Center** — A larger settings hub for chat, HUD, graph, and session controls
 - **Minimap Button** — Left-click for stats, right-click for settings, drag to reposition
 - **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
-- **Persistent Sessions** — All settings and window positions saved between sessions
+- **Persistent Sessions** — Settings, window positions, and per-character session history saved between sessions
 
 ---
 
@@ -66,7 +66,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | --------------------- | -------------------------------------------------- |
 | See your stats        | Left-click the minimap button or `/ding ui`        |
 | Change settings       | Right-click the minimap button or `/ding settings` |
-| View the XP graph     | `/ding graph`                                      |
+| View the XP graph     | Middle-click the minimap button or `/ding graph`   |
 | Open Session Insights | `/ding insights`                                   |
 | Show the floating HUD | `/ding float on`                                   |
 | Reset current session | `/ding reset`                                      |
@@ -102,7 +102,7 @@ All commands work with either `/ding` or `/dt`.
 
 | Command                   | What it does                                                       |
 | ------------------------- | ------------------------------------------------------------------ |
-| `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation (minimum: 30s)   |
+| `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation without resetting the session (minimum: 30s)   |
 
 > **Example:** `/ding window 300` uses the last 5 minutes to calculate your XP/hr. Shorter windows react faster to pace changes; longer windows smooth out gaps.
 
@@ -125,8 +125,9 @@ All commands work with either `/ding` or `/dt`.
 | `/ding graph on`              | Show the graph                                          |
 | `/ding graph off`             | Hide the graph                                          |
 | `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
-| `/ding graph scale fixed`     | Y-axis locked at 100,000 XP/hr                          |
-| `/ding graph scale auto`      | Y-axis scales to 110% of your current max               |
+| `/ding graph scale <mode>`    | Set the Y-axis mode: `visible`, `session`, or `fixed`   |
+| `/ding graph fit`             | Snap the graph back to visible-data scaling              |
+| `/ding graph max <xp/hr>`     | Set the fixed Y-axis cap and switch to fixed mode        |
 | `/ding graph lock`            | Lock graph position                                     |
 | `/ding graph unlock`          | Allow graph to be dragged                               |
 
@@ -146,37 +147,34 @@ All commands work with either `/ding` or `/dt`.
 
 The minimap button lives on the edge of your minimap and is your primary launcher.
 
-- **Left-click** — Open / close the Stats Window
-- **Right-click** — Open / close the Settings Window
+- **Left-click** — Open / close the Stats Dashboard
+- **Middle-click** — Open / close the XP Graph
+- **Right-click** — Open / close the Control Center
 - **Drag** — Slide it anywhere around the minimap rim
 
 You can hide it entirely from the Settings Window if you prefer slash commands.
 
 ---
 
-### Stats Window
+### Stats Dashboard
 
-A compact dashboard showing a live snapshot of your session.
+A denser live dashboard showing your entire session at a glance.
 
-| Row             | What it shows                                      |
-| --------------- | -------------------------------------------------- |
-| Session Time    | How long you've been grinding this session         |
-| Session XP      | Total XP earned since last reset or level-up       |
-| XP Per Hour     | Your current XP/hr based on the rolling window     |
-| Time To Level   | Estimated time to your next ding                   |
-| Session Money   | Total gold/silver/copper earned this session       |
-| Money Per Hour  | Your current gold income rate                      |
+- Progress header with current level XP, percent complete, and remaining XP
+- Eight live metric cards: session time, session XP, current XP/hr, session average, TTL, pace delta, session money, and money/hr
+- Quick-action buttons for Graph, Insights, Settings, and Reset
 
 All values update every second. The window is draggable and remembers its position.
 
 ---
 
-### Floating Text HUD
+### Floating HUD
 
 A minimal HUD that sits above your character showing:
 
 ```text
-[2h 14m] to level  (47,230 XP/hr)
+[2h 14m] to level
+47,230 XP/hr  |  Session 42,801
 ```
 
 Designed to stay out of your way. Hides in combat. Drag it anywhere when unlocked.
@@ -185,7 +183,7 @@ Designed to stay out of your way. Hides in combat. Drag it anywhere when unlocke
 
 ### XP Graph Window
 
-A scrolling bar chart of your XP/hr over time, updated every second.
+A resizable scrolling bar chart of your XP/hr over time, updated every second.
 
 **Bar colors:**
 
@@ -194,6 +192,16 @@ A scrolling bar chart of your XP/hr over time, updated every second.
 - **Gray** — No XP was gained in that segment
 
 **The gold line** across the chart is your session-wide average XP/hr up to each point in time — a useful baseline to see whether your current pace beats your overall average.
+
+**Scale modes:**
+
+- **Visible** — Fits the graph to the biggest bar currently on screen
+- **Session** — Fits the graph to the biggest retained bar in the last 60 minutes
+- **Fixed** — Uses the max XP/hr cap you set with `/ding graph max <xp/hr>`
+
+**Header cards** show your current pace, session average, visible/session peak, and the active scale mode.
+
+**Drag the lower-right corner** to resize the graph window. DingTimer remembers the size between sessions.
 
 **Hover over any bar** to see a tooltip with:
 
@@ -220,16 +228,15 @@ A dedicated analysis window for long-term improvement over multiple leveling ses
 
 ---
 
-### Settings Window
+### Control Center
 
-A full GUI for all major options:
+A larger control hub for all major options:
 
-- Enable / disable chat output
-- Show / hide floating text
-- Lock / unlock floating text position
-- Show / hide XP graph
-- Hide / show minimap button
-- Reset session button
+- Quick-open buttons for Dashboard, Graph, Insights, and Graph Reset
+- Visibility toggles for chat output, floating HUD, graph, and minimap button
+- Output controls for chat mode and rolling-window presets
+- Graph controls for scale mode, fixed max, zoom presets, and remembered size
+- Session reset with confirmation
 
 ---
 
@@ -269,7 +276,7 @@ After the announcement, your session data resets automatically so your XP/hr ref
 
 ## Saved Variables
 
-DingTimer stores all data in `DingTimerDB` (saved per character). This includes:
+DingTimer stores all data in the account-wide `DingTimerDB` SavedVariable. Session history is bucketed per character profile inside that database. This includes:
 
 - All settings and toggle states
 - Window positions for all frames

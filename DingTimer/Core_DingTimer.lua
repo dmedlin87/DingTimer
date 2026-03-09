@@ -68,6 +68,62 @@ function NS.computeMoneyPerHour(now, windowSeconds)
   return computeRatePerHour(NS.state.moneyEvents, now, windowSeconds, "money")
 end
 
+function NS.SetRollingWindowSeconds(seconds)
+  local n = tonumber(seconds)
+  if not n then
+    return false
+  end
+  if n < 30 or n > 86400 then
+    return false
+  end
+
+  DingTimerDB.windowSeconds = math.floor(n)
+  if NS.RefreshStatsWindow then
+    NS.RefreshStatsWindow()
+  end
+  return true
+end
+
+function NS.GetSessionSnapshot(now)
+  now = now or GetTime()
+
+  local xp = UnitXP("player") or 0
+  local maxXP = UnitXPMax("player") or 0
+  local level = (UnitLevel and UnitLevel("player")) or 0
+  local sessionStart = NS.state.sessionStartTime or now
+  local sessionElapsed = math.max(1, now - sessionStart)
+  local sessionXP = NS.state.sessionXP or 0
+  local sessionMoney = NS.state.sessionMoney or 0
+  local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  local currentXph = NS.computeXPPerHour(now, window)
+  local sessionXph = (sessionXP / sessionElapsed) * 3600
+  local moneyPerHour = NS.computeMoneyPerHour(now, window)
+  local remainingXP = math.max(0, maxXP - xp)
+  local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math.huge
+  local zone = "Unknown"
+  if GetZoneText then
+    zone = GetZoneText() or zone
+  end
+
+  return {
+    now = now,
+    level = level,
+    xp = xp,
+    maxXP = maxXP,
+    remainingXP = remainingXP,
+    progress = (maxXP > 0) and (xp / maxXP) or 0,
+    sessionElapsed = sessionElapsed,
+    sessionXP = sessionXP,
+    sessionMoney = sessionMoney,
+    currentXph = currentXph,
+    sessionXph = sessionXph,
+    moneyPerHour = moneyPerHour,
+    ttl = ttl,
+    rollingWindow = window,
+    zone = zone,
+  }
+end
+
 -- Floating text
 local floatFrame
 function NS.ensureFloat()
@@ -75,7 +131,7 @@ function NS.ensureFloat()
 
   -- No global name to avoid potential clashes or EditMode taint
   floatFrame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
-  floatFrame:SetSize(260, 40)
+  floatFrame:SetSize(320, 58)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)
   floatFrame:EnableMouse(true)
@@ -109,11 +165,17 @@ function NS.ensureFloat()
   end
 
   -- UI Polish: Use a better font and layout
-  local fs = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  fs:SetPoint("CENTER", 0, 0)
-  fs:SetJustifyH("CENTER")
-  fs:SetText("DingTimer")
-  floatFrame.text = fs
+  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+  title:SetPoint("TOP", 0, -10)
+  title:SetJustifyH("CENTER")
+  title:SetText("DingTimer")
+  floatFrame.titleText = title
+
+  local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  sub:SetPoint("TOP", title, "BOTTOM", 0, -4)
+  sub:SetJustifyH("CENTER")
+  sub:SetText("")
+  floatFrame.subText = sub
 
   floatFrame:Hide()
 end
@@ -136,12 +198,21 @@ local function updateFloatText(xph, ttl)
   if not DingTimerDB.float then return end
   NS.ensureFloat()
 
-  local msg = NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. " to level"
+  local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(GetTime()) or nil
+  local header = NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. " to level"
+  local paceLine = "No XP pace detected yet"
+
   if xph and xph > 0 then
-    msg = msg .. " |cffcccccc(|r" .. NS.C.base .. string.format("%.0f", xph) .. NS.C.r .. " |cffccccccXP/hr)|r"
+    paceLine = NS.FormatNumber(NS.Round(xph)) .. " XP/hr"
+    if snapshot and snapshot.sessionXph > 0 then
+      paceLine = paceLine .. "  |  Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph))
+    end
+  elseif snapshot and snapshot.sessionXph > 0 then
+    paceLine = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph)) .. " XP/hr"
   end
 
-  floatFrame.text:SetText(msg)
+  floatFrame.titleText:SetText(header)
+  floatFrame.subText:SetText("|cffc6d2db" .. paceLine .. "|r")
 end
 
 function NS.onXPUpdate()
