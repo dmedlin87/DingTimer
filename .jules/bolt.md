@@ -9,3 +9,15 @@
 ## 2025-01-28 - Optimizing O(N*M) Graph Aggregation
 **Learning:** A visually bounded graph loop (O(N) iteration over bars) can contain an unbounded O(M) nested loop if processing time-series data without state caching. A loop processing `up to t_end` over time-series data requires scanning O(M) elements on every frame if starting from index 1.
 **Action:** Use the `total` or full aggregate state as a starting constraint, then process chronologically sorted data backwards (subtracting from the total rather than adding from zero). This drops loop complexity from O(N*M) to O(N).
+
+## 2024-05-19 - O(1) Sliding Window Calculation
+**Learning:** Chronologically sorted time-series data with a sliding window (e.g. for XP or Money per hour calculations) can be optimized by maintaining a continuous running total during insertion and pruning. This avoids full O(N) re-evaluations on every calculation tick.
+**Action:** When calculating rates over a sliding window array, initialize a running total. Increment it when inserting a new event and decrement it when an event is pruned.
+
+## 2024-05-28 - Optimize string formatting to avoid regex
+**Learning:** In Lua 5.1 environments, sequential string concatenation combined with `string.match("^%s*(.-)%s*$")` for whitespace trimming is significantly slower than building the string exactly as needed via `string.format()`.
+**Action:** Use `string.format()` over multiple concatenations (`..`) to avoid intermediate string allocations, and conditionally build strings to completely bypass expensive regex whitespace trimming functions like `string.match`.
+
+## 2025-01-29 - Avoid table length operator (#) inside hot loops
+**Learning:** In Lua 5.1, repeatedly evaluating a table's length using the `#` operator inside loops (e.g., `for i=1, #table` or `table[#table + 1] = x`) incurs meaningful overhead, as `#` calculates length rather than retrieving a cached value.
+**Action:** For loops bounded by table length, cache the length into a local variable before the loop (`local n = #table`). For building tables in tight loops, use an explicit counter variable instead of `#table + 1` to track insertion indices.

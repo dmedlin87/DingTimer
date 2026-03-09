@@ -584,6 +584,22 @@ function NS.InitGraphWindow()
 
   local closeBtn = CreateFrame("Button", nil, graphFrame, "UIPanelCloseButton")
   closeBtn:SetPoint("TOPRIGHT", -4, -4)
+  closeBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine("Close", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  closeBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
+  closeBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine("Close", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  closeBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
 
   local title = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
   title:SetPoint("TOPLEFT", 12, -12)
@@ -785,6 +801,9 @@ function NS.GraphFeedXP(delta, timestamp)
   if delta <= 0 then
     return
   end
+
+  -- Keep retention bounded even when the graph is hidden for a long session.
+  pruneGraphEvents(timestamp)
 
   local lastEvent = graphState.events[#graphState.events]
   local sessionXP = graphState.lastPrunedSessionXP + delta

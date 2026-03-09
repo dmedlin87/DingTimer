@@ -153,6 +153,14 @@ function NS.InitInsightsWindow()
 
   local closeBtn = CreateFrame("Button", nil, insightsFrame, "UIPanelCloseButton")
   closeBtn:SetPoint("TOPRIGHT", -4, -4)
+  closeBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine("Close", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  closeBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
 
   local title = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
   title:SetPoint("TOPLEFT", 12, -12)
@@ -232,14 +240,29 @@ function NS.InitInsightsWindow()
     rowTexts[i] = fs
   end
 
+  local clearState = 0
+  local clearTimer
   local clearBtn = CreateFrame("Button", nil, insightsFrame, "UIPanelButtonTemplate")
   clearBtn:SetSize(120, 24)
   clearBtn:SetPoint("BOTTOMLEFT", insightsFrame, "BOTTOMLEFT", 16, 10)
   clearBtn:SetText("Clear History")
   clearBtn:SetScript("OnClick", function()
-    if NS.ClearProfileSessions then
-      NS.ClearProfileSessions()
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+    if clearState == 0 then
+      clearState = 1
+      clearBtn:SetText("|cffff4040Confirm Clear|r")
+      if clearTimer then clearTimer:Cancel() end
+      clearTimer = C_Timer.NewTimer(3, function()
+        clearState = 0
+        clearBtn:SetText("Clear History")
+      end)
+    else
+      clearState = 0
+      if clearTimer then clearTimer:Cancel() end
+      clearBtn:SetText("Clear History")
+      if NS.ClearProfileSessions then
+        NS.ClearProfileSessions()
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+      end
     end
   end)
 

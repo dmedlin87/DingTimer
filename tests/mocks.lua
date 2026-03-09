@@ -108,6 +108,7 @@ local function newFontString()
   fs.SetFontObject = function() end
   fs.SetText = function(self, text) self._text = text end
   fs.GetText = function(self) return self._text end
+  fs.GetStringWidth = function(self) return #(self._text or "") * 6 end
   fs.SetWidth = function() end
   fs.Show = function(self) self._shown = true end
   fs.Hide = function(self) self._shown = false end
@@ -183,6 +184,7 @@ local function newFrame(name)
   frame.SetBackdropColor = function() end
   frame.SetBackdropBorderColor = function() end
   frame.SetClampedToScreen = function() end
+  frame.SetHitRectInsets = function() end
   frame.RegisterEvent = function() end
   frame.SetChecked = function(self, checked) self._checked = checked and true or false end
   frame.GetChecked = function(self) return self._checked end
@@ -263,6 +265,7 @@ C_Timer = {
 
 GameTooltip = {
   SetOwner = function() end,
+  SetText = function() end,
   AddLine = function() end,
   AddDoubleLine = function() end,
   ClearLines = function() end,

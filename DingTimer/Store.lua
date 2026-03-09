@@ -105,7 +105,10 @@ function NS.InitStore()
   else
     -- 🛡️ Sentinel: Global bounds check for windowSeconds to prevent DoS from maliciously modified or corrupted SavedVariables
     if DingTimerDB.windowSeconds then
-      if DingTimerDB.windowSeconds < 30 then
+      -- Also explicitly check for NaN and Infinity to prevent validation bypass
+      if DingTimerDB.windowSeconds ~= DingTimerDB.windowSeconds or DingTimerDB.windowSeconds == math.huge or DingTimerDB.windowSeconds == -math.huge then
+        DingTimerDB.windowSeconds = 600
+      elseif DingTimerDB.windowSeconds < 30 then
         DingTimerDB.windowSeconds = 30
       elseif DingTimerDB.windowSeconds > 86400 then
         DingTimerDB.windowSeconds = 86400

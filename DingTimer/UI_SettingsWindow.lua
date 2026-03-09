@@ -14,7 +14,7 @@ local function createSectionTitle(parent, x, y, title, description)
   return header, sub
 end
 
-local function createCheckbox(parent, x, y, label, callback)
+local function createCheckbox(parent, x, y, label, callback, tooltipText)
   local cb = CreateFrame("CheckButton", nil, parent, "ChatConfigCheckButtonTemplate")
   cb:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   cb:SetScript("OnClick", function(self)
@@ -25,11 +25,24 @@ local function createCheckbox(parent, x, y, label, callback)
       parent:Refresh()
     end
   end)
+  if tooltipText then
+    cb:SetScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:SetText(tooltipText, 1, 1, 1, 1, true)
+      GameTooltip:Show()
+    end)
+    cb:SetScript("OnLeave", function()
+      GameTooltip:Hide()
+    end)
+  end
 
   local text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   text:SetPoint("LEFT", cb, "RIGHT", 6, 0)
   text:SetText(label)
   cb.text = text
+  if cb.SetHitRectInsets then
+    cb:SetHitRectInsets(0, -140, 0, 0)
+  end
   return cb
 end
 
@@ -103,7 +116,14 @@ function NS.InitSettingsWindow()
 
   local closeBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelCloseButton")
   closeBtn:SetPoint("TOPRIGHT", -4, -4)
-
+  closeBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine("Close", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  closeBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+  end)
   local header = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
   header:SetPoint("TOPLEFT", 14, -12)
   header:SetText(NS.C.base .. "DingTimer Control Center" .. NS.C.r)
@@ -144,21 +164,21 @@ function NS.InitSettingsWindow()
   createSectionTitle(settingsFrame, 16, -118, "Visibility", "Choose which UI surfaces stay on screen.")
   settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -146, "Enable chat output", function(checked)
     DingTimerDB.enabled = checked
-  end)
+  end, "Print XP, XP/hr, TTL, and level-up summaries to chat.")
   settingsFrame.controls.float = createCheckbox(settingsFrame, 16, -174, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
     NS.setFloatVisible(checked)
-  end)
+  end, "Display the compact TTL and pace HUD above your character.")
   settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 16, -202, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
-  end)
+  end, "Prevent the floating HUD from being dragged.")
   settingsFrame.controls.graphVisible = createCheckbox(settingsFrame, 240, -146, "Show XP graph", function(checked)
     DingTimerDB.graphVisible = checked
     NS.SetGraphVisible(checked)
-  end)
+  end, "Show the resizable XP pace graph window.")
   settingsFrame.controls.graphLocked = createCheckbox(settingsFrame, 240, -174, "Lock XP graph", function(checked)
     DingTimerDB.graphLocked = checked
-  end)
+  end, "Prevent the graph window from being moved or resized.")
   settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 240, -202, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
@@ -168,7 +188,7 @@ function NS.InitSettingsWindow()
         DingTimerMinimapButton:Show()
       end
     end
-  end)
+  end, "Remove the DingTimer launcher from the minimap ring.")
 
   createSectionTitle(settingsFrame, 16, -240, "Output", "Set the rolling window and message style.")
   local modeButton = createButton(settingsFrame, 16, -268, 116, "Cycle Mode", function()
