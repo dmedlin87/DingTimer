@@ -7,6 +7,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string]$Flavor = "retail" # retail, classic, classic_era
+
+    ,
+    [Parameter(Mandatory = $false)]
+    [switch]$PauseOnExit
 )
 
 $AddonName = "DingTimer"
@@ -20,11 +24,28 @@ function Confirm-Path {
     param($path)
     if (!(Test-Path $path)) {
         Write-Error "Path not found: $path"
-        exit 1
+        Exit-Script 1
     }
 }
 
-function Fail-On-Error {
+function Wait-ForExitAcknowledgement {
+    if (-not $PauseOnExit) {
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Press Enter to close this window..." -ForegroundColor DarkGray
+    [void](Read-Host)
+}
+
+function Exit-Script {
+    param([int]$Code = 0)
+
+    Wait-ForExitAcknowledgement
+    exit $Code
+}
+
+function Invoke-Operation {
     param(
         [scriptblock]$Operation,
         [string]$FailureMessage
@@ -35,7 +56,7 @@ function Fail-On-Error {
     }
     catch {
         Write-Error "$FailureMessage $($_.Exception.Message)"
-        exit 1
+        Exit-Script 1
     }
 }
 
@@ -45,7 +66,7 @@ function Test-IsAdministrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Quote-Argument {
+function Format-Argument {
     param([string]$Value)
     if ($null -eq $Value) {
         return '""'
@@ -54,7 +75,7 @@ function Quote-Argument {
     return '"' + ($Value -replace '"', '\"') + '"'
 }
 
-function Ensure-Elevated {
+function Assert-Administrator {
     param([string]$ActionDescription)
 
     if (Test-IsAdministrator) {
@@ -64,7 +85,7 @@ function Ensure-Elevated {
     $scriptPath = $MyInvocation.PSCommandPath
     if ([string]::IsNullOrWhiteSpace($scriptPath)) {
         Write-Error "$ActionDescription requires administrator privileges. Re-run PowerShell as Administrator."
-        exit 1
+        Exit-Script 1
     }
 
     $argList = @(
@@ -72,23 +93,24 @@ function Ensure-Elevated {
         "-ExecutionPolicy"
         "Bypass"
         "-File"
-        (Quote-Argument $scriptPath)
+        (Format-Argument $scriptPath)
         "-Action"
-        (Quote-Argument $Action)
+        (Format-Argument $Action)
         "-WowPath"
-        (Quote-Argument $WowPath)
+        (Format-Argument $WowPath)
         "-Flavor"
-        (Quote-Argument $Flavor)
+        (Format-Argument $Flavor)
+        "-PauseOnExit"
     ) -join ' '
 
     try {
         Start-Process PowerShell -Verb RunAs -ArgumentList $argList | Out-Null
         Write-Host "$ActionDescription requires elevation. Opened an administrator PowerShell to continue." -ForegroundColor Yellow
-        exit 0
+        Exit-Script 0
     }
     catch {
         Write-Error "Failed to relaunch PowerShell as Administrator. $($_.Exception.Message)"
-        exit 1
+        Exit-Script 1
     }
 }
 
@@ -98,7 +120,7 @@ function Confirm-WriteAccess {
         [string]$ActionDescription
     )
 
-    Ensure-Elevated -ActionDescription $ActionDescription
+    Assert-Administrator -ActionDescription $ActionDescription
 
     $probePath = Join-Path $DirectoryPath ".dingtimer-write-test"
     try {
@@ -107,7 +129,7 @@ function Confirm-WriteAccess {
     }
     catch {
         Write-Error "$ActionDescription requires write access to '$DirectoryPath'. $($_.Exception.Message)"
-        exit 1
+        Exit-Script 1
     }
 }
 
@@ -118,11 +140,11 @@ if ($Action -eq "install") {
 
     Write-Host "Installing $AddonName to $TargetPath..." -ForegroundColor Cyan
     if (Test-Path $TargetPath) {
-        Fail-On-Error -FailureMessage "Failed to remove existing addon." -Operation {
+        Invoke-Operation -FailureMessage "Failed to remove existing addon." -Operation {
             Remove-Item -Recurse -Force -ErrorAction Stop $TargetPath
         }
     }
-    Fail-On-Error -FailureMessage "Failed to install addon." -Operation {
+    Invoke-Operation -FailureMessage "Failed to install addon." -Operation {
         Copy-Item -Recurse -Path $SourceDir -Destination $TargetPath -ErrorAction Stop
     }
     Write-Host "Success!" -ForegroundColor Green
@@ -135,13 +157,13 @@ elseif ($Action -eq "link") {
     Write-Host "Creating Symbolic Link for $AddonName..." -ForegroundColor Cyan
     if (Test-Path $TargetPath) {
         Write-Host "Removing existing folder/link..." -ForegroundColor Yellow
-        Fail-On-Error -FailureMessage "Failed to remove existing addon before linking." -Operation {
+        Invoke-Operation -FailureMessage "Failed to remove existing addon before linking." -Operation {
             Remove-Item -Recurse -Force -ErrorAction Stop $TargetPath
         }
     }
     
     # Requires Admin privileges
-    Fail-On-Error -FailureMessage "Failed to create symbolic link." -Operation {
+    Invoke-Operation -FailureMessage "Failed to create symbolic link." -Operation {
         New-Item -ItemType SymbolicLink -Path $TargetPath -Target $SourceDir -ErrorAction Stop
     }
     Write-Host "Link created! Changes in this folder will reflect instantly in-game (after /reload)." -ForegroundColor Green
@@ -150,7 +172,7 @@ elseif ($Action -eq "clean") {
     if (Test-Path $TargetPath) {
         Confirm-WriteAccess -DirectoryPath $TargetAddonDir -ActionDescription "Cleaning $AddonName"
         Write-Host "Cleaning $AddonName from $TargetPath..." -ForegroundColor Yellow
-        Fail-On-Error -FailureMessage "Failed to clean addon." -Operation {
+        Invoke-Operation -FailureMessage "Failed to clean addon." -Operation {
             Remove-Item -Recurse -Force -ErrorAction Stop $TargetPath
         }
         Write-Host "Cleaned." -ForegroundColor Green
@@ -177,11 +199,14 @@ elseif ($Action -eq "coverage") {
     Write-Host "Running Lua coverage..." -ForegroundColor Cyan
     & $CoverageScript -Clean
     if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
+        Exit-Script $LASTEXITCODE
     }
     Write-Host "Coverage complete." -ForegroundColor Green
 }
 else {
     Write-Host "Unknown action: $Action" -ForegroundColor Red
     Write-Host "Use: .\manage.ps1 -Action [install|link|clean|dist|coverage] -Flavor [retail|classic|classic_era]"
+    Exit-Script 1
 }
+
+Exit-Script 0
