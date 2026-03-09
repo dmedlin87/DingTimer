@@ -269,10 +269,10 @@ After the announcement, your session data resets automatically so your XP/hr ref
 
 ## Saved Variables
 
-DingTimer stores all data in `DingTimerDB` (saved per character). This includes:
+DingTimer stores all data in `DingTimerDB`, which is an **account-wide** SavedVariable (declared with `## SavedVariables` in the TOC, not `SavedVariablesPerCharacter`). Settings, window positions, and graph data are shared at the account level. Session history and insights are stored in **per-character profiles** keyed by `realm:name:class` inside that account-wide DB, so each character's leveling history stays separate. This includes:
 
 - All settings and toggle states
-- Window positions for all frames
+- Window positions for all frames (Stats, Graph, Insights, and Settings)
 - Current session XP and money events
 - Historical sessions per character profile (last 30 kept by default)
 - Graph data (up to 1 hour of events)

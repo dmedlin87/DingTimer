@@ -33,7 +33,8 @@ local lineSegments = {}
 local graphState = {
   anchor = 0,
   events = {},
-  totalXP = 0,
+  totalXP = 0,       -- XP from retained (non-pruned) events only
+  sessionTotalXP = 0, -- XP from all events since last reset; never decremented by pruning
   dirty = false,
 }
 
@@ -134,11 +135,11 @@ local function RedrawGraph()
   local maxXPH = 0
   local sessionStart = NS.state.sessionStartTime or now
 
-  -- ⚡ Bolt: Optimize average line calculation from O(N+M) to O(N)
-  -- By maintaining graphState.totalXP and taking advantage of chronological sorting
-  -- and precomputed segment values, we can calculate `xp_up_to_t` iteratively
-  -- going backwards from N down to 1 in O(N) time without iterating over events.
-  local xp_up_to_t = graphState.totalXP
+  -- Average line calculation: start from the true session total (never pruned) so
+  -- the denominator (elapsed since session start) and numerator stay in sync even
+  -- after old events are pruned from graphState.events.  We then subtract each
+  -- bar's XP as we step left, giving the cumulative total up to each bar's end.
+  local xp_up_to_t = graphState.sessionTotalXP
 
   for i = N, 1, -1 do
     local segIdx = currentSegIdx - (N - i)
@@ -423,6 +424,7 @@ function NS.GraphFeedXP(delta, timestamp)
 
   table.insert(graphState.events, { t = timestamp, xp = delta })
   graphState.totalXP = graphState.totalXP + delta
+  graphState.sessionTotalXP = graphState.sessionTotalXP + delta
   graphState.dirty = true
 end
 
@@ -430,6 +432,7 @@ function NS.GraphReset()
   graphState.anchor = GetTime()
   graphState.events = {}
   graphState.totalXP = 0
+  graphState.sessionTotalXP = 0
   graphState.dirty = true
 
   if graphFrame and graphFrame:IsShown() then

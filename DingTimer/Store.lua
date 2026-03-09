@@ -53,6 +53,7 @@ function NS.InitStore()
     graphLocked = true,
     insightsWindowVisible = false,
     insightsWindowPosition = nil,
+    settingsWindowPosition = nil,
     schemaVersion = 5,
     meta = {
       addonVersion = "0.4.0",
@@ -131,6 +132,7 @@ function NS.InitStore()
   if DingTimerDB.graphLocked == nil        then DingTimerDB.graphLocked        = defaults.graphLocked        end
   if DingTimerDB.insightsWindowVisible == nil then DingTimerDB.insightsWindowVisible = defaults.insightsWindowVisible end
   if DingTimerDB.insightsWindowPosition == nil then DingTimerDB.insightsWindowPosition = defaults.insightsWindowPosition end
+  if DingTimerDB.settingsWindowPosition == nil then DingTimerDB.settingsWindowPosition = defaults.settingsWindowPosition end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
   DingTimerDB.meta.addonVersion = defaults.meta.addonVersion
 

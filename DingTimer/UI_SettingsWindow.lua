@@ -14,8 +14,23 @@ function NS.InitSettingsWindow()
   settingsFrame:SetMovable(true)
   settingsFrame:EnableMouse(true)
   settingsFrame:RegisterForDrag("LeftButton")
-  settingsFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  settingsFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+  settingsFrame:SetClampedToScreen(true)
+  settingsFrame:SetScript("OnDragStart", function(self)
+    if InCombatLockdown() then return end
+    self:StartMoving()
+  end)
+  settingsFrame:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
+    DingTimerDB.settingsWindowPosition = { point = point, relativePoint = relativePoint, xOfs = xOfs, yOfs = yOfs }
+  end)
+
+  -- Restore saved position
+  if DingTimerDB.settingsWindowPosition then
+    local pos = DingTimerDB.settingsWindowPosition
+    settingsFrame:ClearAllPoints()
+    settingsFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs, pos.yOfs)
+  end
   
   local closeBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelCloseButton")
   closeBtn:SetPoint("TOPRIGHT", -4, -4)
