@@ -83,7 +83,7 @@ function NS.InitSettingsWindow()
   end
 
   settingsFrame = CreateFrame("Frame", "DingTimerSettingsWindow", UIParent, "BackdropTemplate")
-  settingsFrame:SetSize(470, 500)
+  settingsFrame:SetSize(470, 540)
   settingsFrame:SetPoint("CENTER")
   NS.ApplyThemeToFrame(settingsFrame)
 
@@ -161,25 +161,25 @@ function NS.InitSettingsWindow()
     end
   end)
 
-  createSectionTitle(settingsFrame, 16, -118, "Visibility", "Choose which UI surfaces stay on screen.")
-  settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -146, "Enable chat output", function(checked)
+  createSectionTitle(settingsFrame, 16, -126, "Visibility", "Choose which UI surfaces stay on screen.")
+  settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -154, "Enable chat output", function(checked)
     DingTimerDB.enabled = checked
   end, "Print XP, XP/hr, TTL, and level-up summaries to chat.")
-  settingsFrame.controls.float = createCheckbox(settingsFrame, 16, -174, "Show floating HUD", function(checked)
+  settingsFrame.controls.float = createCheckbox(settingsFrame, 16, -182, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
     NS.setFloatVisible(checked)
   end, "Display the compact TTL and pace HUD above your character.")
-  settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 16, -202, "Lock floating HUD", function(checked)
+  settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 16, -210, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
   end, "Prevent the floating HUD from being dragged.")
-  settingsFrame.controls.graphVisible = createCheckbox(settingsFrame, 240, -146, "Show XP graph", function(checked)
+  settingsFrame.controls.graphVisible = createCheckbox(settingsFrame, 240, -154, "Show XP graph", function(checked)
     DingTimerDB.graphVisible = checked
     NS.SetGraphVisible(checked)
   end, "Show the resizable XP pace graph window.")
-  settingsFrame.controls.graphLocked = createCheckbox(settingsFrame, 240, -174, "Lock XP graph", function(checked)
+  settingsFrame.controls.graphLocked = createCheckbox(settingsFrame, 240, -182, "Lock XP graph", function(checked)
     DingTimerDB.graphLocked = checked
   end, "Prevent the graph window from being moved or resized.")
-  settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 240, -202, "Hide minimap button", function(checked)
+  settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 240, -210, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
       if checked then
@@ -190,11 +190,11 @@ function NS.InitSettingsWindow()
     end
   end, "Remove the DingTimer launcher from the minimap ring.")
 
-  createSectionTitle(settingsFrame, 16, -240, "Output", "Set the rolling window and message style.")
-  local modeButton = createButton(settingsFrame, 16, -268, 116, "Cycle Mode", function()
+  createSectionTitle(settingsFrame, 16, -256, "Output", "Set the rolling window and message style.")
+  local modeButton = createButton(settingsFrame, 16, -284, 116, "Cycle Mode", function()
     cycleMode()
   end)
-  settingsFrame.controls.modeValue = createValueLabel(settingsFrame, 144, -273)
+  settingsFrame.controls.modeValue = createValueLabel(settingsFrame, 144, -289)
 
   local windowButtons = {
     { label = "1m", seconds = 60, x = 16 },
@@ -203,39 +203,39 @@ function NS.InitSettingsWindow()
     { label = "15m", seconds = 900, x = 198 },
   }
   for _, button in ipairs(windowButtons) do
-    createButton(settingsFrame, button.x, -304, 52, button.label, function()
+    createButton(settingsFrame, button.x, -320, 52, button.label, function()
       if NS.SetRollingWindowSeconds then
         NS.SetRollingWindowSeconds(button.seconds)
       end
     end)
   end
-  settingsFrame.controls.windowValue = createValueLabel(settingsFrame, 270, -309)
+  settingsFrame.controls.windowValue = createValueLabel(settingsFrame, 270, -325)
   settingsFrame.controls.windowValue:SetText("")
 
-  createSectionTitle(settingsFrame, 16, -346, "Graph", "Scale modes, zoom presets, and the new resizable frame.")
-  local scaleButton = createButton(settingsFrame, 16, -374, 116, "Cycle Scale", function()
+  createSectionTitle(settingsFrame, 16, -370, "Graph", "Scale modes, zoom presets, and the new resizable frame.")
+  local scaleButton = createButton(settingsFrame, 16, -398, 116, "Cycle Scale", function()
     if NS.CycleGraphScaleMode then
       NS.CycleGraphScaleMode()
     end
   end)
-  local fitButton = createButton(settingsFrame, 140, -374, 70, "Fit", function()
+  local fitButton = createButton(settingsFrame, 140, -398, 70, "Fit", function()
     if NS.SetGraphScale then
       NS.SetGraphScale("visible")
     end
   end)
-  local minusMaxButton = createButton(settingsFrame, 218, -374, 32, "-", function()
+  local minusMaxButton = createButton(settingsFrame, 218, -398, 32, "-", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(-25000)
     end
   end)
-  local plusMaxButton = createButton(settingsFrame, 258, -374, 32, "+", function()
+  local plusMaxButton = createButton(settingsFrame, 258, -398, 32, "+", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(25000)
     end
   end)
-  settingsFrame.controls.graphScaleValue = createValueLabel(settingsFrame, 302, -379)
-  settingsFrame.controls.graphMaxValue = createValueLabel(settingsFrame, 302, -398)
-  settingsFrame.controls.graphSizeValue = createValueLabel(settingsFrame, 302, -417)
+  settingsFrame.controls.graphScaleValue = createValueLabel(settingsFrame, 302, -403)
+  settingsFrame.controls.graphMaxValue = createValueLabel(settingsFrame, 302, -422)
+  settingsFrame.controls.graphSizeValue = createValueLabel(settingsFrame, 302, -441)
 
   local graphZoomButtons = {
     { label = "3m", x = 16 },
@@ -245,18 +245,18 @@ function NS.InitSettingsWindow()
     { label = "60m", x = 264 },
   }
   for _, button in ipairs(graphZoomButtons) do
-    createButton(settingsFrame, button.x, -410, 52, button.label, function()
+    createButton(settingsFrame, button.x, -434, 52, button.label, function()
       if NS.SetGraphZoom then
         NS.SetGraphZoom(button.label)
       end
     end)
   end
 
-  createSectionTitle(settingsFrame, 16, -446, "Session", "Reset the current run when you are done with it.")
+  createSectionTitle(settingsFrame, 16, -480, "Session", "Reset the current run when you are done with it.")
   local resetState = 0
   local resetTimer = nil
   local resetButton
-  resetButton = createButton(settingsFrame, 16, -474, 140, "Reset Session", function()
+  resetButton = createButton(settingsFrame, 16, -508, 140, "Reset Session", function()
     if resetState == 0 then
       resetState = 1
       resetButton:SetText("Confirm Reset")

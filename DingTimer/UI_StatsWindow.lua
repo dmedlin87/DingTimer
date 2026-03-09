@@ -1,10 +1,10 @@
 local ADDON, NS = ...
 
 local FRAME_WIDTH = 420
-local FRAME_HEIGHT = 360
-local CARD_GAP = 10
+local FRAME_HEIGHT = 390
+local CARD_GAP = 12
 local CARD_WIDTH = 188
-local CARD_HEIGHT = 48
+local CARD_HEIGHT = 52
 
 local statsFrame = nil
 
@@ -156,7 +156,7 @@ function NS.InitStatsWindow()
   header:SetText(NS.C.base .. "DingTimer Dashboard" .. NS.C.r)
 
   local zoneText = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  zoneText:SetPoint("TOPRIGHT", -32, -16)
+  zoneText:SetPoint("TOPRIGHT", -36, -16)
   zoneText:SetText("Unknown")
   statsFrame.zoneText = zoneText
 
