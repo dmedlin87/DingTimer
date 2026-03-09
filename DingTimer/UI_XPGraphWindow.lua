@@ -243,7 +243,7 @@ local function layoutGraphFrame()
   end
 
   graphFrame.graphArea:ClearAllPoints()
-  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -104)
+  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -112)
   graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -18, 70)
 
   graphFrame.legendLabel:ClearAllPoints()
