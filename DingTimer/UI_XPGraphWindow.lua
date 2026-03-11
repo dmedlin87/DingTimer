@@ -7,15 +7,6 @@ local MAX_RETENTION_SECONDS = 3600
 local GRID_LINE_COUNT = 4
 local TIME_LABEL_COUNT = 5
 
-local DEFAULTS = NS.GraphWindowDefaults or {
-  width = 660,
-  height = 340,
-  minWidth = 540,
-  minHeight = 280,
-  maxWidth = 1200,
-  maxHeight = 680,
-}
-
 local ZOOM_LEVELS = {
   { label = "3m", seconds = 180 },
   { label = "5m", seconds = 300 },
@@ -45,44 +36,37 @@ local graphState = {
   totalXP = 0,
   lastPrunedSessionXP = 0,
   dirty = false,
+  lastSegmentIndex = nil,
+  lastAreaWidth = nil,
+  lastAreaHeight = nil,
+  cachedScaleMax = 1,
+  cachedVisiblePeak = 0,
+  cachedHistoryPeak = 0,
 }
 
+--- Computes the number of bars to draw based on the window size.
+--- @param windowSeconds number The total duration of the graph's time window in seconds.
+--- @return number The constrained number of bars to display.
 local function computeBarCount(windowSeconds)
   local raw = math.floor(windowSeconds / MIN_SEGMENT_SECONDS)
   return math.max(MIN_BARS, math.min(MAX_BARS, raw))
 end
 
+--- Calculates the duration of a single standard segment (bar) in seconds.
+--- @param windowSeconds number The total duration of the graph's time window.
+--- @return number The duration of one segment in seconds.
 local function computeSegmentSeconds(windowSeconds)
   local n = computeBarCount(windowSeconds)
   return windowSeconds / n
 end
 
+--- Determines which segment block a specific timestamp belongs to.
+--- @param timestamp number The exact time of the event.
+--- @param anchor number The starting reference time grid anchor.
+--- @param segSeconds number The duration of one segment.
+--- @return number The zero-indexed segment position.
 local function getSegmentIndex(timestamp, anchor, segSeconds)
   return math.floor((timestamp - anchor) / segSeconds)
-end
-
-local function getStoredGraphSize()
-  local size = DingTimerDB.graphWindowSize or {}
-  local width, height = NS.ClampGraphWindowSize(size.width or DEFAULTS.width, size.height or DEFAULTS.height)
-  return width, height
-end
-
-local function saveGraphPosition(frame)
-  local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
-  DingTimerDB.graphPosition = {
-    point = point,
-    relativePoint = relativePoint,
-    xOfs = xOfs,
-    yOfs = yOfs,
-  }
-end
-
-local function saveGraphSize(width, height)
-  local clampedWidth, clampedHeight = NS.ClampGraphWindowSize(width, height)
-  DingTimerDB.graphWindowSize = {
-    width = clampedWidth,
-    height = clampedHeight,
-  }
 end
 
 local function pruneGraphEvents(now)
@@ -104,6 +88,12 @@ local function pruneGraphEvents(now)
   end
 end
 
+--- Aggregates historical XP events into buckets for the visible graph segments.
+--- @param now number The current time.
+--- @param segSeconds number The size of a single segment bucket.
+--- @param segmentCount number The total number of visible segments.
+--- @param anchor number The origin timestamp grid.
+--- @return table, number A sparse array of XP per segment, and the index of the current segment.
 local function aggregateVisibleSegments(now, segSeconds, segmentCount, anchor)
   local currentSegIdx = getSegmentIndex(now, anchor, segSeconds)
   local firstVisibleIdx = currentSegIdx - segmentCount + 1
@@ -154,6 +144,24 @@ local function buildAverageSeries(events, baselineSessionXP, now, sessionStart, 
   local cumulativeXP = baselineSessionXP or 0
   local eventIndex = 1
 
+  local firstSegIdx = currentSegIdx - (segmentCount - 1)
+  local firstSegStart = anchor + firstSegIdx * segSeconds
+
+  local low, high = 1, #events
+  while low <= high do
+    local mid = math.floor((low + high) / 2)
+    if events[mid].t <= firstSegStart then
+      low = mid + 1
+    else
+      high = mid - 1
+    end
+  end
+
+  if high > 0 and events[high] then
+    cumulativeXP = events[high].sessionXP or (cumulativeXP + events[high].xp)
+    eventIndex = high + 1
+  end
+
   for i = 1, segmentCount do
     local segIdx = currentSegIdx - (segmentCount - i)
     local segEnd = anchor + (segIdx + 1) * segSeconds
@@ -175,6 +183,13 @@ local function buildAverageSeries(events, baselineSessionXP, now, sessionStart, 
   return averages
 end
 
+--- Determines the maximum Y-axis value for the graph depending on the current scale mode.
+--- @param mode string The user's active scale mode setting.
+--- @param visiblePeak number The highest bar value currently on screen.
+--- @param avgPeak number The highest rolling average value currently on screen.
+--- @param historyPeak number The overall highest retained peak in recent history.
+--- @param fixedMax number The user's custom manual maximum, if any.
+--- @return number The resulting maximum ceiling to draw the graph up to.
 local function resolveScaleMax(mode, visiblePeak, avgPeak, historyPeak, fixedMax)
   local normalized = NS.NormalizeGraphScaleMode(mode)
   if normalized == "fixed" then
@@ -222,6 +237,8 @@ local function applySummaryCard(card, label, value, subValue)
   card.sub:SetText(subValue or "")
 end
 
+--- Repositions and dynamically scales inner layout components of the graph frame.
+--- Responds to resize events or zoom scale changes.
 local function layoutGraphFrame()
   if not graphFrame then
     return
@@ -232,18 +249,19 @@ local function layoutGraphFrame()
   local cardWidth = math.floor((width - 24 - (cardGap * 3)) / 4)
   local left = 12
 
-  graphFrame.separator:SetWidth(width - 24)
+  -- Separator was removed
+  -- graphFrame.separator:SetWidth(width - 24)
 
   for i = 1, #graphFrame.summaryCards do
     local card = graphFrame.summaryCards[i]
     card:ClearAllPoints()
     card:SetSize(cardWidth, 48)
-    card:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", left, -42)
+    card:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", left, -6)
     left = left + cardWidth + cardGap
   end
 
   graphFrame.graphArea:ClearAllPoints()
-  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -112)
+  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -76)
   graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -18, 70)
 
   graphFrame.legendLabel:ClearAllPoints()
@@ -275,13 +293,16 @@ local function layoutGraphFrame()
   graphFrame.fitButton:ClearAllPoints()
   graphFrame.fitButton:SetPoint("LEFT", graphFrame.scaleModeButton, "RIGHT", 6, 0)
 
-  graphFrame.resetViewButton:ClearAllPoints()
-  graphFrame.resetViewButton:SetPoint("LEFT", graphFrame.fitButton, "RIGHT", 6, 0)
-
-  graphFrame.resizeGrip:ClearAllPoints()
-  graphFrame.resizeGrip:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -8, 8)
+  -- Resize grip is now on the main window, but let's hide the graph's grip
+  if graphFrame.resizeGrip then
+    graphFrame.resizeGrip:Hide()
+  end
 end
 
+--- Renders the backing horizontal grid lines and labels.
+--- @param scaleMax number The maximum value of the graph layout.
+--- @param now number The current active timestamp.
+--- @param windowSeconds number The graph's total visible duration window.
 local function updateAxis(scaleMax, now, windowSeconds)
   local graphArea = graphFrame.graphArea
   local areaWidth = math.max(graphArea:GetWidth(), 1)
@@ -364,13 +385,15 @@ local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
   )
 end
 
+--- Pulls new tracking states and repaints the entire graph area.
+--- Called periodically to advance the graph or when settings dictate a full manual redraw.
 local function redrawGraph()
   if not graphFrame or not graphFrame:IsShown() then
     return
   end
 
   local now = GetTime()
-  graphState.dirty = false
+  local wasDirty = graphState.dirty
   pruneGraphEvents(now)
 
   local windowSeconds = DingTimerDB.graphWindowSeconds or 300
@@ -381,10 +404,28 @@ local function redrawGraph()
     anchor = NS.state.sessionStartTime or now
   end
 
-  local segments, currentSegIdx = aggregateVisibleSegments(now, segSeconds, segmentCount, anchor)
   local graphArea = graphFrame.graphArea
   local areaWidth = math.max(graphArea:GetWidth(), 1)
   local areaHeight = math.max(graphArea:GetHeight(), 1)
+  local snapshot = NS.GetSessionSnapshot(now)
+  local currentSegIdx = getSegmentIndex(now, anchor, segSeconds)
+  if (not wasDirty)
+    and graphState.lastSegmentIndex == currentSegIdx
+    and graphState.lastAreaWidth == areaWidth
+    and graphState.lastAreaHeight == areaHeight then
+    updateAxis(graphState.cachedScaleMax or 1, now, windowSeconds)
+    refreshControlState(graphState.cachedScaleMax or 1, graphState.cachedVisiblePeak or 0, graphState.cachedHistoryPeak or 0, snapshot)
+    graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average")
+    if (graphState.cachedVisiblePeak or 0) <= 0 and snapshot.sessionXP <= 0 then
+      graphFrame.emptyState:Show()
+    else
+      graphFrame.emptyState:Hide()
+    end
+    return
+  end
+
+  graphState.dirty = false
+  local segments = aggregateVisibleSegments(now, segSeconds, segmentCount, anchor)
   local gap = 2
   local barWidth = math.max(3, (areaWidth - ((segmentCount - 1) * gap)) / segmentCount)
 
@@ -427,12 +468,17 @@ local function redrawGraph()
 
   local historyPeak = computeHistoryPeakXPH(now, anchor, segSeconds, currentSegIdx)
   local scaleMax = resolveScaleMax(DingTimerDB.graphScaleMode, visiblePeak, avgPeak, historyPeak, DingTimerDB.graphFixedMaxXPH)
-  local snapshot = NS.GetSessionSnapshot(now)
+  graphState.lastSegmentIndex = currentSegIdx
+  graphState.lastAreaWidth = areaWidth
+  graphState.lastAreaHeight = areaHeight
+  graphState.cachedScaleMax = scaleMax
+  graphState.cachedVisiblePeak = visiblePeak
+  graphState.cachedHistoryPeak = historyPeak
 
   updateAxis(scaleMax, now, windowSeconds)
   refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
 
-  graphFrame.subtitle:SetText("Resizable graph. Drag the lower-right corner.")
+  -- Removed subtitle
   graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average")
   if visiblePeak <= 0 and snapshot.sessionXP <= 0 then
     graphFrame.emptyState:Show()
@@ -535,87 +581,19 @@ local function createSummaryCard(parent)
   return card
 end
 
-function NS.InitGraphWindow()
+--- Initializes the primary graph panel UI.
+--- Contains the coordinate system, layout definition, and zoom controls.
+--- @param parent frame The host tab or container frame.
+--- @return frame The initialized and structured graph panel.
+function NS.InitGraphPanel(parent)
   if graphFrame then
-    return
+    return graphFrame
   end
 
-  local width, height = getStoredGraphSize()
+  graphFrame = CreateFrame("Frame", "DingTimerXPGraphPanel", parent)
+  graphFrame:SetAllPoints(parent)
 
-  graphFrame = CreateFrame("Frame", "DingTimerXPGraphWindow", UIParent, "BackdropTemplate")
-  graphFrame:SetSize(width, height)
-  graphFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
-  NS.ApplyThemeToFrame(graphFrame)
-
-  graphFrame:SetMovable(true)
-  graphFrame:SetResizable(true)
-  graphFrame:EnableMouse(true)
-  graphFrame:RegisterForDrag("LeftButton")
-  graphFrame:SetClampedToScreen(true)
-
-  if graphFrame.SetResizeBounds then
-    graphFrame:SetResizeBounds(DEFAULTS.minWidth, DEFAULTS.minHeight, DEFAULTS.maxWidth, DEFAULTS.maxHeight)
-  else
-    if graphFrame.SetMinResize then
-      graphFrame:SetMinResize(DEFAULTS.minWidth, DEFAULTS.minHeight)
-    end
-    if graphFrame.SetMaxResize then
-      graphFrame:SetMaxResize(DEFAULTS.maxWidth, DEFAULTS.maxHeight)
-    end
-  end
-
-  graphFrame:SetScript("OnDragStart", function(self)
-    if DingTimerDB.graphLocked or InCombatLockdown() then
-      return
-    end
-    self:StartMoving()
-  end)
-
-  graphFrame:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    saveGraphPosition(self)
-  end)
-
-  if DingTimerDB.graphPosition then
-    local pos = DingTimerDB.graphPosition
-    graphFrame:ClearAllPoints()
-    graphFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs, pos.yOfs)
-  end
-
-  local closeBtn = CreateFrame("Button", nil, graphFrame, "UIPanelCloseButton")
-  closeBtn:SetPoint("TOPRIGHT", -4, -4)
-  closeBtn:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Close", 1, 1, 1)
-    GameTooltip:Show()
-  end)
-  closeBtn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-  end)
-  closeBtn:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Close", 1, 1, 1)
-    GameTooltip:Show()
-  end)
-  closeBtn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-  end)
-
-  local title = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  title:SetPoint("TOPLEFT", 12, -12)
-  title:SetText(NS.C.base .. "XP Pace Graph" .. NS.C.r)
-  graphFrame.title = title
-
-  local subtitle = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-  subtitle:SetText("")
-  graphFrame.subtitle = subtitle
-
-  local separator = graphFrame:CreateTexture(nil, "ARTWORK")
-  separator:SetHeight(1)
-  separator:SetPoint("TOP", 0, -35)
-  separator:SetColorTexture(0.2, 0.6, 0.8, 0.45)
-  graphFrame.separator = separator
+  -- Removed standalone window controls (movable, resizable, drag, closeBtn, title, separator)
 
   graphFrame.summaryCards = {}
   for i = 1, 4 do
@@ -716,33 +694,7 @@ function NS.InitGraphWindow()
   end)
   graphFrame.fitButton = fitButton
 
-  local resetViewButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
-  resetViewButton:SetSize(74, 24)
-  resetViewButton:SetText("Reset")
-  resetViewButton:SetScript("OnClick", function()
-    NS.ResetGraphLayout()
-  end)
-  graphFrame.resetViewButton = resetViewButton
-
-  local resizeGrip = CreateFrame("Button", nil, graphFrame)
-  resizeGrip:SetSize(18, 18)
-  resizeGrip:EnableMouse(true)
-  resizeGrip:SetScript("OnMouseDown", function()
-    if DingTimerDB.graphLocked or InCombatLockdown() then
-      return
-    end
-    graphFrame:StartSizing("BOTTOMRIGHT")
-  end)
-  resizeGrip:SetScript("OnMouseUp", function()
-    graphFrame:StopMovingOrSizing()
-    saveGraphSize(graphFrame:GetWidth(), graphFrame:GetHeight())
-    redrawGraph()
-  end)
-  local gripText = resizeGrip:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  gripText:SetPoint("CENTER")
-  gripText:SetText("//")
-  graphFrame.resizeGrip = resizeGrip
-
+  -- Removed resize grip
   for i = 1, MAX_BARS - 1 do
     local line = graphArea:CreateLine(nil, "OVERLAY")
     line:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], COLOR_LINE[4])
@@ -784,19 +736,24 @@ function NS.InitGraphWindow()
   end
 
   graphFrame:SetScript("OnSizeChanged", function(self, newWidth, newHeight)
-    saveGraphSize(newWidth, newHeight)
     layoutGraphFrame()
+    graphState.lastAreaWidth = nil
+    graphState.lastAreaHeight = nil
     if self:IsShown() then
       redrawGraph()
     end
   end)
 
   layoutGraphFrame()
-  NS.ManageFrameTicker(graphFrame, 1, redrawGraph, "graphVisible")
-  tinsert(UISpecialFrames, graphFrame:GetName())
+  NS.ManageFrameTicker(graphFrame, 1, redrawGraph)
   graphFrame:Hide()
+  return graphFrame
 end
 
+--- Inserts a new XP earning event to be drawn as a spike in the graph.
+--- Extends tracking buffers intelligently and purges old entries automatically.
+--- @param delta number The amount of experience points earned.
+--- @param timestamp number The core game time stamp of the event.
 function NS.GraphFeedXP(delta, timestamp)
   if delta <= 0 then
     return
@@ -820,42 +777,30 @@ function NS.GraphFeedXP(delta, timestamp)
   graphState.dirty = true
 end
 
+--- Clears all visual memory and events from the local display cache.
 function NS.GraphReset()
   graphState.anchor = GetTime()
   graphState.events = {}
   graphState.totalXP = 0
   graphState.lastPrunedSessionXP = 0
   graphState.dirty = true
+  graphState.lastSegmentIndex = nil
+  graphState.lastAreaWidth = nil
+  graphState.lastAreaHeight = nil
+  graphState.cachedScaleMax = 1
+  graphState.cachedVisiblePeak = 0
+  graphState.cachedHistoryPeak = 0
 
   if graphFrame and graphFrame:IsShown() then
     redrawGraph()
   end
 end
 
-function NS.ToggleGraphWindow()
-  if not graphFrame then
-    NS.InitGraphWindow()
-  end
-  if graphFrame:IsShown() then
-    graphFrame:Hide()
-  else
-    graphFrame:Show()
-  end
-end
+-- Removed ToggleGraphWindow and SetGraphVisible as we use Tabs now
 
-function NS.SetGraphVisible(on)
-  if on then
-    if not graphFrame then
-      NS.InitGraphWindow()
-    end
-    graphFrame:Show()
-  else
-    if graphFrame then
-      graphFrame:Hide()
-    end
-  end
-end
-
+--- Adjusts the visible horizontal window timespan by applying a mapped zoom preset.
+--- @param label string The identifier for the zoom level (e.g., "15m").
+--- @return boolean True if the zoom was applied successfully.
 function NS.SetGraphZoom(label)
   for _, z in ipairs(ZOOM_LEVELS) do
     if z.label == label then
@@ -870,6 +815,9 @@ function NS.SetGraphZoom(label)
   return false
 end
 
+--- Modifies how the upper Y-axis boundary responds to incoming data.
+--- @param mode string The desired scaling behavior ("visible", "session", "fixed", "auto").
+--- @return boolean True if mode changed successfully.
 function NS.SetGraphScale(mode)
   if mode ~= "visible" and mode ~= "session" and mode ~= "fixed" and mode ~= "auto" then
     return false
@@ -908,24 +856,4 @@ end
 function NS.AdjustGraphFixedMax(delta)
   local current = DingTimerDB.graphFixedMaxXPH or 100000
   return NS.SetGraphFixedMax(current + (delta or 0))
-end
-
-function NS.GetGraphWindowSize()
-  return getStoredGraphSize()
-end
-
-function NS.ResetGraphLayout()
-  local width, height = NS.ClampGraphWindowSize(DEFAULTS.width, DEFAULTS.height)
-  saveGraphSize(width, height)
-  DingTimerDB.graphPosition = nil
-
-  if graphFrame then
-    graphFrame:ClearAllPoints()
-    graphFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
-    graphFrame:SetSize(width, height)
-    layoutGraphFrame()
-    if graphFrame:IsShown() then
-      redrawGraph()
-    end
-  end
 end

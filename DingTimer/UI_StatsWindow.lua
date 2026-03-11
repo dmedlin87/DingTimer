@@ -1,13 +1,19 @@
 local ADDON, NS = ...
 
-local FRAME_WIDTH = 420
-local FRAME_HEIGHT = 390
+local FRAME_WIDTH = 640
+local FRAME_HEIGHT = 440
 local CARD_GAP = 12
 local CARD_WIDTH = 188
 local CARD_HEIGHT = 52
 
 local statsFrame = nil
 
+--- Creates a reusable metric card widget for the stats panel.
+--- @param parent frame The parent frame to attach the card to.
+--- @param x number The X offset relative to the parent's TOPLEFT.
+--- @param y number The Y offset relative to the parent's TOPLEFT.
+--- @param labelText string The text for the card's header label.
+--- @return table A table containing refs to the background frame and its text elements.
 local function createMetricCard(parent, x, y, labelText)
   local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   card:SetSize(CARD_WIDTH, CARD_HEIGHT)
@@ -39,6 +45,13 @@ local function createMetricCard(parent, x, y, labelText)
   }
 end
 
+--- Creates a standard action button for the stats panel.
+--- @param parent frame The parent frame to attach the button to.
+--- @param x number The X offset relative to the parent's BOTTOMLEFT.
+--- @param y number The Y offset relative to the parent's BOTTOMLEFT.
+--- @param label string The text to display on the button.
+--- @param callback function The function to call when the button is clicked.
+--- @return button The created button widget.
 local function createActionButton(parent, x, y, label, callback)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
   btn:SetSize(90, 24)
@@ -48,11 +61,20 @@ local function createActionButton(parent, x, y, label, callback)
   return btn
 end
 
+--- Replaces the displayed text on a metric card.
+--- @param card table The metric card object created by createMetricCard.
+--- @param value string|nil The primary value text to display, defaults to "--".
+--- @param subValue string|nil The secondary subtitle text to display, defaults to "".
 local function setCard(card, value, subValue)
   card.value:SetText(value or "--")
   card.sub:SetText(subValue or "")
 end
 
+--- Computes and formats the percentage difference between current pace and session average.
+--- Returns colored text indicating if the player is speeding up or slowing down.
+--- @param currentXph number The player's current XP per hour pace.
+--- @param sessionXph number The player's overall session XP per hour pace.
+--- @return string, string The formatted value text and a subtitle text explaining it.
 local function formatPaceDelta(currentXph, sessionXph)
   if not currentXph or currentXph <= 0 or not sessionXph or sessionXph <= 0 then
     return NS.C.mid .. "Waiting" .. NS.C.r, "Need live and session pace"
@@ -70,6 +92,8 @@ local function formatPaceDelta(currentXph, sessionXph)
   return color .. sign .. NS.fmtPercent(deltaPct, 1) .. NS.C.r, "Current vs session avg"
 end
 
+--- Called periodically to compute stats and update all displays in the stats panel.
+--- Syncs UI widgets with the current tracking state via NS.GetSessionSnapshot.
 local function updateValues()
   if not statsFrame or not statsFrame:IsShown() then
     return
@@ -103,66 +127,28 @@ local function updateValues()
   setCard(statsFrame.cards.moneyPerHour, NS.fmtMoney(NS.Round(snapshot.moneyPerHour)) .. " / hr", "Income pace")
 end
 
-function NS.InitStatsWindow()
+--- Initializes the primary stats dashboard, creating all visual elements.
+--- Will return the existing frame if already created.
+--- @param parent frame The parent tab container or window for this panel.
+--- @return frame The initialized stats panel frame.
+function NS.InitStatsPanel(parent)
   if statsFrame then
-    return
+    return statsFrame
   end
 
-  statsFrame = CreateFrame("Frame", "DingTimerStatsWindow", UIParent, "BackdropTemplate")
-  statsFrame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
-  statsFrame:SetPoint("CENTER")
-  NS.ApplyThemeToFrame(statsFrame)
+  statsFrame = CreateFrame("Frame", "DingTimerStatsPanel", parent)
+  statsFrame:SetAllPoints(parent)
 
-  statsFrame:SetMovable(true)
-  statsFrame:EnableMouse(true)
-  statsFrame:RegisterForDrag("LeftButton")
-  statsFrame:SetClampedToScreen(true)
-  statsFrame:SetScript("OnDragStart", function(self)
-    if InCombatLockdown() then
-      return
-    end
-    self:StartMoving()
-  end)
-  statsFrame:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-    DingTimerDB.uiWindowPosition = {
-      point = point,
-      relativePoint = relativePoint,
-      xOfs = xOfs,
-      yOfs = yOfs,
-    }
-  end)
-
-  if DingTimerDB.uiWindowPosition then
-    local pos = DingTimerDB.uiWindowPosition
-    statsFrame:ClearAllPoints()
-    statsFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs, pos.yOfs)
-  end
-
-  local closeBtn = CreateFrame("Button", nil, statsFrame, "UIPanelCloseButton")
-  closeBtn:SetPoint("TOPRIGHT", -4, -4)
-  closeBtn:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Close", 1, 1, 1)
-    GameTooltip:Show()
-  end)
-  closeBtn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-  end)
-
-  local header = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  header:SetPoint("TOPLEFT", 14, -12)
-  header:SetText(NS.C.base .. "DingTimer Dashboard" .. NS.C.r)
+  -- Removed standalone window controls (closeBtn, header, drag handlers)
 
   local zoneText = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  zoneText:SetPoint("TOPRIGHT", -36, -16)
+  zoneText:SetPoint("TOPLEFT", 16, -16)
   zoneText:SetText("Unknown")
   statsFrame.zoneText = zoneText
 
   local separator = statsFrame:CreateTexture(nil, "ARTWORK")
   separator:SetColorTexture(0.2, 0.6, 0.8, 0.45)
-  separator:SetSize(FRAME_WIDTH - 24, 1)
+  separator:SetSize(FRAME_WIDTH - 32, 1)
   separator:SetPoint("TOP", 0, -35)
 
   local progressFrame = CreateFrame("Frame", nil, statsFrame, "BackdropTemplate")
@@ -200,39 +186,27 @@ function NS.InitStatsWindow()
   progressFill:SetColorTexture(0.24, 0.78, 0.92, 0.9)
   statsFrame.progressFill = progressFill
 
+  -- Realign 3 cards per row
+  local startX = 16
   statsFrame.cards = {
-    sessionTime = createMetricCard(statsFrame, 16, -112, "Session Time"),
-    sessionXP = createMetricCard(statsFrame, 16 + CARD_WIDTH + CARD_GAP, -112, "Session XP"),
-    currentXph = createMetricCard(statsFrame, 16, -112 - CARD_HEIGHT - CARD_GAP, "Current XP / hr"),
-    sessionAvg = createMetricCard(statsFrame, 16 + CARD_WIDTH + CARD_GAP, -112 - CARD_HEIGHT - CARD_GAP, "Session Avg / hr"),
-    ttl = createMetricCard(statsFrame, 16, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Time To Level"),
-    paceDelta = createMetricCard(statsFrame, 16 + CARD_WIDTH + CARD_GAP, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Pace Delta"),
-    sessionMoney = createMetricCard(statsFrame, 16, -112 - ((CARD_HEIGHT + CARD_GAP) * 3), "Session Money"),
-    moneyPerHour = createMetricCard(statsFrame, 16 + CARD_WIDTH + CARD_GAP, -112 - ((CARD_HEIGHT + CARD_GAP) * 3), "Money / hr"),
+    sessionTime  = createMetricCard(statsFrame, startX, -112, "Session Time"),
+    sessionXP    = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112, "Session XP"),
+    currentXph   = createMetricCard(statsFrame, startX + (CARD_WIDTH + CARD_GAP)*2, -112, "Current XP / hr"),
+    
+    sessionAvg   = createMetricCard(statsFrame, startX, -112 - CARD_HEIGHT - CARD_GAP, "Session Avg / hr"),
+    ttl          = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112 - CARD_HEIGHT - CARD_GAP, "Time To Level"),
+    paceDelta    = createMetricCard(statsFrame, startX + (CARD_WIDTH + CARD_GAP)*2, -112 - CARD_HEIGHT - CARD_GAP, "Pace Delta"),
+    
+    sessionMoney = createMetricCard(statsFrame, startX, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Session Money"),
+    moneyPerHour = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Money / hr"),
   }
 
-  createActionButton(statsFrame, 16, 14, "Graph", function()
-    if NS.ToggleGraphWindow then
-      NS.ToggleGraphWindow()
-    end
-  end)
-
-  createActionButton(statsFrame, 112, 14, "Insights", function()
-    if NS.ToggleInsightsWindow then
-      NS.ToggleInsightsWindow()
-    end
-  end)
-
-  createActionButton(statsFrame, 208, 14, "Settings", function()
-    if NS.ToggleSettingsWindow then
-      NS.ToggleSettingsWindow()
-    end
-  end)
+  -- Removed individual window buttons (Graph, Insights, Settings) since they are tabs now
 
   local resetState = 0
   local resetTimer = nil
   local resetBtn
-  resetBtn = createActionButton(statsFrame, 304, 14, "Reset", function()
+  resetBtn = createActionButton(statsFrame, 16, 14, "Reset", function()
     if resetState == 0 then
       resetState = 1
       resetBtn:SetText("Confirm")
@@ -260,26 +234,17 @@ function NS.InitStatsWindow()
   end)
 
   local footer = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  footer:SetPoint("BOTTOM", 0, 46)
-  footer:SetText("Live dashboard. Use the graph for pace spikes and the settings panel for controls.")
+  footer:SetPoint("BOTTOMLEFT", 112, 18)
+  footer:SetText("Live dashboard. Use the tabs above to navigate.")
 
   statsFrame:Hide()
-  tinsert(UISpecialFrames, statsFrame:GetName())
   NS.ManageFrameTicker(statsFrame, 1, updateValues, "uiWindowVisible")
+  return statsFrame
 end
 
-function NS.ToggleStatsWindow()
-  if not statsFrame then
-    NS.InitStatsWindow()
-  end
+-- Removed ToggleStatsWindow since ToggleMainWindow replaces it
 
-  if statsFrame:IsShown() then
-    statsFrame:Hide()
-  else
-    statsFrame:Show()
-  end
-end
-
+--- Triggers an immediate refresh of the stats window if it is currently visible.
 function NS.RefreshStatsWindow()
   if statsFrame and statsFrame:IsShown() then
     updateValues()

@@ -1,5 +1,8 @@
 local ADDON, NS = ...
 
+--- Ensures the number of kept sessions is within safe bounds (5 to 100).
+--- @param n number|string|nil The requested number of sessions to keep.
+--- @return number The clamped integer value.
 local function clampKeepSessions(n)
   n = math.floor(tonumber(n) or 30)
   -- 🛡️ Sentinel: Validate for NaN and Infinity to prevent validation bypass
@@ -13,6 +16,10 @@ local function clampKeepSessions(n)
   return n
 end
 
+--- Safely converts a value to a string, returning a fallback if invalid or empty.
+--- @param value any The value to convert.
+--- @param fallback string The fallback string to use if the value is invalid.
+--- @return string The valid string or the fallback.
 local function safeString(value, fallback)
   if type(value) == "string" and value ~= "" then
     return value
@@ -26,6 +33,9 @@ local function safeString(value, fallback)
   return fallback
 end
 
+--- Computes the arithmetic mean of an array of numbers.
+--- @param values number[] The array of numbers.
+--- @return number The average, or 0 if the array is empty.
 local function average(values)
   local n = #values
   if n == 0 then return 0 end
@@ -36,6 +46,9 @@ local function average(values)
   return sum / n
 end
 
+--- Computes the median of an array of numbers.
+--- @param values number[] The array of numbers.
+--- @return number The median, or 0 if the array is empty.
 local function median(values)
   local n = #values
   if n == 0 then return 0 end
@@ -54,6 +67,9 @@ end
 
 NS.NormalizeKeepSessions = clampKeepSessions
 
+--- Gets a unique profile key based on the player's realm, name, and class.
+--- Used to partition stats between alts or different servers.
+--- @return string The profile key in the format "Realm:Name:CLASS".
 function NS.GetProfileKey()
   local name = "Unknown"
   local realm = "Unknown"
@@ -77,6 +93,10 @@ function NS.GetProfileKey()
   return string.format("%s:%s:%s", realm, name, classToken)
 end
 
+--- Retrieves the persistent storage table for the current character's sessions.
+--- Handles initialization and migration from an unknown profile if necessary.
+--- @param createIfMissing boolean Whether to create the profile structure if it doesn't exist.
+--- @return table|nil The profile table containing a `sessions` array, or nil if DB is unavailable.
 function NS.GetProfileStore(createIfMissing)
   if not DingTimerDB then return nil end
 
@@ -109,6 +129,9 @@ function NS.GetProfileStore(createIfMissing)
   return profile
 end
 
+--- Trims the oldest sessions from a profile to enforce the retention limit.
+--- @param profile table The profile store to trim.
+--- @param keepN number|nil Optional explicit limit (defaults to saved setting or 30).
 function NS.TrimSessions(profile, keepN)
   if not profile or type(profile.sessions) ~= "table" then return end
 
@@ -121,6 +144,7 @@ function NS.TrimSessions(profile, keepN)
   end
 end
 
+--- Clears all recorded sessions for the current character and updates the UI.
 function NS.ClearProfileSessions()
   local profile = NS.GetProfileStore(true)
   if not profile then return end
@@ -131,6 +155,10 @@ function NS.ClearProfileSessions()
   end
 end
 
+--- Finalizes and saves the active tracking session to the character's history.
+--- Requires at least some XP or money to have been earned to save a record.
+--- @param reason string|nil The cause of the session recording (e.g., "LEVEL_UP", "MANUAL_RESET").
+--- @return table|nil The saved session record, or nil if there was nothing to record.
 function NS.RecordSession(reason)
   if not DingTimerDB or not NS.state then return nil end
 
@@ -183,6 +211,10 @@ function NS.RecordSession(reason)
   return record
 end
 
+--- Aggregates statistics across recent historical sessions for the Insights UI.
+--- Computes trends, medians, and extracts a window of recent charts points.
+--- @param limit number|nil The maximum number of recent session rows to return.
+--- @return table A summary object with total counts, median/best values, and trend data.
 function NS.GetInsightsSummary(limit)
   local rowLimit = math.max(1, math.floor(tonumber(limit) or 10))
   local profile = NS.GetProfileStore(false)

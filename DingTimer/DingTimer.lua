@@ -20,14 +20,10 @@ f:SetScript("OnEvent", function(self, event, ...)
     if not InCombatLockdown() then
       NS.setFloatVisible(DingTimerDB.float)
     end
-    if DingTimerDB.uiWindowVisible and NS.ToggleStatsWindow then
-      NS.ToggleStatsWindow()
-    end
-    if DingTimerDB.graphVisible and NS.SetGraphVisible then
-      NS.SetGraphVisible(true)
-    end
-    if DingTimerDB.insightsWindowVisible and NS.SetInsightsVisible then
-      NS.SetInsightsVisible(true)
+    if DingTimerDB.mainWindowVisible then
+      if NS.ShowMainWindow then
+        NS.ShowMainWindow(DingTimerDB.lastOpenTab or 1)
+      end
     end
     if NS.InitMinimapButton then
       NS.InitMinimapButton()
@@ -106,13 +102,11 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  Example: " .. NS.C.val .. "/ding float unlock" .. NS.C.r)
     elseif arg == "graph" then
       NS.chat(NS.C.base .. "=== DingTimer Help: graph ===" .. NS.C.r)
-      NS.chat("  " .. NS.C.val .. "on | off" .. NS.C.r .. " - Show or hide the XP bar chart.")
+      NS.chat("  " .. NS.C.val .. "on | off" .. NS.C.r .. " - Open or close the Graph tab in the main window.")
       NS.chat("  " .. NS.C.val .. "zoom 3m|5m|15m|30m|60m" .. NS.C.r .. " - Set the rolling time window.")
       NS.chat("  " .. NS.C.val .. "scale visible|session|fixed" .. NS.C.r .. " - Fit to visible bars, fit to retained history, or use a fixed cap.")
       NS.chat("  " .. NS.C.val .. "fit" .. NS.C.r .. " - Shortcut for visible scale.")
       NS.chat("  " .. NS.C.val .. "max <xp/hr>" .. NS.C.r .. " - Set the fixed Y-axis cap.")
-      NS.chat("  " .. NS.C.val .. "lock | unlock" .. NS.C.r .. " - Lock or unlock the graph for dragging.")
-      NS.chat("  The graph is resizable from the lower-right corner.")
     elseif arg == "insights" then
       NS.chat(NS.C.base .. "=== DingTimer Help: insights ===" .. NS.C.r)
       NS.chat("  " .. NS.C.val .. "/ding insights" .. NS.C.r .. " - Toggle the Session Insights window.")
@@ -121,8 +115,8 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  Example: " .. NS.C.val .. "/ding insights keep 30" .. NS.C.r)
     else
       NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
-      NS.chat("  " .. NS.C.val .. "/ding ui" .. NS.C.r .. " - Open the elegant stats window")
-      NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the settings window")
+      NS.chat("  " .. NS.C.val .. "/ding ui" .. NS.C.r .. " - Toggle the Dashboard tab")
+      NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Toggle the Settings tab")
       NS.chat("  " .. NS.C.val .. "/ding on | off" .. NS.C.r .. " - Enable or disable chat output")
       NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session data")
       NS.chat("  " .. NS.C.val .. "/ding insights" .. NS.C.r .. " - Open Session Insights")
@@ -130,7 +124,8 @@ SlashCmdList.DINGTIMER = function(msg)
       NS.chat("  " .. NS.C.val .. "/ding mode full | ttl" .. NS.C.r .. " - Change chat output style")
       NS.chat("  " .. NS.C.val .. "/ding float on | off" .. NS.C.r .. " - Toggle the floating UI frame")
       NS.chat("  " .. NS.C.val .. "/ding float lock | unlock" .. NS.C.r .. " - Lock or unlock floating frame dragging")
-      NS.chat("  " .. NS.C.val .. "/ding graph" .. NS.C.r .. " - Toggle the XP graph window")
+      NS.chat("  " .. NS.C.val .. "/ding graph" .. NS.C.r .. " - Toggle the Graph tab")
+      NS.chat("  " .. NS.C.val .. "/ding graph on | off" .. NS.C.r .. " - Open or close the Graph tab")
       NS.chat("  " .. NS.C.val .. "/ding graph zoom <level>" .. NS.C.r .. " - Set graph time window (3m, 5m, 15m, 30m, 60m)")
       NS.chat("  " .. NS.C.val .. "/ding graph scale <mode>" .. NS.C.r .. " - Set Y-axis scale (visible, session, fixed)")
       NS.chat("  " .. NS.C.val .. "/ding graph max <xp/hr>" .. NS.C.r .. " - Set the fixed graph cap")
@@ -140,12 +135,12 @@ SlashCmdList.DINGTIMER = function(msg)
   end
 
   if cmd == "ui" or cmd == "stats" then
-    if NS.ToggleStatsWindow then NS.ToggleStatsWindow() end
+    if NS.ToggleMainWindow then NS.ToggleMainWindow(1) end
     return
   end
 
   if cmd == "settings" then
-    if NS.ToggleSettingsWindow then NS.ToggleSettingsWindow() end
+    if NS.ToggleMainWindow then NS.ToggleMainWindow(4) end
     return
   end
 
@@ -176,7 +171,7 @@ SlashCmdList.DINGTIMER = function(msg)
     subarg = subarg or ""
 
     if sub == "" then
-      if NS.ToggleInsightsWindow then NS.ToggleInsightsWindow() end
+      if NS.ToggleMainWindow then NS.ToggleMainWindow(3) end
       return
     end
 
@@ -266,12 +261,16 @@ SlashCmdList.DINGTIMER = function(msg)
     sub = sub or ""
 
     if sub == "" then
-      if NS.ToggleGraphWindow then NS.ToggleGraphWindow() end
+      if NS.ToggleMainWindow then NS.ToggleMainWindow(2) end
     elseif sub == "on" then
-      if NS.SetGraphVisible then NS.SetGraphVisible(true) end
+      if NS.ShowMainWindow then NS.ShowMainWindow(2) end
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph shown.")
     elseif sub == "off" then
-      if NS.SetGraphVisible then NS.SetGraphVisible(false) end
+      if NS.IsMainWindowShown and NS.IsMainWindowShown() and (DingTimerDB.lastOpenTab or 1) == 2 then
+        if NS.HideMainWindow then
+          NS.HideMainWindow()
+        end
+      end
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph hidden.")
     elseif sub == "zoom" then
       if subarg == "" then
@@ -313,14 +312,8 @@ SlashCmdList.DINGTIMER = function(msg)
           NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph fixed max = " .. NS.FormatNumber(applied))
         end
       end
-    elseif sub == "lock" then
-      DingTimerDB.graphLocked = true
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph locked.")
-    elseif sub == "unlock" then
-      DingTimerDB.graphLocked = false
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " graph unlocked.")
     else
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown graph command. Use: on, off, zoom, scale, fit, max, lock, unlock")
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " Unknown graph command. Use: on, off, zoom, scale, fit, max")
     end
     return
   end

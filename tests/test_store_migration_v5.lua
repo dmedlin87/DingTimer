@@ -10,6 +10,12 @@ DingTimerDB = {
   enabled = false,
   windowSeconds = 900,
   schemaVersion = 4,
+  graphVisible = true,
+  graphLocked = false,
+  graphWindowSize = {
+    width = 400,
+    height = 200,
+  },
   graphScaleMode = "fixed",
   graphFixedMaxXPH = 100000,
   settingsWindowPosition = {
@@ -31,7 +37,7 @@ NS.InitStore()
 local key = NS.GetProfileKey()
 local profile = DingTimerDB.xp.profiles[key]
 
-assert_eq(DingTimerDB.schemaVersion, 6, "schemaVersion should migrate to 6")
+assert_eq(DingTimerDB.schemaVersion, 7, "schemaVersion should migrate to 7")
 assert_eq(DingTimerDB.enabled, false, "existing settings should be preserved")
 assert_eq(DingTimerDB.xp.keepSessions, 12, "keepSessions should be preserved")
 assert_true(DingTimerDB.xp.sessions == nil, "legacy xp.sessions should be removed")
@@ -39,10 +45,12 @@ assert_true(profile ~= nil, "profile should exist for current character")
 assert_eq(#profile.sessions, 1, "legacy sessions should migrate into profile")
 assert_eq(profile.sessions[1].id, "legacy-1", "legacy session payload should be preserved")
 assert_eq(DingTimerDB.insightsWindowVisible, false, "insights visibility default should exist")
-assert_true(DingTimerDB.settingsWindowPosition ~= nil, "settings window position should be preserved")
-assert_eq(DingTimerDB.settingsWindowPosition.xOfs, 12, "settings window position payload should survive init")
+assert_true(DingTimerDB.settingsWindowPosition == nil, "obsolete settings window position should be removed")
 assert_eq(DingTimerDB.graphScaleMode, "visible", "legacy fixed default should migrate to visible scale")
-assert_true(DingTimerDB.graphWindowSize ~= nil, "graph window size should be created")
-assert_true(DingTimerDB.graphWindowSize.width >= 540, "graph window width should be clamped to the new minimum")
+assert_true(DingTimerDB.graphWindowSize == nil, "obsolete graph window size should be removed")
+assert_true(DingTimerDB.graphVisible == nil, "obsolete graph visibility flag should be removed")
+assert_true(DingTimerDB.graphLocked == nil, "obsolete graph lock flag should be removed")
+assert_eq(DingTimerDB.mainWindowVisible, false, "main window visibility default should exist")
+assert_eq(DingTimerDB.lastOpenTab, 1, "main window tab default should exist")
 
-print("Store v6 migration test passed!")
+print("Store v7 migration test passed!")

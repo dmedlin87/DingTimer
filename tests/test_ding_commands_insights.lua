@@ -18,7 +18,7 @@ DingTimerDB = nil
 NS.InitStore()
 
 local toggles = 0
-NS.ToggleInsightsWindow = function()
+NS.ToggleMainWindow = function()
   toggles = toggles + 1
 end
 

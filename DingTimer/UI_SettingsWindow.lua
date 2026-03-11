@@ -77,109 +77,31 @@ local function cycleMode()
   end
 end
 
-function NS.InitSettingsWindow()
+function NS.InitSettingsPanel(parent)
   if settingsFrame then
-    return
+    return settingsFrame
   end
 
-  settingsFrame = CreateFrame("Frame", "DingTimerSettingsWindow", UIParent, "BackdropTemplate")
-  settingsFrame:SetSize(470, 540)
-  settingsFrame:SetPoint("CENTER")
-  NS.ApplyThemeToFrame(settingsFrame)
+  settingsFrame = CreateFrame("Frame", "DingTimerSettingsPanel", parent)
+  settingsFrame:SetAllPoints(parent)
 
-  settingsFrame:SetMovable(true)
-  settingsFrame:EnableMouse(true)
-  settingsFrame:RegisterForDrag("LeftButton")
-  settingsFrame:SetClampedToScreen(true)
-  settingsFrame:SetScript("OnDragStart", function(self)
-    if InCombatLockdown() then
-      return
-    end
-    self:StartMoving()
-  end)
-  settingsFrame:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-    DingTimerDB.settingsWindowPosition = {
-      point = point,
-      relativePoint = relativePoint,
-      xOfs = xOfs,
-      yOfs = yOfs,
-    }
-  end)
-
-  if DingTimerDB.settingsWindowPosition then
-    local pos = DingTimerDB.settingsWindowPosition
-    settingsFrame:ClearAllPoints()
-    settingsFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs, pos.yOfs)
-  end
-
-  local closeBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelCloseButton")
-  closeBtn:SetPoint("TOPRIGHT", -4, -4)
-  closeBtn:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Close", 1, 1, 1)
-    GameTooltip:Show()
-  end)
-  closeBtn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-  end)
-  local header = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  header:SetPoint("TOPLEFT", 14, -12)
-  header:SetText(NS.C.base .. "DingTimer Control Center" .. NS.C.r)
-
-  local subtitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  subtitle:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -4)
-  subtitle:SetText("The graph now resizes and defaults to a visible-data fit.")
-
-  local separator = settingsFrame:CreateTexture(nil, "ARTWORK")
-  separator:SetColorTexture(0.2, 0.6, 0.8, 0.45)
-  separator:SetSize(446, 1)
-  separator:SetPoint("TOP", 0, -35)
-
+  -- Removed standalone window controls (movable, drag, closeBtn, title, sep)
   settingsFrame.controls = {}
 
-  createSectionTitle(settingsFrame, 16, -48, "Quick Actions", "Open the surfaces you use most.")
-  createButton(settingsFrame, 16, -76, 98, "Dashboard", function()
-    if NS.ToggleStatsWindow then
-      NS.ToggleStatsWindow()
-    end
-  end)
-  createButton(settingsFrame, 122, -76, 98, "Graph", function()
-    if NS.ToggleGraphWindow then
-      NS.ToggleGraphWindow()
-    end
-  end)
-  createButton(settingsFrame, 228, -76, 98, "Insights", function()
-    if NS.ToggleInsightsWindow then
-      NS.ToggleInsightsWindow()
-    end
-  end)
-  createButton(settingsFrame, 334, -76, 98, "Reset Graph", function()
-    if NS.ResetGraphLayout then
-      NS.ResetGraphLayout()
-    end
-  end)
+  -- Removed Quick Actions section as navigation is now handled by tabs
 
-  createSectionTitle(settingsFrame, 16, -126, "Visibility", "Choose which UI surfaces stay on screen.")
-  settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -154, "Enable chat output", function(checked)
+  createSectionTitle(settingsFrame, 16, -118, "Visibility", "Choose which UI surfaces stay on screen.")
+  settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -146, "Enable chat output", function(checked)
     DingTimerDB.enabled = checked
   end, "Print XP, XP/hr, TTL, and level-up summaries to chat.")
-  settingsFrame.controls.float = createCheckbox(settingsFrame, 16, -182, "Show floating HUD", function(checked)
+  settingsFrame.controls.float = createCheckbox(settingsFrame, 16, -174, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
     NS.setFloatVisible(checked)
   end, "Display the compact TTL and pace HUD above your character.")
-  settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 16, -210, "Lock floating HUD", function(checked)
+  settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 16, -202, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
   end, "Prevent the floating HUD from being dragged.")
-  settingsFrame.controls.graphVisible = createCheckbox(settingsFrame, 240, -154, "Show XP graph", function(checked)
-    DingTimerDB.graphVisible = checked
-    NS.SetGraphVisible(checked)
-  end, "Show the resizable XP pace graph window.")
-  settingsFrame.controls.graphLocked = createCheckbox(settingsFrame, 240, -182, "Lock XP graph", function(checked)
-    DingTimerDB.graphLocked = checked
-  end, "Prevent the graph window from being moved or resized.")
-  settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 240, -210, "Hide minimap button", function(checked)
+  settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 16, -230, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
       if checked then
@@ -190,11 +112,51 @@ function NS.InitSettingsWindow()
     end
   end, "Remove the DingTimer launcher from the minimap ring.")
 
-  createSectionTitle(settingsFrame, 16, -256, "Output", "Set the rolling window and message style.")
-  local modeButton = createButton(settingsFrame, 16, -284, 116, "Cycle Mode", function()
+  createSectionTitle(settingsFrame, 340, -118, "Graph", "Scale modes, fixed cap, and zoom presets.")
+  local scaleButton = createButton(settingsFrame, 340, -146, 116, "Cycle Scale", function()
+    if NS.CycleGraphScaleMode then
+      NS.CycleGraphScaleMode()
+    end
+  end)
+  local fitButton = createButton(settingsFrame, 464, -146, 70, "Fit", function()
+    if NS.SetGraphScale then
+      NS.SetGraphScale("visible")
+    end
+  end)
+  local minusMaxButton = createButton(settingsFrame, 542, -146, 32, "-", function()
+    if NS.AdjustGraphFixedMax then
+      NS.AdjustGraphFixedMax(-25000)
+    end
+  end)
+  local plusMaxButton = createButton(settingsFrame, 582, -146, 32, "+", function()
+    if NS.AdjustGraphFixedMax then
+      NS.AdjustGraphFixedMax(25000)
+    end
+  end)
+  settingsFrame.controls.graphScaleValue = createValueLabel(settingsFrame, 340, -179)
+  settingsFrame.controls.graphMaxValue = createValueLabel(settingsFrame, 340, -198)
+  settingsFrame.controls.graphZoomValue = createValueLabel(settingsFrame, 340, -217)
+
+  local graphZoomButtons = {
+    { label = "3m", x = 340 },
+    { label = "5m", x = 398 },
+    { label = "15m", x = 456 },
+    { label = "30m", x = 514 },
+    { label = "60m", x = 572 },
+  }
+  for _, button in ipairs(graphZoomButtons) do
+    createButton(settingsFrame, button.x, -244, 40, button.label, function()
+      if NS.SetGraphZoom then
+        NS.SetGraphZoom(button.label)
+      end
+    end)
+  end
+
+  createSectionTitle(settingsFrame, 16, -286, "Output", "Set the rolling window and message style.")
+  local modeButton = createButton(settingsFrame, 16, -314, 116, "Cycle Mode", function()
     cycleMode()
   end)
-  settingsFrame.controls.modeValue = createValueLabel(settingsFrame, 144, -289)
+  settingsFrame.controls.modeValue = createValueLabel(settingsFrame, 144, -319)
 
   local windowButtons = {
     { label = "1m", seconds = 60, x = 16 },
@@ -203,60 +165,20 @@ function NS.InitSettingsWindow()
     { label = "15m", seconds = 900, x = 198 },
   }
   for _, button in ipairs(windowButtons) do
-    createButton(settingsFrame, button.x, -320, 52, button.label, function()
+    createButton(settingsFrame, button.x, -350, 52, button.label, function()
       if NS.SetRollingWindowSeconds then
         NS.SetRollingWindowSeconds(button.seconds)
       end
     end)
   end
-  settingsFrame.controls.windowValue = createValueLabel(settingsFrame, 270, -325)
+  settingsFrame.controls.windowValue = createValueLabel(settingsFrame, 270, -355)
   settingsFrame.controls.windowValue:SetText("")
 
-  createSectionTitle(settingsFrame, 16, -370, "Graph", "Scale modes, zoom presets, and the new resizable frame.")
-  local scaleButton = createButton(settingsFrame, 16, -398, 116, "Cycle Scale", function()
-    if NS.CycleGraphScaleMode then
-      NS.CycleGraphScaleMode()
-    end
-  end)
-  local fitButton = createButton(settingsFrame, 140, -398, 70, "Fit", function()
-    if NS.SetGraphScale then
-      NS.SetGraphScale("visible")
-    end
-  end)
-  local minusMaxButton = createButton(settingsFrame, 218, -398, 32, "-", function()
-    if NS.AdjustGraphFixedMax then
-      NS.AdjustGraphFixedMax(-25000)
-    end
-  end)
-  local plusMaxButton = createButton(settingsFrame, 258, -398, 32, "+", function()
-    if NS.AdjustGraphFixedMax then
-      NS.AdjustGraphFixedMax(25000)
-    end
-  end)
-  settingsFrame.controls.graphScaleValue = createValueLabel(settingsFrame, 302, -403)
-  settingsFrame.controls.graphMaxValue = createValueLabel(settingsFrame, 302, -422)
-  settingsFrame.controls.graphSizeValue = createValueLabel(settingsFrame, 302, -441)
-
-  local graphZoomButtons = {
-    { label = "3m", x = 16 },
-    { label = "5m", x = 74 },
-    { label = "15m", x = 132 },
-    { label = "30m", x = 198 },
-    { label = "60m", x = 264 },
-  }
-  for _, button in ipairs(graphZoomButtons) do
-    createButton(settingsFrame, button.x, -434, 52, button.label, function()
-      if NS.SetGraphZoom then
-        NS.SetGraphZoom(button.label)
-      end
-    end)
-  end
-
-  createSectionTitle(settingsFrame, 16, -480, "Session", "Reset the current run when you are done with it.")
+  createSectionTitle(settingsFrame, 16, -394, "Session", "Reset the current run when you are done with it.")
   local resetState = 0
   local resetTimer = nil
   local resetButton
-  resetButton = createButton(settingsFrame, 16, -508, 140, "Reset Session", function()
+  resetButton = createButton(settingsFrame, 16, -422, 140, "Reset Session", function()
     if resetState == 0 then
       resetState = 1
       resetButton:SetText("Confirm Reset")
@@ -285,14 +207,12 @@ function NS.InitSettingsWindow()
 
   local footer = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   footer:SetPoint("BOTTOMRIGHT", -16, 10)
-  footer:SetText("Tip: middle-click the minimap button to open the graph.")
+  footer:SetText("Tip: middle-click the minimap button to jump to the Graph tab.")
 
   function settingsFrame:Refresh()
     self.controls.enabled:SetChecked(DingTimerDB.enabled)
     self.controls.float:SetChecked(DingTimerDB.float)
     self.controls.floatLocked:SetChecked(DingTimerDB.floatLocked)
-    self.controls.graphVisible:SetChecked(DingTimerDB.graphVisible)
-    self.controls.graphLocked:SetChecked(DingTimerDB.graphLocked)
     self.controls.minimapHidden:SetChecked(DingTimerDB.minimapHidden)
 
     local modeText = (DingTimerDB.mode == "ttl") and "TTL only" or "Full output"
@@ -302,13 +222,7 @@ function NS.InitSettingsWindow()
     local scaleMode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
     self.controls.graphScaleValue:SetText("Scale: " .. NS.GetGraphScaleModeLabel(scaleMode, true))
     self.controls.graphMaxValue:SetText("Fixed max: " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
-
-    local graphDefaults = NS.GraphWindowDefaults or { width = 660, height = 340 }
-    local graphWidth, graphHeight = graphDefaults.width, graphDefaults.height
-    if NS.GetGraphWindowSize then
-      graphWidth, graphHeight = NS.GetGraphWindowSize()
-    end
-    self.controls.graphSizeValue:SetText(string.format("Size: %dx%d  |  Zoom: %s", graphWidth, graphHeight, tostring((DingTimerDB.graphWindowSeconds and NS.fmtTime(DingTimerDB.graphWindowSeconds)) or "5m")))
+    self.controls.graphZoomValue:SetText("Zoom: " .. tostring(math.floor((DingTimerDB.graphWindowSeconds or 300) / 60)) .. "m")
   end
 
   settingsFrame:SetScript("OnShow", function(self)
@@ -316,16 +230,7 @@ function NS.InitSettingsWindow()
   end)
 
   settingsFrame:Hide()
-  tinsert(UISpecialFrames, settingsFrame:GetName())
+  return settingsFrame
 end
 
-function NS.ToggleSettingsWindow()
-  if not settingsFrame then
-    NS.InitSettingsWindow()
-  end
-  if settingsFrame:IsShown() then
-    settingsFrame:Hide()
-  else
-    settingsFrame:Show()
-  end
-end
+-- Removed ToggleSettingsWindow since we use Tabs now

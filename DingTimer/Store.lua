@@ -29,25 +29,13 @@ local function normalizeScaleMode(mode, fixedMax)
   return normalized or "visible"
 end
 
-local function normalizeGraphSize(size)
-  if type(size) ~= "table" then
-    size = {}
-  end
-
-  local defaultSize = NS.GraphWindowDefaults or { width = 660, height = 340 }
-  local clamp = NS.ClampGraphWindowSize
-  local width, height
-  if clamp then
-    width, height = clamp(size.width or defaultSize.width, size.height or defaultSize.height)
-  else
-    width = size.width or defaultSize.width
-    height = size.height or defaultSize.height
-  end
-
-  return {
-    width = width,
-    height = height,
-  }
+local function cleanupObsoleteWindowState()
+  DingTimerDB.graphVisible = nil
+  DingTimerDB.graphPosition = nil
+  DingTimerDB.graphLocked = nil
+  DingTimerDB.graphWindowSize = nil
+  DingTimerDB.insightsWindowPosition = nil
+  DingTimerDB.settingsWindowPosition = nil
 end
 
 local function ensureProfileTables()
@@ -67,7 +55,6 @@ local function ensureProfileTables()
 end
 
 function NS.InitStore()
-  local graphDefaults = NS.GraphWindowDefaults or { width = 660, height = 340 }
   local defaults = {
     enabled = true,
     windowSeconds = 600,
@@ -75,20 +62,15 @@ function NS.InitStore()
     mode = "full",
     float = false,
     floatLocked = true,
-    graphVisible = false,
-    graphPosition = nil,
     graphWindowSeconds = 300,
     graphScaleMode = "visible",
     graphFixedMaxXPH = 100000,
-    graphLocked = true,
-    graphWindowSize = {
-      width = graphDefaults.width,
-      height = graphDefaults.height,
-    },
     insightsWindowVisible = false,
-    insightsWindowPosition = nil,
-    settingsWindowPosition = nil,
-    schemaVersion = 6,
+    minimapHidden = false,
+    mainWindowVisible = false,
+    mainWindowPosition = nil,
+    lastOpenTab = 1,
+    schemaVersion = 7,
     meta = {
       addonVersion = "0.5.0",
       createdAt = GetTime(),
@@ -139,11 +121,9 @@ function NS.InitStore()
 
     if DingTimerDB.schemaVersion < 4 then
       DingTimerDB.schemaVersion = 4
-      if DingTimerDB.graphVisible == nil       then DingTimerDB.graphVisible       = false     end
-      if DingTimerDB.graphWindowSeconds == nil  then DingTimerDB.graphWindowSeconds = 300       end
+      if DingTimerDB.graphWindowSeconds == nil then DingTimerDB.graphWindowSeconds = 300 end
       if DingTimerDB.graphScaleMode == nil     then DingTimerDB.graphScaleMode     = "visible" end
       if DingTimerDB.graphFixedMaxXPH == nil   then DingTimerDB.graphFixedMaxXPH   = 100000    end
-      if DingTimerDB.graphLocked == nil        then DingTimerDB.graphLocked        = true      end
     end
 
     if DingTimerDB.schemaVersion < 5 then
@@ -154,7 +134,6 @@ function NS.InitStore()
 
       DingTimerDB.schemaVersion = 5
       if DingTimerDB.insightsWindowVisible == nil then DingTimerDB.insightsWindowVisible = false end
-      if DingTimerDB.insightsWindowPosition == nil then DingTimerDB.insightsWindowPosition = nil end
 
       local _, profile = ensureProfileTables()
       if legacySessions and #legacySessions > 0 and #profile.sessions == 0 then
@@ -167,23 +146,26 @@ function NS.InitStore()
     if DingTimerDB.schemaVersion < 6 then
       DingTimerDB.schemaVersion = 6
       DingTimerDB.graphScaleMode = normalizeScaleMode(DingTimerDB.graphScaleMode, DingTimerDB.graphFixedMaxXPH)
-      DingTimerDB.graphWindowSize = normalizeGraphSize(DingTimerDB.graphWindowSize)
+    end
+
+    if DingTimerDB.schemaVersion < 7 then
+      DingTimerDB.schemaVersion = 7
+      cleanupObsoleteWindowState()
     end
   end
 
-  if DingTimerDB.graphVisible == nil       then DingTimerDB.graphVisible       = defaults.graphVisible       end
   if DingTimerDB.graphWindowSeconds == nil then DingTimerDB.graphWindowSeconds = defaults.graphWindowSeconds end
   if DingTimerDB.graphScaleMode == nil     then DingTimerDB.graphScaleMode     = defaults.graphScaleMode     end
   if DingTimerDB.graphFixedMaxXPH == nil   then DingTimerDB.graphFixedMaxXPH   = defaults.graphFixedMaxXPH   end
-  if DingTimerDB.graphLocked == nil        then DingTimerDB.graphLocked        = defaults.graphLocked        end
-  if DingTimerDB.graphWindowSize == nil    then DingTimerDB.graphWindowSize    = defaults.graphWindowSize    end
   if DingTimerDB.insightsWindowVisible == nil then DingTimerDB.insightsWindowVisible = defaults.insightsWindowVisible end
-  if DingTimerDB.insightsWindowPosition == nil then DingTimerDB.insightsWindowPosition = defaults.insightsWindowPosition end
-  if DingTimerDB.settingsWindowPosition == nil then DingTimerDB.settingsWindowPosition = defaults.settingsWindowPosition end
+  if DingTimerDB.minimapHidden == nil then DingTimerDB.minimapHidden = defaults.minimapHidden end
+  if DingTimerDB.mainWindowVisible == nil then DingTimerDB.mainWindowVisible = defaults.mainWindowVisible end
+  if DingTimerDB.mainWindowPosition == nil then DingTimerDB.mainWindowPosition = defaults.mainWindowPosition end
+  if DingTimerDB.lastOpenTab == nil then DingTimerDB.lastOpenTab = defaults.lastOpenTab end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
+  cleanupObsoleteWindowState()
   DingTimerDB.graphScaleMode = normalizeScaleMode(DingTimerDB.graphScaleMode, DingTimerDB.graphFixedMaxXPH)
   DingTimerDB.graphFixedMaxXPH = NS.ClampGraphFixedMax and NS.ClampGraphFixedMax(DingTimerDB.graphFixedMaxXPH) or DingTimerDB.graphFixedMaxXPH
-  DingTimerDB.graphWindowSize = normalizeGraphSize(DingTimerDB.graphWindowSize)
   DingTimerDB.meta.addonVersion = defaults.meta.addonVersion
 
   local _, profile = ensureProfileTables()

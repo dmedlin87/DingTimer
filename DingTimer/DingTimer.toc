@@ -9,6 +9,7 @@ Util.lua
 Insights.lua
 Store.lua
 Core_DingTimer.lua
+UI_MainWindow.lua
 UI_StatsWindow.lua
 UI_XPGraphWindow.lua
 UI_InsightsWindow.lua

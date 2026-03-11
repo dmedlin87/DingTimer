@@ -12,7 +12,7 @@
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
 ![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)
-![WoW](https://img.shields.io/badge/WoW-Retail%20%7C%20Midnight-orange?style=flat-square)
+![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
 
@@ -33,14 +33,14 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **XP Per Hour** — Rolling-window calculation that adapts to your current pace, not your average from an hour ago
 - **Time To Level (TTL)** — Live countdown to your next ding, updated every second
 - **Money Per Hour** — Track your gold income alongside your XP gains
-- **XP Graph 2.0** — Resizable bar chart with visible/session/fixed scale modes, summary cards, grid labels, and a session average overlay
+- **XP Graph 2.0** — Dedicated graph tab with visible/session/fixed scale modes, summary cards, grid labels, and a session average overlay
 - **Session Insights** — Per-character history with best/median rates, trend tracking, and recent-session breakdowns
 - **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, and session pace
 - **Stats Dashboard** — A richer dashboard with progress, eight live metrics, and quick-launch actions
 - **Control Center** — A larger settings hub for chat, HUD, graph, and session controls
-- **Minimap Button** — Left-click for stats, right-click for settings, drag to reposition
+- **Minimap Button** — Left-click for dashboard, middle-click for graph, right-click for settings, drag to reposition
 - **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
-- **Persistent Sessions** — Settings, window positions, and per-character session history saved between sessions
+- **Persistent Sessions** — Settings, main window/HUD placement, and per-character session history saved between sessions
 
 ---
 
@@ -56,7 +56,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically
 
-> The minimap button will appear on login. Left-click it to open the stats window.
+> The minimap button will appear on login. Left-click it to toggle the Dashboard tab.
 
 ---
 
@@ -83,7 +83,7 @@ All commands work with either `/ding` or `/dt`.
 | ----------------------- | --------------------------------------------- |
 | `/ding`                 | Show the help menu                            |
 | `/ding help <command>`  | Detailed help for a specific command          |
-| `/ding ui`              | Toggle the stats window                       |
+| `/ding ui`              | Toggle the Dashboard tab                      |
 | `/ding stats`           | Same as above                                 |
 | `/ding settings`        | Open the settings window                      |
 | `/ding insights`        | Toggle the Session Insights window            |
@@ -122,15 +122,12 @@ All commands work with either `/ding` or `/dt`.
 | Command                       | What it does                                            |
 | ----------------------------- | ------------------------------------------------------- |
 | `/ding graph`                 | Toggle the graph window                                 |
-| `/ding graph on`              | Show the graph                                          |
-| `/ding graph off`             | Hide the graph                                          |
+| `/ding graph on`              | Open the Graph tab                                      |
+| `/ding graph off`             | Close the main window if the Graph tab is active        |
 | `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
 | `/ding graph scale <mode>`    | Set the Y-axis mode: `visible`, `session`, or `fixed`   |
 | `/ding graph fit`             | Snap the graph back to visible-data scaling              |
 | `/ding graph max <xp/hr>`     | Set the fixed Y-axis cap and switch to fixed mode        |
-| `/ding graph lock`            | Lock graph position                                     |
-| `/ding graph unlock`          | Allow graph to be dragged                               |
-
 ### Insights Commands
 
 | Command                     | What it does                                          |
@@ -147,9 +144,9 @@ All commands work with either `/ding` or `/dt`.
 
 The minimap button lives on the edge of your minimap and is your primary launcher.
 
-- **Left-click** — Open / close the Stats Dashboard
-- **Middle-click** — Open / close the XP Graph
-- **Right-click** — Open / close the Control Center
+- **Left-click** — Toggle the Dashboard tab
+- **Middle-click** — Toggle the Graph tab
+- **Right-click** — Toggle the Control Center tab
 - **Drag** — Slide it anywhere around the minimap rim
 
 You can hide it entirely from the Settings Window if you prefer slash commands.
@@ -181,9 +178,9 @@ Designed to stay out of your way. Hides in combat. Drag it anywhere when unlocke
 
 ---
 
-### XP Graph Window
+### XP Graph Tab
 
-A resizable scrolling bar chart of your XP/hr over time, updated every second.
+A dedicated graph tab inside the main window, updated every second while visible.
 
 **Bar colors:**
 
@@ -200,8 +197,6 @@ A resizable scrolling bar chart of your XP/hr over time, updated every second.
 - **Fixed** — Uses the max XP/hr cap you set with `/ding graph max <xp/hr>`
 
 **Header cards** show your current pace, session average, visible/session peak, and the active scale mode.
-
-**Drag the lower-right corner** to resize the graph window. DingTimer remembers the size between sessions.
 
 **Hover over any bar** to see a tooltip with:
 
@@ -279,10 +274,9 @@ After the announcement, your session data resets automatically so your XP/hr ref
 DingTimer stores all data in the account-wide `DingTimerDB` SavedVariable. Session history is bucketed per character profile inside that database. This includes:
 
 - All settings and toggle states
-- Window positions for all frames
-- Current session XP and money events
+- Main window and floating HUD positions
 - Historical sessions per character profile (last 30 kept by default)
-- Graph data (up to 1 hour of events)
+- Graph presentation settings (zoom, scale mode, fixed max)
 - Minimap button angle
 
 Deleting `DingTimerDB` from your SavedVariables folder resets everything to defaults.
@@ -291,12 +285,10 @@ Deleting `DingTimerDB` from your SavedVariables folder resets everything to defa
 
 ## Compatibility
 
-| Version                  | Status                    |
+| Package target           | Status                    |
 | ------------------------ | ------------------------- |
-| Retail (Midnight)        | Supported                 |
-| Retail (The War Within)  | Supported                 |
-| Dragonflight             | Supported                 |
-| Classic / Era            | Not currently supported   |
+| `## Interface: 30300`    | Supported by this package |
+| Other clients            | Unverified                |
 
 ---
 

@@ -169,6 +169,9 @@ local function newFrame(name)
   frame.ClearAllPoints = function(self)
     self._point = { "CENTER", nil, "CENTER", 0, 0 }
   end
+  frame.SetAllPoints = function() end
+  frame.LockHighlight = function() end
+  frame.UnlockHighlight = function() end
   frame.SetMovable = function() end
   frame.SetResizable = function() end
   frame.SetMinResize = function() end

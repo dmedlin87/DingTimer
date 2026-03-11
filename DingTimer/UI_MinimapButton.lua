@@ -82,20 +82,20 @@ end)
 
 f:SetScript("OnClick", function(self, button)
   if button == "LeftButton" then
-    if NS.ToggleStatsWindow then NS.ToggleStatsWindow() end
+    if NS.ToggleMainWindow then NS.ToggleMainWindow(1) end
   elseif button == "MiddleButton" then
-    if NS.ToggleGraphWindow then NS.ToggleGraphWindow() end
+    if NS.ToggleMainWindow then NS.ToggleMainWindow(2) end
   elseif button == "RightButton" then
-    if NS.ToggleSettingsWindow then NS.ToggleSettingsWindow() end
+    if NS.ToggleMainWindow then NS.ToggleMainWindow(4) end
   end
 end)
 
 f:SetScript("OnEnter", function(self)
   GameTooltip:SetOwner(self, "ANCHOR_LEFT")
   GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
-  GameTooltip:AddLine("Left-click to open Stats Window", 1, 1, 1)
-  GameTooltip:AddLine("Middle-click to open the XP Graph", 1, 1, 1)
-  GameTooltip:AddLine("Right-click to open Settings", 1, 1, 1)
+  GameTooltip:AddLine("Left-click to toggle the Dashboard tab", 1, 1, 1)
+  GameTooltip:AddLine("Middle-click to toggle the Graph tab", 1, 1, 1)
+  GameTooltip:AddLine("Right-click to toggle the Settings tab", 1, 1, 1)
   GameTooltip:AddLine("Drag to move this button", 0.7, 0.7, 0.7)
   GameTooltip:Show()
 end)
