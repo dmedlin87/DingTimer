@@ -50,7 +50,7 @@ function NS.fmtTime(seconds)
 end
 
 function NS.fmtMoney(copper)
-  if not copper or copper == 0 then return "0|cffeda55fc|r" end
+  if not copper or copper == 0 or copper ~= copper or copper == math.huge or copper == -math.huge then return "0|cffeda55fc|r" end
   local isNegative = copper < 0
   copper = math.abs(copper)
 
@@ -76,7 +76,7 @@ function NS.fmtMoney(copper)
 end
 
 function NS.ttlColor(ttl, lastTTL)
-  if not lastTTL or lastTTL == math.huge then return NS.C.val end
+  if not ttl or ttl ~= ttl or not lastTTL or lastTTL ~= lastTTL or lastTTL == math.huge or lastTTL == -math.huge then return NS.C.val end
 
   -- If TTL went down => improved => green. Up => red.
   -- Use a small dead-zone to avoid flicker on tiny changes.
@@ -88,7 +88,7 @@ function NS.ttlColor(ttl, lastTTL)
 end
 
 function NS.ttlDeltaText(ttl, lastTTL)
-  if not ttl or ttl == math.huge or not lastTTL or lastTTL == math.huge then
+  if not ttl or ttl ~= ttl or ttl == math.huge or ttl == -math.huge or not lastTTL or lastTTL ~= lastTTL or lastTTL == math.huge or lastTTL == -math.huge then
     return ""
   end
   local diff = ttl - lastTTL
