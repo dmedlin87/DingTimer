@@ -99,12 +99,20 @@ function GetChatLog()
 end
 
 local function newFontString()
-  local fs = { _text = "" }
+  local fs = { _text = "", _shown = true }
   fs.SetPoint = function() end
+  fs.ClearAllPoints = function() end
   fs.SetJustifyH = function() end
+  fs.SetJustifyV = function() end
+  fs.SetTextColor = function() end
+  fs.SetFontObject = function() end
   fs.SetText = function(self, text) self._text = text end
   fs.GetText = function(self) return self._text end
+  fs.GetStringWidth = function(self) return #(self._text or "") * 6 end
   fs.SetWidth = function() end
+  fs.Show = function(self) self._shown = true end
+  fs.Hide = function(self) self._shown = false end
+  fs.SetShown = function(self, shown) self._shown = shown end
   return fs
 end
 
@@ -113,9 +121,12 @@ local function newTexture()
   tx.SetTexture = function() end
   tx.SetSize = function() end
   tx.SetPoint = function() end
+  tx.ClearAllPoints = function() end
+  tx.SetAllPoints = function() end
   tx.SetColorTexture = function() end
   tx.SetHeight = function() end
   tx.SetWidth = function() end
+  tx.SetTexCoord = function() end
   tx.Hide = function() end
   tx.Show = function() end
   return tx
@@ -159,6 +170,10 @@ local function newFrame(name)
     self._point = { "CENTER", nil, "CENTER", 0, 0 }
   end
   frame.SetMovable = function() end
+  frame.SetResizable = function() end
+  frame.SetMinResize = function() end
+  frame.SetMaxResize = function() end
+  frame.SetResizeBounds = function() end
   frame.EnableMouse = function() end
   frame.RegisterForDrag = function() end
   frame.RegisterForClicks = function() end
@@ -169,7 +184,19 @@ local function newFrame(name)
   frame.SetBackdropColor = function() end
   frame.SetBackdropBorderColor = function() end
   frame.SetClampedToScreen = function() end
+  frame.SetHitRectInsets = function() end
   frame.RegisterEvent = function() end
+  frame.SetChecked = function(self, checked) self._checked = checked and true or false end
+  frame.GetChecked = function(self) return self._checked end
+  frame.SetAutoFocus = function() end
+  frame.SetNumeric = function() end
+  frame.SetMaxLetters = function() end
+  frame.SetNormalTexture = function() end
+  frame.SetPushedTextOffset = function() end
+  frame.SetNormalFontObject = function() end
+  frame.SetHighlightFontObject = function() end
+  frame.SetDisabledFontObject = function() end
+  frame.StartSizing = function() end
   frame.SetText = function(self, text) self._text = text end
   frame.GetText = function(self) return self._text end
   frame.StartMoving = function() end
@@ -238,6 +265,7 @@ C_Timer = {
 
 GameTooltip = {
   SetOwner = function() end,
+  SetText = function() end,
   AddLine = function() end,
   AddDoubleLine = function() end,
   ClearLines = function() end,

@@ -214,10 +214,15 @@ function NS.GetInsightsSummary(limit)
     if xph ~= xph or xph == math.huge or xph == -math.huge then xph = 0 end
     local dur = tonumber(s.durationSec) or 0
     if dur ~= dur or dur == math.huge or dur == -math.huge then dur = 0 end
+<<<<<<< Updated upstream
 
     x_count = x_count + 1
     xphValues[x_count] = xph
 
+=======
+
+    xphValues[#xphValues + 1] = xph
+>>>>>>> Stashed changes
     if dur > 0 then
       d_count = d_count + 1
       durations[d_count] = dur
@@ -235,8 +240,12 @@ function NS.GetInsightsSummary(limit)
     for i = start, count do
       local val = tonumber(sessions[i].avgXph) or 0
       if val ~= val or val == math.huge or val == -math.huge then val = 0 end
+<<<<<<< Updated upstream
       c_count = c_count + 1
       chartValues[c_count] = val
+=======
+      chartValues[#chartValues + 1] = val
+>>>>>>> Stashed changes
     end
   end
 

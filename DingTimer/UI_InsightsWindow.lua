@@ -183,12 +183,12 @@ function NS.InitInsightsWindow()
   end
 
   insightsFrame.valueMedianXPH = createSummaryBlock(16, "Median XP/hr")
-  insightsFrame.valueBestXPH = createSummaryBlock(160, "Best XP/hr")
-  insightsFrame.valueAvgLevel = createSummaryBlock(304, "Avg Time in Level")
-  insightsFrame.valueTrend = createSummaryBlock(448, "Trend")
+  insightsFrame.valueBestXPH = createSummaryBlock(140, "Best XP/hr")
+  insightsFrame.valueAvgLevel = createSummaryBlock(264, "Avg Time in Level")
+  insightsFrame.valueTrend = createSummaryBlock(408, "Trend")
 
   local countLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  countLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -95)
+  countLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -100)
   countLabel:SetText("Stored Sessions")
 
   insightsFrame.valueCount = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -196,12 +196,12 @@ function NS.InitInsightsWindow()
   insightsFrame.valueCount:SetText("0")
 
   local sparkLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  sparkLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -115)
+  sparkLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -120)
   sparkLabel:SetText("Recent XP/hr Trend")
 
   local sparkArea = CreateFrame("Frame", nil, insightsFrame, "BackdropTemplate")
-  sparkArea:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -132)
-  sparkArea:SetPoint("TOPRIGHT", insightsFrame, "TOPRIGHT", -16, -132)
+  sparkArea:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -140)
+  sparkArea:SetPoint("TOPRIGHT", insightsFrame, "TOPRIGHT", -16, -140)
   sparkArea:SetHeight(92)
   sparkArea:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -228,12 +228,12 @@ function NS.InitInsightsWindow()
   end
 
   local rowsHeader = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  rowsHeader:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -236)
+  rowsHeader:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -248)
   rowsHeader:SetText("Recent Sessions (newest first)")
 
   for i = 1, MAX_ROWS do
     local fs = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -250 - ((i - 1) * 14))
+    fs:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -262 - ((i - 1) * 14))
     fs:SetJustifyH("LEFT")
     fs:SetWidth(FRAME_WIDTH - 32)
     fs:SetText("")

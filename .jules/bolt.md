@@ -17,3 +17,7 @@
 ## 2024-05-28 - Optimize string formatting to avoid regex
 **Learning:** In Lua 5.1 environments, sequential string concatenation combined with `string.match("^%s*(.-)%s*$")` for whitespace trimming is significantly slower than building the string exactly as needed via `string.format()`.
 **Action:** Use `string.format()` over multiple concatenations (`..`) to avoid intermediate string allocations, and conditionally build strings to completely bypass expensive regex whitespace trimming functions like `string.match`.
+
+## 2025-01-29 - Avoid table length operator (#) inside hot loops
+**Learning:** In Lua 5.1, repeatedly evaluating a table's length using the `#` operator inside loops (e.g., `for i=1, #table` or `table[#table + 1] = x`) incurs meaningful overhead, as `#` calculates length rather than retrieving a cached value.
+**Action:** For loops bounded by table length, cache the length into a local variable before the loop (`local n = #table`). For building tables in tight loops, use an explicit counter variable instead of `#table + 1` to track insertion indices.
