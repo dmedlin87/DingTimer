@@ -1,4 +1,4 @@
-require("tests/mocks")
+require("tests.mocks")
 
 local NS = {}
 -- Global DB mock

@@ -152,9 +152,9 @@ function NS.ShowMainWindow(tabId)
   end
 
   NS.SelectTab(getActiveTabId(tabId))
-  ---@diagnostic disable-next-line: need-check-nil
+  ---@diagnostic disable-next-line: need-check-nil, undefined-field
   if not mainWindow:IsShown() then
-    ---@diagnostic disable-next-line: need-check-nil
+    ---@diagnostic disable-next-line: need-check-nil, undefined-field
     mainWindow:Show()
   end
   return true
@@ -175,7 +175,7 @@ function NS.ToggleMainWindow(tabId)
 
   local activeTabId = getActiveTabId(tabId)
   local sameTab = (DingTimerDB.lastOpenTab or 1) == activeTabId
-  ---@diagnostic disable-next-line: need-check-nil
+  ---@diagnostic disable-next-line: need-check-nil, undefined-field
   if mainWindow:IsShown() and sameTab then
     return NS.HideMainWindow()
   end
