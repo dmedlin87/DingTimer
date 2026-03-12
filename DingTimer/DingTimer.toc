@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: DingTimer
 ## Notes: Chat XP/hr + Time-to-Level
-## Author: You
+## Author: dmedlin87
 ## Version: 0.5.0
 ## SavedVariables: DingTimerDB
 
@@ -9,6 +9,7 @@ Util.lua
 Insights.lua
 Store.lua
 Core_DingTimer.lua
+GraphMath.lua
 UI_MainWindow.lua
 UI_StatsWindow.lua
 UI_XPGraphWindow.lua

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "Lua.runtime.version": "Lua 5.1",
+  "Lua.diagnostics.globals": [
+    "os",
+    "dofile",
+    "loadfile",
+    "require",
+    "DingTimerMinimapButton",
+    "DingTimerMainWindow",
+    "DingTimerXPGraphPanel",
+    "DingTimerStatsPanel",
+    "DingTimerSettingsPanel",
+    "assert_eq",
+    "assert_true",
+    "assert_near",
+    "assert_equal",
+    "assertEqual",
+    "assertStringMatch",
+    "run_tests",
+    "it",
+    "LoadAddonFile"
+  ],
+  "Lua.diagnostics.disable": [
+    "lowercase-global"
+  ],
+  "Lua.workspace.ignoreDir": [
+    "benchmark*.lua",
+    "test_perf*.lua"
+  ]
+}

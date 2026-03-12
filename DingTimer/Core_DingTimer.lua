@@ -57,7 +57,7 @@ local function computeRatePerHour(evList, now, windowSeconds, valueKey, sumKey)
 
   local sum = 0
   if sumKey and NS.state[sumKey] then
-    sum = NS.state[sumKey]
+    sum = tonumber(NS.state[sumKey]) or 0
   else
     for i = 1, #evList do sum = sum + evList[i][valueKey] end
   end
@@ -212,9 +212,11 @@ end
 function NS.setFloatVisible(on)
   if on then
     NS.ensureFloat()
+    ---@diagnostic disable-next-line: redundant-parameter
     RegisterStateDriver(floatFrame, "visibility", "[combat] hide; show")
   else
     if floatFrame then
+      ---@diagnostic disable-next-line: redundant-parameter
       UnregisterStateDriver(floatFrame, "visibility")
       if not InCombatLockdown() then
         floatFrame:Hide()

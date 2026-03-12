@@ -217,3 +217,44 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
     frame._dingAccent = accent
   end
 end
+
+--- Creates a two-click confirmed action button.
+--- First click changes the label to a confirm prompt and starts a 3-second timeout.
+--- Second click (within the window) fires the action; timeout auto-resets to idle.
+--- @param parent frame The parent frame to anchor the button on.
+--- @param x number X offset from parent BOTTOMLEFT.
+--- @param y number Y offset from parent BOTTOMLEFT.
+--- @param width number Button width in pixels.
+--- @param idleLabel string Text shown in the ready state (e.g. "Reset").
+--- @param confirmLabel string Text shown in the confirm state (e.g. "|cffff4040Confirm|r").
+--- @param onConfirm function Callback invoked when the user clicks to confirm.
+--- @return Button The created Button widget.
+function NS.CreateConfirmButton(parent, x, y, width, idleLabel, confirmLabel, onConfirm)
+  local state = 0
+  local timer = nil
+  local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+  btn:SetSize(width, 24)
+  btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
+  btn:SetText(idleLabel)
+
+  local function resetToIdle()
+    state = 0
+    if timer then timer:Cancel() end
+    timer = nil
+    btn:SetText(idleLabel)
+  end
+
+  btn:SetScript("OnClick", function()
+    if state == 0 then
+      state = 1
+      btn:SetText(confirmLabel)
+      timer = C_Timer.NewTimer(3, resetToIdle)
+    else
+      resetToIdle()
+      if onConfirm then onConfirm() end
+    end
+  end)
+
+  return btn --[[@as Button]]
+end
+

@@ -9,7 +9,7 @@ local CARD_HEIGHT = 52
 local statsFrame = nil
 
 --- Creates a reusable metric card widget for the stats panel.
---- @param parent frame The parent frame to attach the card to.
+--- @param parent Frame The parent frame to attach the card to.
 --- @param x number The X offset relative to the parent's TOPLEFT.
 --- @param y number The Y offset relative to the parent's TOPLEFT.
 --- @param labelText string The text for the card's header label.
@@ -46,19 +46,19 @@ local function createMetricCard(parent, x, y, labelText)
 end
 
 --- Creates a standard action button for the stats panel.
---- @param parent frame The parent frame to attach the button to.
+--- @param parent Frame The parent frame to attach the button to.
 --- @param x number The X offset relative to the parent's BOTTOMLEFT.
 --- @param y number The Y offset relative to the parent's BOTTOMLEFT.
 --- @param label string The text to display on the button.
 --- @param callback function The function to call when the button is clicked.
---- @return button The created button widget.
+--- @return Button The created button widget.
 local function createActionButton(parent, x, y, label, callback)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
   btn:SetSize(90, 24)
   btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
   btn:SetText(label)
   btn:SetScript("OnClick", callback)
-  return btn
+  return btn --[[@as Button]]
 end
 
 --- Replaces the displayed text on a metric card.
@@ -129,8 +129,8 @@ end
 
 --- Initializes the primary stats dashboard, creating all visual elements.
 --- Will return the existing frame if already created.
---- @param parent frame The parent tab container or window for this panel.
---- @return frame The initialized stats panel frame.
+--- @param parent Frame The parent tab container or window for this panel.
+--- @return Frame The initialized stats panel frame.
 function NS.InitStatsPanel(parent)
   if statsFrame then
     return statsFrame
@@ -203,32 +203,8 @@ function NS.InitStatsPanel(parent)
 
   -- Removed individual window buttons (Graph, Insights, Settings) since they are tabs now
 
-  local resetState = 0
-  local resetTimer = nil
-  local resetBtn
-  resetBtn = createActionButton(statsFrame, 16, 14, "Reset", function()
-    if resetState == 0 then
-      resetState = 1
-      resetBtn:SetText("Confirm")
-      if resetTimer then
-        resetTimer:Cancel()
-      end
-      resetTimer = C_Timer.NewTimer(3, function()
-        resetState = 0
-        resetBtn:SetText("Reset")
-      end)
-      return
-    end
-
-    resetState = 0
-    if resetTimer then
-      resetTimer:Cancel()
-    end
-    resetBtn:SetText("Reset")
-
-    if NS.RecordSession then
-      NS.RecordSession("MANUAL_RESET")
-    end
+  NS.CreateConfirmButton(statsFrame, 16, 14, 90, "Reset", "|cffff4040Confirm|r", function()
+    if NS.RecordSession then NS.RecordSession("MANUAL_RESET") end
     NS.resetXPState()
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
@@ -239,7 +215,7 @@ function NS.InitStatsPanel(parent)
 
   statsFrame:Hide()
   NS.ManageFrameTicker(statsFrame, 1, updateValues, "uiWindowVisible")
-  return statsFrame
+  return statsFrame --[[@as Frame]]
 end
 
 -- Removed ToggleStatsWindow since ToggleMainWindow replaces it

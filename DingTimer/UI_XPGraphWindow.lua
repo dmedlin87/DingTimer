@@ -44,31 +44,6 @@ local graphState = {
   cachedHistoryPeak = 0,
 }
 
---- Computes the number of bars to draw based on the window size.
---- @param windowSeconds number The total duration of the graph's time window in seconds.
---- @return number The constrained number of bars to display.
-local function computeBarCount(windowSeconds)
-  local raw = math.floor(windowSeconds / MIN_SEGMENT_SECONDS)
-  return math.max(MIN_BARS, math.min(MAX_BARS, raw))
-end
-
---- Calculates the duration of a single standard segment (bar) in seconds.
---- @param windowSeconds number The total duration of the graph's time window.
---- @return number The duration of one segment in seconds.
-local function computeSegmentSeconds(windowSeconds)
-  local n = computeBarCount(windowSeconds)
-  return windowSeconds / n
-end
-
---- Determines which segment block a specific timestamp belongs to.
---- @param timestamp number The exact time of the event.
---- @param anchor number The starting reference time grid anchor.
---- @param segSeconds number The duration of one segment.
---- @return number The zero-indexed segment position.
-local function getSegmentIndex(timestamp, anchor, segSeconds)
-  return math.floor((timestamp - anchor) / segSeconds)
-end
-
 local function pruneGraphEvents(now)
   local cutoff = now - MAX_RETENTION_SECONDS - 60
   local events = graphState.events
@@ -88,124 +63,6 @@ local function pruneGraphEvents(now)
   end
 end
 
---- Aggregates historical XP events into buckets for the visible graph segments.
---- @param now number The current time.
---- @param segSeconds number The size of a single segment bucket.
---- @param segmentCount number The total number of visible segments.
---- @param anchor number The origin timestamp grid.
---- @return table, number A sparse array of XP per segment, and the index of the current segment.
-local function aggregateVisibleSegments(now, segSeconds, segmentCount, anchor)
-  local currentSegIdx = getSegmentIndex(now, anchor, segSeconds)
-  local firstVisibleIdx = currentSegIdx - segmentCount + 1
-  local segments = {}
-
-  for i = #graphState.events, 1, -1 do
-    local ev = graphState.events[i]
-    local segIdx = getSegmentIndex(ev.t, anchor, segSeconds)
-    if segIdx < firstVisibleIdx then
-      break
-    end
-    if segIdx <= currentSegIdx then
-      segments[segIdx] = (segments[segIdx] or 0) + ev.xp
-    end
-  end
-
-  return segments, currentSegIdx
-end
-
-local function computeHistoryPeakXPH(now, anchor, segSeconds, currentSegIdx)
-  local firstRetainedIdx = getSegmentIndex(now - MAX_RETENTION_SECONDS, anchor, segSeconds)
-  local segmentXP = {}
-  local peak = 0
-
-  for i = #graphState.events, 1, -1 do
-    local ev = graphState.events[i]
-    local segIdx = getSegmentIndex(ev.t, anchor, segSeconds)
-    if segIdx < firstRetainedIdx then
-      break
-    end
-    if segIdx <= currentSegIdx then
-      segmentXP[segIdx] = (segmentXP[segIdx] or 0) + ev.xp
-    end
-  end
-
-  for _, xp in pairs(segmentXP) do
-    local xph = (xp / segSeconds) * 3600
-    if xph > peak then
-      peak = xph
-    end
-  end
-
-  return peak
-end
-
-local function buildAverageSeries(events, baselineSessionXP, now, sessionStart, anchor, segSeconds, currentSegIdx, segmentCount)
-  local averages = {}
-  local cumulativeXP = baselineSessionXP or 0
-  local eventIndex = 1
-
-  local firstSegIdx = currentSegIdx - (segmentCount - 1)
-  local firstSegStart = anchor + firstSegIdx * segSeconds
-
-  local low, high = 1, #events
-  while low <= high do
-    local mid = math.floor((low + high) / 2)
-    if events[mid].t <= firstSegStart then
-      low = mid + 1
-    else
-      high = mid - 1
-    end
-  end
-
-  if high > 0 and events[high] then
-    cumulativeXP = events[high].sessionXP or (cumulativeXP + events[high].xp)
-    eventIndex = high + 1
-  end
-
-  for i = 1, segmentCount do
-    local segIdx = currentSegIdx - (segmentCount - i)
-    local segEnd = anchor + (segIdx + 1) * segSeconds
-    local pointTime = math.min(segEnd, now)
-
-    while events[eventIndex] and events[eventIndex].t <= pointTime do
-      local event = events[eventIndex]
-      cumulativeXP = event.sessionXP or (cumulativeXP + (event.xp or 0))
-      eventIndex = eventIndex + 1
-    end
-
-    local elapsed = pointTime - sessionStart
-    if elapsed < 1 then
-      elapsed = 1
-    end
-    averages[i] = (cumulativeXP / elapsed) * 3600
-  end
-
-  return averages
-end
-
---- Determines the maximum Y-axis value for the graph depending on the current scale mode.
---- @param mode string The user's active scale mode setting.
---- @param visiblePeak number The highest bar value currently on screen.
---- @param avgPeak number The highest rolling average value currently on screen.
---- @param historyPeak number The overall highest retained peak in recent history.
---- @param fixedMax number The user's custom manual maximum, if any.
---- @return number The resulting maximum ceiling to draw the graph up to.
-local function resolveScaleMax(mode, visiblePeak, avgPeak, historyPeak, fixedMax)
-  local normalized = NS.NormalizeGraphScaleMode(mode)
-  if normalized == "fixed" then
-    return math.max(NS.ClampGraphFixedMax(fixedMax), 1)
-  end
-
-  local peak = math.max(visiblePeak or 0, avgPeak or 0, 1)
-  if normalized == "session" then
-    peak = math.max(peak, historyPeak or 0)
-  end
-
-  return math.max(1, peak * 1.12)
-end
-
-NS.BuildGraphAverageSeriesForTest = buildAverageSeries
-NS.ResolveGraphScaleForTest = resolveScaleMax
 
 local function zoomLabelForSeconds(seconds)
   for _, z in ipairs(ZOOM_LEVELS) do
@@ -304,6 +161,7 @@ end
 --- @param now number The current active timestamp.
 --- @param windowSeconds number The graph's total visible duration window.
 local function updateAxis(scaleMax, now, windowSeconds)
+  if not graphFrame then return end
   local graphArea = graphFrame.graphArea
   local areaWidth = math.max(graphArea:GetWidth(), 1)
   local areaHeight = math.max(graphArea:GetHeight(), 1)
@@ -341,6 +199,7 @@ local function updateAxis(scaleMax, now, windowSeconds)
 end
 
 local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
+  if not graphFrame then return end
   local mode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
   graphFrame.scaleModeButton:SetText(NS.GetGraphScaleModeLabel(mode, true))
   graphFrame.fitButton:SetText(mode == "visible" and "Fitted" or "Fit")
@@ -397,8 +256,8 @@ local function redrawGraph()
   pruneGraphEvents(now)
 
   local windowSeconds = DingTimerDB.graphWindowSeconds or 300
-  local segmentCount = computeBarCount(windowSeconds)
-  local segSeconds = computeSegmentSeconds(windowSeconds)
+  local segmentCount = NS.ComputeBarCount(windowSeconds, MIN_SEGMENT_SECONDS, MIN_BARS, MAX_BARS)
+  local segSeconds = NS.ComputeSegmentSeconds(windowSeconds, segmentCount)
   local anchor = graphState.anchor
   if anchor == 0 then
     anchor = NS.state.sessionStartTime or now
@@ -408,7 +267,7 @@ local function redrawGraph()
   local areaWidth = math.max(graphArea:GetWidth(), 1)
   local areaHeight = math.max(graphArea:GetHeight(), 1)
   local snapshot = NS.GetSessionSnapshot(now)
-  local currentSegIdx = getSegmentIndex(now, anchor, segSeconds)
+  local currentSegIdx = NS.GetSegmentIndex(now, anchor, segSeconds)
   if (not wasDirty)
     and graphState.lastSegmentIndex == currentSegIdx
     and graphState.lastAreaWidth == areaWidth
@@ -425,12 +284,12 @@ local function redrawGraph()
   end
 
   graphState.dirty = false
-  local segments = aggregateVisibleSegments(now, segSeconds, segmentCount, anchor)
+  local segments = NS.AggregateVisibleSegments(graphState.events, now, segSeconds, segmentCount, anchor)
   local gap = 2
   local barWidth = math.max(3, (areaWidth - ((segmentCount - 1) * gap)) / segmentCount)
 
   local sessionStart = NS.state.sessionStartTime or now
-  local avgSeries = buildAverageSeries(
+  local avgSeries = NS.BuildAverageSeries(
     graphState.events,
     graphState.lastPrunedSessionXP,
     now,
@@ -466,8 +325,8 @@ local function redrawGraph()
     end
   end
 
-  local historyPeak = computeHistoryPeakXPH(now, anchor, segSeconds, currentSegIdx)
-  local scaleMax = resolveScaleMax(DingTimerDB.graphScaleMode, visiblePeak, avgPeak, historyPeak, DingTimerDB.graphFixedMaxXPH)
+  local historyPeak = NS.ComputeHistoryPeakXPH(graphState.events, now, anchor, segSeconds, currentSegIdx, MAX_RETENTION_SECONDS)
+  local scaleMax = NS.ResolveGraphScaleMax(DingTimerDB.graphScaleMode, visiblePeak, avgPeak, historyPeak, DingTimerDB.graphFixedMaxXPH)
   graphState.lastSegmentIndex = currentSegIdx
   graphState.lastAreaWidth = areaWidth
   graphState.lastAreaHeight = areaHeight
@@ -583,8 +442,8 @@ end
 
 --- Initializes the primary graph panel UI.
 --- Contains the coordinate system, layout definition, and zoom controls.
---- @param parent frame The host tab or container frame.
---- @return frame The initialized and structured graph panel.
+--- @param parent Frame The host tab or container frame.
+--- @return Frame The initialized and structured graph panel.
 function NS.InitGraphPanel(parent)
   if graphFrame then
     return graphFrame
@@ -747,7 +606,7 @@ function NS.InitGraphPanel(parent)
   layoutGraphFrame()
   NS.ManageFrameTicker(graphFrame, 1, redrawGraph)
   graphFrame:Hide()
-  return graphFrame
+  return graphFrame --[[@as Frame]]
 end
 
 --- Inserts a new XP earning event to be drawn as a spike in the graph.

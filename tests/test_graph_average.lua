@@ -1,9 +1,10 @@
 require("tests.mocks")
 
 local NS = {}
-LoadAddonFile("DingTimer/UI_XPGraphWindow.lua", "DingTimer", NS)
+LoadAddonFile("DingTimer/Util.lua", "DingTimer", NS)
+LoadAddonFile("DingTimer/GraphMath.lua", "DingTimer", NS)
 
-local averages = NS.BuildGraphAverageSeriesForTest(
+local averages = NS.BuildAverageSeries(
   {
     { t = 130, xp = 100, sessionXP = 1000 },
     { t = 190, xp = 50, sessionXP = 1050 },

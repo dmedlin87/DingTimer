@@ -175,32 +175,8 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls.windowValue:SetText("")
 
   createSectionTitle(settingsFrame, 16, -394, "Session", "Reset the current run when you are done with it.")
-  local resetState = 0
-  local resetTimer = nil
-  local resetButton
-  resetButton = createButton(settingsFrame, 16, -422, 140, "Reset Session", function()
-    if resetState == 0 then
-      resetState = 1
-      resetButton:SetText("Confirm Reset")
-      if resetTimer then
-        resetTimer:Cancel()
-      end
-      resetTimer = C_Timer.NewTimer(3, function()
-        resetState = 0
-        resetButton:SetText("Reset Session")
-      end)
-      return
-    end
-
-    resetState = 0
-    if resetTimer then
-      resetTimer:Cancel()
-    end
-    resetButton:SetText("Reset Session")
-
-    if NS.RecordSession then
-      NS.RecordSession("MANUAL_RESET")
-    end
+  NS.CreateConfirmButton(settingsFrame, 16, 14, 140, "Reset Session", "Confirm Reset", function()
+    if NS.RecordSession then NS.RecordSession("MANUAL_RESET") end
     NS.resetXPState()
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
@@ -229,8 +205,16 @@ function NS.InitSettingsPanel(parent)
     self:Refresh()
   end)
 
+
   settingsFrame:Hide()
   return settingsFrame
 end
 
 -- Removed ToggleSettingsWindow since we use Tabs now
+
+--- Triggers an immediate refresh if the settings panel is currently visible.
+function NS.RefreshSettingsPanel()
+  if settingsFrame then
+    settingsFrame:Refresh()
+  end
+end
