@@ -1,7 +1,7 @@
 local ADDON, NS = ...
 
-local FRAME_WIDTH = 690
-local CARD_WIDTH = 158
+local FRAME_WIDTH = 664
+local CARD_WIDTH = 151
 local CARD_HEIGHT = 56
 local CARD_GAP = 10
 
@@ -129,14 +129,16 @@ function NS.InitStatsPanel(parent)
   statsFrame = CreateFrame("Frame", "DingTimerStatsPanel", parent)
   statsFrame:SetAllPoints(parent)
 
-  local zoneText = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(statsFrame, 664, 550)
+
+  local zoneText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoneText:SetPoint("TOPLEFT", 16, -16)
   zoneText:SetText("Unknown")
   statsFrame.zoneText = zoneText
 
-  local progressFrame = CreateFrame("Frame", nil, statsFrame, "BackdropTemplate")
+  local progressFrame = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
   progressFrame:SetSize(FRAME_WIDTH, 60)
-  progressFrame:SetPoint("TOPLEFT", statsFrame, "TOPLEFT", 16, -36)
+  progressFrame:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -36)
   NS.ApplyThemeToFrame(progressFrame, true)
 
   local progressTitle = progressFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -170,34 +172,34 @@ function NS.InitStatsPanel(parent)
   statsFrame.progressFill = progressFill
 
   statsFrame.cards = {
-    currentXph = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16, -112, "Current Pace"),
-    sessionAvg = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -112, "Session Avg"),
-    ttl = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -112, "Time To Level"),
-    goal = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -112, "Goal Pace"),
-    sessionXP = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16, -178, "Session XP"),
-    sessionMoney = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -178, "Session Money"),
-    moneyPerHour = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -178, "Money / hr"),
-    bestSegment = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -178, "Best Segment"),
+    currentXph = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16, -112, "Current Pace"),
+    sessionAvg = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -112, "Session Avg"),
+    ttl = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -112, "Time To Level"),
+    goal = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -112, "Goal Pace"),
+    sessionXP = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16, -178, "Session XP"),
+    sessionMoney = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -178, "Session Money"),
+    moneyPerHour = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -178, "Money / hr"),
+    bestSegment = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -178, "Best Segment"),
   }
 
-  NS.UI.CreateSectionTitle(statsFrame, 16, -254, "Session Coach", "Goal tracking, current segment status, and recent guidance.")
-  statsFrame.goalStatus = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  statsFrame.goalStatus:SetPoint("TOPLEFT", statsFrame, "TOPLEFT", 16, -282)
+  NS.UI.CreateSectionTitle(scrollChild, 16, -254, "Session Coach", "Goal tracking, current segment status, and recent guidance.")
+  statsFrame.goalStatus = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  statsFrame.goalStatus:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -282)
   statsFrame.goalStatus:SetWidth(680)
   statsFrame.goalStatus:SetJustifyH("LEFT")
   statsFrame.goalStatus:SetText("")
 
-  statsFrame.segmentStatus = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  statsFrame.segmentStatus = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   statsFrame.segmentStatus:SetPoint("TOPLEFT", statsFrame.goalStatus, "BOTTOMLEFT", 0, -6)
   statsFrame.segmentStatus:SetWidth(680)
   statsFrame.segmentStatus:SetJustifyH("LEFT")
   statsFrame.segmentStatus:SetText("")
 
-  NS.UI.CreateSectionTitle(statsFrame, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
-  statsFrame.alertRows = NS.UI.CreateListRows(statsFrame, 16, -360, 680, 4, 16, "GameFontHighlightSmall")
+  NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
+  statsFrame.alertRows = NS.UI.CreateListRows(scrollChild, 16, -360, 680, 4, 16, "GameFontHighlightSmall")
 
-  NS.UI.CreateSectionTitle(statsFrame, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
-  statsFrame.recapRows = NS.UI.CreateListRows(statsFrame, 16, -466, 680, 3, 16, "GameFontDisableSmall")
+  NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
+  statsFrame.recapRows = NS.UI.CreateListRows(scrollChild, 16, -466, 680, 3, 16, "GameFontDisableSmall")
 
   statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 88, "Show HUD", function()
     DingTimerDB.float = not DingTimerDB.float

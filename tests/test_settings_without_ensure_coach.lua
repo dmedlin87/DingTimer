@@ -5,6 +5,7 @@ LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Insights.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/GraphMath.lua", NS)
+LoadAddonFile("DingTimer/UI_Shared.lua", NS)
 LoadAddonFile("DingTimer/UI_MainWindow.lua", NS)
 LoadAddonFile("DingTimer/UI_SettingsWindow.lua", NS)
 

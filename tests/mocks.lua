@@ -204,6 +204,7 @@ local function newFrame(name)
   frame.GetText = function(self) return self._text end
   frame.StartMoving = function() end
   frame.StopMovingOrSizing = function() end
+  frame.SetScrollChild = function() end
   frame.SetScript = function(self, scriptName, fn)
     self._scripts[scriptName] = fn
   end
