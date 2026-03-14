@@ -1,5 +1,69 @@
 local ADDON, NS = ...
 
+local COACH_DEFAULTS = {
+  goal = "ding",
+  alertsEnabled = true,
+  chatAlerts = true,
+  idleSeconds = 90,
+  paceDropPct = 15,
+  alertCooldownSeconds = 90,
+  alertHistoryLimit = 4,
+}
+
+local function copyCoachDefaults()
+  local out = {}
+  for key, value in pairs(COACH_DEFAULTS) do
+    out[key] = value
+  end
+  return out
+end
+
+if not NS.GetCoachDefaults then
+  function NS.GetCoachDefaults()
+    return copyCoachDefaults()
+  end
+end
+
+if not NS.EnsureCoachConfig then
+  function NS.EnsureCoachConfig(db)
+    db = db or DingTimerDB or {}
+    db.coach = db.coach or {}
+
+    for key, value in pairs(COACH_DEFAULTS) do
+      if db.coach[key] == nil then
+        db.coach[key] = value
+      end
+    end
+
+    if db.coach.goal ~= "off" and db.coach.goal ~= "ding" and db.coach.goal ~= "30m" and db.coach.goal ~= "60m" then
+      db.coach.goal = COACH_DEFAULTS.goal
+    end
+
+    local idleSeconds = math.floor(tonumber(db.coach.idleSeconds) or COACH_DEFAULTS.idleSeconds)
+    if idleSeconds < 30 then idleSeconds = 30 end
+    db.coach.idleSeconds = idleSeconds
+
+    local paceDropPct = math.floor(tonumber(db.coach.paceDropPct) or COACH_DEFAULTS.paceDropPct)
+    if paceDropPct < 5 then paceDropPct = 5 end
+    if paceDropPct > 50 then paceDropPct = 50 end
+    db.coach.paceDropPct = paceDropPct
+
+    local alertCooldownSeconds = math.floor(tonumber(db.coach.alertCooldownSeconds) or COACH_DEFAULTS.alertCooldownSeconds)
+    if alertCooldownSeconds < 30 then alertCooldownSeconds = 30 end
+    db.coach.alertCooldownSeconds = alertCooldownSeconds
+
+    local alertHistoryLimit = math.floor(tonumber(db.coach.alertHistoryLimit) or COACH_DEFAULTS.alertHistoryLimit)
+    if alertHistoryLimit < 1 then alertHistoryLimit = 1 end
+    if alertHistoryLimit > 8 then alertHistoryLimit = 8 end
+    db.coach.alertHistoryLimit = alertHistoryLimit
+
+    if db.coach.alertsEnabled == nil then db.coach.alertsEnabled = COACH_DEFAULTS.alertsEnabled end
+    if db.coach.chatAlerts == nil then db.coach.chatAlerts = COACH_DEFAULTS.chatAlerts end
+
+    return db.coach
+  end
+end
+
 local function normalizeKeep(n)
   if NS.NormalizeKeepSessions then
     return NS.NormalizeKeepSessions(n)
@@ -27,6 +91,16 @@ local function normalizeScaleMode(mode, fixedMax)
     return "visible"
   end
   return normalized or "visible"
+end
+
+local function ensureCoachConfig()
+  DingTimerDB.coach = DingTimerDB.coach or {}
+  for key, value in pairs(COACH_DEFAULTS) do
+    if DingTimerDB.coach[key] == nil then
+      DingTimerDB.coach[key] = value
+    end
+  end
+  NS.EnsureCoachConfig(DingTimerDB)
 end
 
 local function cleanupObsoleteWindowState()
@@ -70,12 +144,13 @@ function NS.InitStore()
     mainWindowVisible = false,
     mainWindowPosition = nil,
     lastOpenTab = 1,
-    schemaVersion = 7,
+    schemaVersion = 8,
     meta = {
-      addonVersion = "0.5.0",
+      addonVersion = "0.6.0",
       createdAt = GetTime(),
       lastSeenAt = GetTime(),
     },
+    coach = copyCoachDefaults(),
     xp = {
       keepSessions = 30,
       profiles = {},
@@ -152,6 +227,13 @@ function NS.InitStore()
       DingTimerDB.schemaVersion = 7
       cleanupObsoleteWindowState()
     end
+
+    if DingTimerDB.schemaVersion < 8 then
+      DingTimerDB.schemaVersion = 8
+      DingTimerDB.coach = DingTimerDB.coach or {}
+      DingTimerDB.coach.lastRecap = DingTimerDB.coach.lastRecap or nil
+      DingTimerDB.coach.pendingRecap = DingTimerDB.coach.pendingRecap or nil
+    end
   end
 
   if DingTimerDB.graphWindowSeconds == nil then DingTimerDB.graphWindowSeconds = defaults.graphWindowSeconds end
@@ -162,16 +244,27 @@ function NS.InitStore()
   if DingTimerDB.mainWindowVisible == nil then DingTimerDB.mainWindowVisible = defaults.mainWindowVisible end
   if DingTimerDB.mainWindowPosition == nil then DingTimerDB.mainWindowPosition = defaults.mainWindowPosition end
   if DingTimerDB.lastOpenTab == nil then DingTimerDB.lastOpenTab = defaults.lastOpenTab end
+  if DingTimerDB.coach == nil then DingTimerDB.coach = copyCoachDefaults() end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
   cleanupObsoleteWindowState()
   DingTimerDB.graphScaleMode = normalizeScaleMode(DingTimerDB.graphScaleMode, DingTimerDB.graphFixedMaxXPH)
   DingTimerDB.graphFixedMaxXPH = NS.ClampGraphFixedMax and NS.ClampGraphFixedMax(DingTimerDB.graphFixedMaxXPH) or DingTimerDB.graphFixedMaxXPH
   DingTimerDB.meta.addonVersion = defaults.meta.addonVersion
+  ensureCoachConfig()
 
   local _, profile = ensureProfileTables()
   DingTimerDB.xp.sessions = nil
   if NS.TrimSessions then
     NS.TrimSessions(profile, DingTimerDB.xp.keepSessions)
+  end
+  for _, existingProfile in pairs(DingTimerDB.xp.profiles or {}) do
+    local sessions = existingProfile.sessions or {}
+    for i = 1, #sessions do
+      sessions[i].segments = sessions[i].segments or {}
+      if sessions[i].coachSummary == nil then
+        sessions[i].coachSummary = nil
+      end
+    end
   end
 
   DingTimerDB.meta.lastSeenAt = GetTime()

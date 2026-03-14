@@ -1,11 +1,12 @@
 local ADDON, NS = ...
 
-local MAIN_WIDTH = 660
-local MAIN_HEIGHT = 500
+local MAIN_WIDTH = 720
+local MAIN_HEIGHT = 540
 
 local mainWindow = nil
 local tabs = {}
 local panels = {}
+local panelFactories = {}
 
 -- This allows us to hook into the creation of the panels later
 NS.UIPanels = {}
@@ -42,7 +43,7 @@ end
 
 local function createTabButton(parent, id, text, x, y)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  btn:SetSize(100, 24)
+  btn:SetSize(110, 24)
   btn:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", x, y)
   btn:SetText(text)
   
@@ -87,26 +88,45 @@ function NS.InitMainWindow()
   local header = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
   header:SetPoint("TOPLEFT", 14, -12)
   header:SetText(NS.C.base .. "DingTimer" .. NS.C.r)
+  mainWindow.header = header
+
+  local subtitle = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  subtitle:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
+  subtitle:SetText("Session Coach")
+  mainWindow.subtitle = subtitle
 
   local contentArea = CreateFrame("Frame", "DingTimerMainContent", mainWindow)
-  contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 10, -40)
+  contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 10, -54)
   contentArea:SetPoint("BOTTOMRIGHT", mainWindow, "BOTTOMRIGHT", -10, 10)
   mainWindow.contentArea = contentArea
 
   -- Create Tabs
-  tabs[1] = createTabButton(contentArea, 1, "Dashboard", 0, 2)
-  tabs[2] = createTabButton(contentArea, 2, "Graph", 102, 2)
-  tabs[3] = createTabButton(contentArea, 3, "Insights", 204, 2)
-  tabs[4] = createTabButton(contentArea, 4, "Settings", 306, 2)
+  tabs[1] = createTabButton(contentArea, 1, "Live", 0, 2)
+  tabs[2] = createTabButton(contentArea, 2, "Analysis", 112, 2)
+  tabs[3] = createTabButton(contentArea, 3, "History", 224, 2)
+  tabs[4] = createTabButton(contentArea, 4, "Settings", 336, 2)
 
-  -- Initialize panels (these will attach to contentArea)
-  if NS.InitStatsPanel then panels[1] = NS.InitStatsPanel(contentArea) end
-  if NS.InitGraphPanel then panels[2] = NS.InitGraphPanel(contentArea) end
-  if NS.InitInsightsPanel then panels[3] = NS.InitInsightsPanel(contentArea) end
-  if NS.InitSettingsPanel then panels[4] = NS.InitSettingsPanel(contentArea) end
+  panelFactories[1] = function()
+    return NS.InitStatsPanel and NS.InitStatsPanel(contentArea) or nil
+  end
+  panelFactories[2] = function()
+    return NS.InitGraphPanel and NS.InitGraphPanel(contentArea) or nil
+  end
+  panelFactories[3] = function()
+    return NS.InitInsightsPanel and NS.InitInsightsPanel(contentArea) or nil
+  end
+  panelFactories[4] = function()
+    return NS.InitSettingsPanel and NS.InitSettingsPanel(contentArea) or nil
+  end
+  mainWindow.tabs = tabs
+  mainWindow.panels = panels
 
   mainWindow:SetScript("OnShow", function()
     DingTimerDB.mainWindowVisible = true
+    if mainWindow.subtitle then
+      local coachGoal = DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal or "ding"
+      mainWindow.subtitle:SetText("Session Coach  |  Goal: " .. tostring(coachGoal))
+    end
   end)
   mainWindow:SetScript("OnHide", function()
     DingTimerDB.mainWindowVisible = false
@@ -116,8 +136,32 @@ function NS.InitMainWindow()
   mainWindow:Hide()
 end
 
+local function ensurePanel(id)
+  if panels[id] then
+    return panels[id]
+  end
+
+  local factory = panelFactories[id]
+  if not factory then
+    return nil
+  end
+
+  local ok, panel = pcall(factory)
+  if not ok then
+    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " panel failed to load: " .. tostring(panel))
+    return nil
+  end
+
+  panels[id] = panel
+  if mainWindow then
+    mainWindow.panels = panels
+  end
+  return panel
+end
+
 function NS.SelectTab(id)
   if not mainWindow then NS.InitMainWindow() end
+  ensurePanel(id)
   
   -- Update button states
   for i, tab in pairs(tabs) do
@@ -129,7 +173,8 @@ function NS.SelectTab(id)
   end
 
   -- Show selected panel, hide others
-  for i, panel in pairs(panels) do
+  for i = 1, 4 do
+    local panel = panels[i]
     if panel then
       if i == id then
         panel:Show()

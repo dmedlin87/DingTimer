@@ -18,6 +18,118 @@ NS.GraphWindowDefaults = {
   maxHeight = 680,
 }
 
+NS.UI = NS.UI or {}
+
+local function ensureUIHelpers()
+  if not NS.UI.CreateSectionTitle then
+    function NS.UI.CreateSectionTitle(parent, x, y, title, description)
+      local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+      header:SetText(title)
+
+      local sub = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+      sub:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
+      sub:SetText(description or "")
+
+      return header, sub
+    end
+  end
+
+  if not NS.UI.CreateMetricCard then
+    function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
+      local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+      card:SetSize(width, height)
+      card:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+      NS.ApplyThemeToFrame(card, true)
+
+      local accent = card:CreateTexture(nil, "ARTWORK")
+      accent:SetHeight(2)
+      accent:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -8)
+      accent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
+      accent:SetColorTexture(0.24, 0.78, 0.92, 0.72)
+
+      local label = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+      label:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -12)
+      label:SetText(labelText or "")
+
+      local value = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+      value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+      value:SetText("--")
+
+      local sub = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+      sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 8)
+      sub:SetText("")
+
+      card.label = label
+      card.value = value
+      card.sub = sub
+      return card
+    end
+  end
+
+  if not NS.UI.SetMetricCard then
+    function NS.UI.SetMetricCard(card, value, subValue)
+      if not card then
+        return
+      end
+      card.value:SetText(value or "--")
+      card.sub:SetText(subValue or "")
+    end
+  end
+
+  if not NS.UI.CreateActionButton then
+    function NS.UI.CreateActionButton(parent, x, y, width, label, callback)
+      local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+      btn:SetSize(width, 24)
+      btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
+      btn:SetText(label)
+      btn:SetScript("OnClick", callback)
+      return btn
+    end
+  end
+
+  if not NS.UI.CreateValueLabel then
+    function NS.UI.CreateValueLabel(parent, x, y)
+      local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+      fs:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+      fs:SetText("--")
+      return fs
+    end
+  end
+
+  if not NS.UI.CreateListRows then
+    function NS.UI.CreateListRows(parent, startX, startY, width, rowCount, spacing, fontObject)
+      local rows = {}
+      for i = 1, rowCount do
+        local fs = parent:CreateFontString(nil, "OVERLAY", fontObject or "GameFontHighlightSmall")
+        fs:SetPoint("TOPLEFT", parent, "TOPLEFT", startX, startY - ((i - 1) * spacing))
+        fs:SetJustifyH("LEFT")
+        fs:SetWidth(width)
+        fs:SetText("")
+        rows[i] = fs
+      end
+      return rows
+    end
+  end
+
+  if not NS.UI.SetRows then
+    function NS.UI.SetRows(rows, values, emptyText)
+      for i = 1, #rows do
+        local value = values and values[i] or nil
+        if value and value ~= "" then
+          rows[i]:SetText(value)
+        elseif i == 1 and emptyText then
+          rows[i]:SetText(emptyText)
+        else
+          rows[i]:SetText("")
+        end
+      end
+    end
+  end
+end
+
+ensureUIHelpers()
+
 function NS.FormatNumber(num)
   if not num then return "0" end
   if num ~= num or num == math.huge or num == -math.huge then return "0" end
@@ -167,6 +279,33 @@ function NS.ClampGraphWindowSize(width, height)
   local w = math.floor(NS.Clamp(width, bounds.minWidth, bounds.maxWidth))
   local h = math.floor(NS.Clamp(height, bounds.minHeight, bounds.maxHeight))
   return w, h
+end
+
+function NS.CreateLineCompat(parent, layer)
+  if parent and parent.CreateLine then
+    return parent:CreateLine(nil, layer or "OVERLAY")
+  end
+
+  local texture = parent and parent.CreateTexture and parent:CreateTexture(nil, layer or "OVERLAY") or {}
+  if not texture.SetColorTexture then
+    texture.SetColorTexture = function() end
+  end
+  if not texture.SetThickness then
+    texture.SetThickness = function() end
+  end
+  if not texture.Show then
+    texture.Show = function() end
+  end
+  if not texture.Hide then
+    texture.Hide = function() end
+  end
+  if not texture.SetStartPoint then
+    texture.SetStartPoint = function() end
+  end
+  if not texture.SetEndPoint then
+    texture.SetEndPoint = function() end
+  end
+  return texture
 end
 
 function NS.ManageFrameTicker(frame, interval, callback, dbVisibilityKey)

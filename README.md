@@ -11,7 +11,7 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.6.0-blue?style=flat-square)
 ![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
@@ -33,12 +33,13 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **XP Per Hour** — Rolling-window calculation that adapts to your current pace, not your average from an hour ago
 - **Time To Level (TTL)** — Live countdown to your next ding, updated every second
 - **Money Per Hour** — Track your gold income alongside your XP gains
-- **XP Graph 2.0** — Dedicated graph tab with visible/session/fixed scale modes, summary cards, grid labels, and a session average overlay
-- **Session Insights** — Per-character history with best/median rates, trend tracking, and recent-session breakdowns
-- **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, and session pace
-- **Stats Dashboard** — A richer dashboard with progress, eight live metrics, and quick-launch actions
-- **Control Center** — A larger settings hub for chat, HUD, graph, and session controls
-- **Minimap Button** — Left-click for dashboard, middle-click for graph, right-click for settings, drag to reposition
+- **Session Coach** — Goal presets, pace-drop alerts, idle nudges, best-segment callouts, and end-of-run recap
+- **Analysis Graph** — Dedicated graph view with visible/session/fixed scale modes, summary cards, goal comparisons, and recent segment rows
+- **History View** — Per-character history with best/median rates, trend tracking, zone leaders, recap storage, and recent-session breakdowns
+- **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, session pace, and timed-goal pace when relevant
+- **Live Panel** — A refreshed home view for progress, coach status, recent alerts, and quick actions
+- **Settings Hub** — Grouped controls for output, HUD, coach, graph, and data maintenance
+- **Minimap Button** — Left-click for Live, middle-click for Analysis, right-click for Settings, drag to reposition
 - **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
 - **Persistent Sessions** — Settings, main window/HUD placement, and per-character session history saved between sessions
 
@@ -64,12 +65,13 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 
 | You want to...        | Do this                                            |
 | --------------------- | -------------------------------------------------- |
-| See your stats        | Left-click the minimap button or `/ding ui`        |
+| Open Live             | Left-click the minimap button or `/ding live`      |
 | Change settings       | Right-click the minimap button or `/ding settings` |
-| View the XP graph     | Middle-click the minimap button or `/ding graph`   |
-| Open Session Insights | `/ding insights`                                   |
-| Show the floating HUD | `/ding float on`                                   |
-| Reset current session | `/ding reset`                                      |
+| Open Analysis         | Middle-click the minimap button or `/ding graph`   |
+| Open History          | `/ding history` or `/ding insights`                |
+| Set a coach goal      | `/ding goal ding` or `/ding goal 30m`              |
+| Record a checkpoint   | `/ding split`                                      |
+| Show the latest recap | `/ding recap`                                      |
 
 ---
 
@@ -83,11 +85,16 @@ All commands work with either `/ding` or `/dt`.
 | ----------------------- | --------------------------------------------- |
 | `/ding`                 | Show the help menu                            |
 | `/ding help <command>`  | Detailed help for a specific command          |
-| `/ding ui`              | Toggle the Dashboard tab                      |
+| `/ding ui`              | Toggle the Live tab                           |
+| `/ding live`            | Same as above                                 |
 | `/ding stats`           | Same as above                                 |
 | `/ding settings`        | Open the settings window                      |
-| `/ding insights`        | Toggle the Session Insights window            |
+| `/ding history`         | Toggle the History window                     |
+| `/ding insights`        | Alias for History                             |
 | `/ding reset`           | Reset current session data                    |
+| `/ding goal <preset>`   | Set the coach goal: `off`, `ding`, `30m`, `60m` |
+| `/ding split`           | Record a manual checkpoint                    |
+| `/ding recap`           | Print the latest session recap                |
 | `/ding on`              | Enable chat output                            |
 | `/ding off`             | Disable chat output                           |
 

@@ -37,6 +37,22 @@ local minimapShapes = {
   ["TRICORNER-BOTTOMRIGHT"] = {true, true, true, false},
 }
 
+local function atan2(y, x)
+  if math.atan2 then
+    return math.atan2(y, x)
+  end
+  if x == 0 then
+    if y > 0 then return math.pi / 2 end
+    if y < 0 then return -(math.pi / 2) end
+    return 0
+  end
+  local angle = math.atan(y / x)
+  if x < 0 then
+    angle = angle + (y >= 0 and math.pi or -math.pi)
+  end
+  return angle
+end
+
 local function UpdatePosition()
   local angle = math.rad(DingTimerDB.minimapAngle or 45)
   local x = math.cos(angle)
@@ -70,7 +86,7 @@ f:SetScript("OnDragStart", function()
     local scale = Minimap:GetEffectiveScale()
     px, py = px / scale, py / scale
     
-    local angle = math.deg(math.atan2(py - cy, px - cx))
+    local angle = math.deg(atan2(py - cy, px - cx))
     DingTimerDB.minimapAngle = angle
     UpdatePosition()
   end)
@@ -93,8 +109,8 @@ end)
 f:SetScript("OnEnter", function(self)
   GameTooltip:SetOwner(self, "ANCHOR_LEFT")
   GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
-  GameTooltip:AddLine("Left-click to toggle the Dashboard tab", 1, 1, 1)
-  GameTooltip:AddLine("Middle-click to toggle the Graph tab", 1, 1, 1)
+  GameTooltip:AddLine("Left-click to toggle the Live tab", 1, 1, 1)
+  GameTooltip:AddLine("Middle-click to toggle the Analysis tab", 1, 1, 1)
   GameTooltip:AddLine("Right-click to toggle the Settings tab", 1, 1, 1)
   GameTooltip:AddLine("Drag to move this button", 0.7, 0.7, 0.7)
   GameTooltip:Show()

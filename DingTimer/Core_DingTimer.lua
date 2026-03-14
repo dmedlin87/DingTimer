@@ -7,6 +7,7 @@ NS.state = {
   lastMax = 0,
   lastTTL = nil,
   sessionXP = 0,
+  sessionPeakXph = 0,
   sessionMoney = 0,
   lastMoney = 0,
   events = {}, -- {t=GetTime(), xp=delta}
@@ -15,21 +16,28 @@ NS.state = {
   windowMoney = 0,
 }
 
+local coachTicker = nil
+
 function NS.resetXPState()
-  NS.state.sessionStartTime = GetTime()
+  local now = GetTime()
+  NS.state.sessionStartTime = now
   NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
   NS.state.lastXP = UnitXP("player") or 0
   NS.state.lastMax = UnitXPMax("player") or 0
   NS.state.lastTTL = nil
   NS.state.sessionXP = 0
+  NS.state.sessionPeakXph = 0
   NS.state.sessionMoney = 0
   NS.state.lastMoney = GetMoney() or 0
   NS.state.events = {}
   NS.state.moneyEvents = {}
   NS.state.windowXP = 0
   NS.state.windowMoney = 0
-  
+  if NS.InitCoachState then
+    NS.InitCoachState(now)
+  end
   if NS.RefreshStatsWindow then NS.RefreshStatsWindow() end
+  if NS.RefreshInsightsWindow then NS.RefreshInsightsWindow() end
   if NS.GraphReset then NS.GraphReset() end
 end
 
@@ -108,6 +116,7 @@ function NS.GetSessionSnapshot(now)
   local sessionMoney = NS.state.sessionMoney or 0
   local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
   local currentXph = NS.computeXPPerHour(now, window)
+  NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, currentXph or 0)
   local sessionXph = (sessionXP / sessionElapsed) * 3600
   local moneyPerHour = NS.computeMoneyPerHour(now, window)
   local remainingXP = math.max(0, maxXP - xp)
@@ -128,12 +137,33 @@ function NS.GetSessionSnapshot(now)
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
     currentXph = currentXph,
+    sessionPeakXph = NS.state.sessionPeakXph or 0,
     sessionXph = sessionXph,
     moneyPerHour = moneyPerHour,
     ttl = ttl,
     rollingWindow = window,
     zone = zone,
+    coachGoal = (DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or "ding",
   }
+end
+
+function NS.RunCoachHeartbeat(now)
+  now = now or GetTime()
+  if NS.MaybeRunCoach then
+    NS.MaybeRunCoach(now)
+  end
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD(now)
+  end
+end
+
+function NS.StartCoachTicker()
+  if coachTicker then
+    return
+  end
+  coachTicker = C_Timer.NewTicker(1, function()
+    NS.RunCoachHeartbeat(GetTime())
+  end)
 end
 
 -- Floating text
@@ -214,6 +244,9 @@ function NS.setFloatVisible(on)
     NS.ensureFloat()
     ---@diagnostic disable-next-line: redundant-parameter
     RegisterStateDriver(floatFrame, "visibility", "[combat] hide; show")
+    if NS.RefreshFloatingHUD then
+      NS.RefreshFloatingHUD()
+    end
   else
     if floatFrame then
       ---@diagnostic disable-next-line: redundant-parameter
@@ -225,25 +258,40 @@ function NS.setFloatVisible(on)
   end
 end
 
-local function updateFloatText(xph, ttl)
-  if not DingTimerDB.float then return end
+function NS.RefreshFloatingHUD(now)
+  if not DingTimerDB or not DingTimerDB.float then return end
   NS.ensureFloat()
 
-  local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(GetTime()) or nil
-  local header = NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. " to level"
-  local paceLine = "No XP pace detected yet"
+  now = now or GetTime()
+  local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(now) or nil
+  local coach = NS.GetCoachStatus and NS.GetCoachStatus(now) or nil
+  if not snapshot then
+    return
+  end
 
-  if xph and xph > 0 then
-    paceLine = NS.FormatNumber(NS.Round(xph)) .. " XP/hr"
-    if snapshot and snapshot.sessionXph > 0 then
-      paceLine = paceLine .. "  |  Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph))
+  local header = NS.C.base .. NS.fmtTime(snapshot.ttl) .. NS.C.r .. " to level"
+  local paceParts = {}
+
+  if snapshot.currentXph and snapshot.currentXph > 0 then
+    paceParts[#paceParts + 1] = NS.FormatNumber(NS.Round(snapshot.currentXph)) .. " XP/hr"
+  else
+    paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
+  end
+
+  if snapshot.sessionXph and snapshot.sessionXph > 0 then
+    paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph))
+  end
+
+  if coach and coach.goal and coach.goal.targetXph and coach.goal.targetXph > 0 then
+    local goalLabel = coach.goal.shortLabel or "Goal"
+    if not snapshot.sessionXph
+      or math.abs((coach.goal.targetXph or 0) - (snapshot.sessionXph or 0)) > 0.5 then
+      paceParts[#paceParts + 1] = goalLabel .. " " .. NS.FormatNumber(NS.Round(coach.goal.targetXph))
     end
-  elseif snapshot and snapshot.sessionXph > 0 then
-    paceLine = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph)) .. " XP/hr"
   end
 
   floatFrame.titleText:SetText(header)
-  floatFrame.subText:SetText("|cffc6d2db" .. paceLine .. "|r")
+  floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
 end
 
 function NS.onXPUpdate()
@@ -268,6 +316,7 @@ function NS.onXPUpdate()
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     table.insert(NS.state.events, { t = now, xp = delta })
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
+    if NS.NoteCoachXP then NS.NoteCoachXP(delta, now) end
     if NS.GraphFeedXP then NS.GraphFeedXP(delta, now) end
   end
 
@@ -277,8 +326,6 @@ function NS.onXPUpdate()
 
   local tcol = NS.ttlColor(ttl, NS.state.lastTTL)
   local trend = NS.ttlDeltaText(ttl, NS.state.lastTTL)
-
-  updateFloatText(xph, ttl)
   
   if DingTimerDB.enabled and delta >= (DingTimerDB.minXPDeltaToPrint or 1) then
     local header = NS.C.base .. "[DING]" .. NS.C.r .. " "
@@ -297,6 +344,7 @@ function NS.onXPUpdate()
   end
 
   NS.state.lastTTL = ttl
+  NS.RunCoachHeartbeat(now)
 end
 
 function NS.onMoneyUpdate()
@@ -307,6 +355,9 @@ function NS.onMoneyUpdate()
   
   if delta ~= 0 then
     NS.state.sessionMoney = (NS.state.sessionMoney or 0) + delta
+    if NS.NoteCoachMoney then
+      NS.NoteCoachMoney(delta, now)
+    end
   end
   
   -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden

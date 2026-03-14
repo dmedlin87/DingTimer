@@ -29,6 +29,7 @@ local lineSegments = {}
 local gridLines = {}
 local yAxisLabels = {}
 local timeAxisLabels = {}
+local segmentRows = {}
 
 local graphState = {
   anchor = 0,
@@ -119,24 +120,34 @@ local function layoutGraphFrame()
 
   graphFrame.graphArea:ClearAllPoints()
   graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -76)
-  graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -18, 70)
+  graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -18, 132)
 
   graphFrame.legendLabel:ClearAllPoints()
-  graphFrame.legendLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 48)
+  graphFrame.legendLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 108)
+
+  graphFrame.segmentSummaryLabel:ClearAllPoints()
+  graphFrame.segmentSummaryLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 92)
+
+  local rowY = 74
+  for i = 1, #segmentRows do
+    segmentRows[i]:ClearAllPoints()
+    segmentRows[i]:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, rowY)
+    rowY = rowY - 16
+  end
 
   graphFrame.zoomFooter:ClearAllPoints()
-  graphFrame.zoomFooter:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 22)
+  graphFrame.zoomFooter:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 18)
 
   local zoomX = 56
   for i = 1, #graphFrame.zoomButtons do
     local btn = graphFrame.zoomButtons[i]
     btn:ClearAllPoints()
-    btn:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", zoomX, 16)
+    btn:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", zoomX, 12)
     zoomX = zoomX + 42
   end
 
   graphFrame.fixedMaxLabel:ClearAllPoints()
-  graphFrame.fixedMaxLabel:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -164, 46)
+  graphFrame.fixedMaxLabel:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -164, 42)
 
   graphFrame.decreaseFixedButton:ClearAllPoints()
   graphFrame.decreaseFixedButton:SetPoint("RIGHT", graphFrame.fixedMaxLabel, "LEFT", -6, 0)
@@ -145,7 +156,7 @@ local function layoutGraphFrame()
   graphFrame.increaseFixedButton:SetPoint("LEFT", graphFrame.fixedMaxLabel, "RIGHT", 6, 0)
 
   graphFrame.scaleModeButton:ClearAllPoints()
-  graphFrame.scaleModeButton:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -140, 16)
+  graphFrame.scaleModeButton:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -140, 12)
 
   graphFrame.fitButton:ClearAllPoints()
   graphFrame.fitButton:SetPoint("LEFT", graphFrame.scaleModeButton, "RIGHT", 6, 0)
@@ -201,6 +212,10 @@ end
 local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
   if not graphFrame then return end
   local mode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
+  local coach = NS.GetCoachStatus and NS.GetCoachStatus(snapshot.now) or nil
+  local goal = coach and coach.goal or nil
+  local bestSegment = coach and coach.bestSegment or nil
+  local currentSegment = coach and coach.currentSegment or nil
   graphFrame.scaleModeButton:SetText(NS.GetGraphScaleModeLabel(mode, true))
   graphFrame.fitButton:SetText(mode == "visible" and "Fitted" or "Fit")
   graphFrame.fixedMaxLabel:SetText("Fixed " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
@@ -231,16 +246,63 @@ local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
 
   applySummaryCard(
     graphFrame.summaryCards[3],
-    mode == "session" and "60m Peak" or "Visible Peak",
-    formatRateShort(mode == "session" and historyPeak or visiblePeak),
-    mode == "session" and "Retained graph history" or "Bars on screen"
+    "Goal Pace",
+    (goal and goal.targetXph and goal.targetXph > 0) and formatRateShort(goal.targetXph) or "--",
+    goal and goal.goalLabel or "No goal"
   )
 
   applySummaryCard(
     graphFrame.summaryCards[4],
-    "Scale",
-    NS.GetGraphScaleModeLabel(mode, true),
-    NS.FormatNumber(NS.Round(scaleMax)) .. " max"
+    "Best Segment",
+    bestSegment and formatRateShort(bestSegment.avgXph) or "--",
+    bestSegment and tostring(bestSegment.zone or "Unknown") or "No completed segment"
+  )
+
+  if currentSegment and goal and goal.targetXph and goal.targetXph > 0 then
+    local delta = (currentSegment.avgXph or 0) - goal.targetXph
+    local sign = (delta >= 0) and "+" or "-"
+    graphFrame.segmentSummaryLabel:SetText(string.format(
+      "Current segment: %s  |  %s XP/hr  |  %s%s vs goal",
+      tostring(currentSegment.zone or "Unknown"),
+      NS.FormatNumber(NS.Round(currentSegment.avgXph or 0)),
+      sign,
+      NS.FormatNumber(NS.Round(math.abs(delta)))
+    ))
+  elseif currentSegment then
+    graphFrame.segmentSummaryLabel:SetText(string.format(
+      "Current segment: %s  |  %s XP/hr over %s",
+      tostring(currentSegment.zone or "Unknown"),
+      NS.FormatNumber(NS.Round(currentSegment.avgXph or 0)),
+      NS.fmtTime(currentSegment.durationSec or 0)
+    ))
+  else
+    graphFrame.segmentSummaryLabel:SetText("Current segment starts once the session begins tracking.")
+  end
+
+  local segmentValues = {}
+  local recentSegments = coach and coach.recentSegments or {}
+  for i = 1, math.min(#recentSegments, #segmentRows) do
+    local segment = recentSegments[i]
+    local compareText = ""
+    if goal and goal.targetXph and goal.targetXph > 0 then
+      local delta = (segment.avgXph or 0) - goal.targetXph
+      local sign = (delta >= 0) and "+" or "-"
+      compareText = string.format("  |  %s%s vs goal", sign, NS.FormatNumber(NS.Round(math.abs(delta))))
+    end
+    local prefix = segment.isCurrent and "*" or tostring(i)
+    segmentValues[i] = string.format(
+      "%s  %s  |  %s XP/hr  |  %s%s",
+      prefix,
+      tostring(segment.zone or "Unknown"),
+      NS.FormatNumber(NS.Round(segment.avgXph or 0)),
+      NS.fmtTime(segment.durationSec or 0),
+      compareText
+    )
+  end
+  NS.UI.SetRows(
+    segmentRows,
+    segmentValues,
+    NS.C.mid .. "No session segments yet. Manual splits and zone changes will appear here." .. NS.C.r
   )
 end
 
@@ -274,7 +336,7 @@ local function redrawGraph()
     and graphState.lastAreaHeight == areaHeight then
     updateAxis(graphState.cachedScaleMax or 1, now, windowSeconds)
     refreshControlState(graphState.cachedScaleMax or 1, graphState.cachedVisiblePeak or 0, graphState.cachedHistoryPeak or 0, snapshot)
-    graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average")
+    graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
     if (graphState.cachedVisiblePeak or 0) <= 0 and snapshot.sessionXP <= 0 then
       graphFrame.emptyState:Show()
     else
@@ -338,7 +400,7 @@ local function redrawGraph()
   refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
 
   -- Removed subtitle
-  graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average")
+  graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
   if visiblePeak <= 0 and snapshot.sessionXP <= 0 then
     graphFrame.emptyState:Show()
   else
@@ -502,6 +564,14 @@ function NS.InitGraphPanel(parent)
   legendLabel:SetText("")
   graphFrame.legendLabel = legendLabel
 
+  local segmentSummaryLabel = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  segmentSummaryLabel:SetWidth(640)
+  segmentSummaryLabel:SetJustifyH("LEFT")
+  segmentSummaryLabel:SetText("")
+  graphFrame.segmentSummaryLabel = segmentSummaryLabel
+
+  segmentRows = NS.UI.CreateListRows(graphFrame, 16, -1, 640, 4, 16, "GameFontDisableSmall")
+
   local zoomFooter = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoomFooter:SetText("Zoom")
   graphFrame.zoomFooter = zoomFooter
@@ -555,7 +625,7 @@ function NS.InitGraphPanel(parent)
 
   -- Removed resize grip
   for i = 1, MAX_BARS - 1 do
-    local line = graphArea:CreateLine(nil, "OVERLAY")
+    local line = NS.CreateLineCompat(graphArea, "OVERLAY")
     line:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], COLOR_LINE[4])
     line:SetThickness(2)
     line:Hide()

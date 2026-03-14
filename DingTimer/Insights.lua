@@ -183,6 +183,10 @@ function NS.RecordSession(reason)
   local avgXph = (xpGained / durationSec) * 3600
   local avgMoneyPh = (moneyNetCopper / durationSec) * 3600
   local endedStamp = math.floor(now + 0.5)
+  local segments = {}
+  if NS.FinalizeSessionSegments then
+    segments = NS.FinalizeSessionSegments(reason, now)
+  end
 
   local record = {
     id = string.format("%d-%d-%d", endedStamp, levelStart, levelEnd),
@@ -198,11 +202,24 @@ function NS.RecordSession(reason)
     sampleCount = sampleCount,
     zone = zone,
     reason = reason or "MANUAL_RESET",
+    coachGoal = (DingTimerDB.coach and DingTimerDB.coach.goal) or "ding",
+    segments = segments,
   }
+
+  if NS.BuildCoachSummary then
+    record.coachSummary = NS.BuildCoachSummary(record)
+  end
 
   local profile = NS.GetProfileStore(true)
   table.insert(profile.sessions, record)
   NS.TrimSessions(profile)
+
+  if record.coachSummary and NS.StoreCoachSummary then
+    NS.StoreCoachSummary(record.coachSummary, record.reason == "LOGOUT")
+    if record.reason ~= "LOGOUT" and NS.DeliverCoachSummary then
+      NS.DeliverCoachSummary(record.coachSummary)
+    end
+  end
 
   if NS.RefreshInsightsWindow then
     NS.RefreshInsightsWindow()
@@ -236,6 +253,9 @@ function NS.GetInsightsSummary(limit)
   local xphValues = {}
   local durations = {}
   local bestXph = 0
+  local bestSession = nil
+  local lastSession = sessions[count]
+  local zoneStats = {}
 
   -- ⚡ Bolt: Use explicit counters for table insertion to avoid O(N) `#` operator
   -- overhead on every loop iteration, improving aggregation performance by ~35%
@@ -256,7 +276,17 @@ function NS.GetInsightsSummary(limit)
     end
     if xph > bestXph then
       bestXph = xph
+      bestSession = s
     end
+
+    local zoneKey = safeString(s.zone, "Unknown")
+    local zoneEntry = zoneStats[zoneKey]
+    if not zoneEntry then
+      zoneEntry = { zone = zoneKey, totalXph = 0, sessions = 0 }
+      zoneStats[zoneKey] = zoneEntry
+    end
+    zoneEntry.totalXph = zoneEntry.totalXph + xph
+    zoneEntry.sessions = zoneEntry.sessions + 1
   end
 
   local chartValues = {}
@@ -297,6 +327,24 @@ function NS.GetInsightsSummary(limit)
     end
   end
 
+  local zoneLeaders = {}
+  for _, stat in pairs(zoneStats) do
+    zoneLeaders[#zoneLeaders + 1] = {
+      zone = stat.zone,
+      avgXph = (stat.sessions > 0) and (stat.totalXph / stat.sessions) or 0,
+      sessions = stat.sessions,
+    }
+  end
+  table.sort(zoneLeaders, function(a, b)
+    if a.avgXph == b.avgXph then
+      return a.zone < b.zone
+    end
+    return a.avgXph > b.avgXph
+  end)
+  while #zoneLeaders > 3 do
+    table.remove(zoneLeaders)
+  end
+
   return {
     totalSessions = count,
     rows = rows,
@@ -305,5 +353,8 @@ function NS.GetInsightsSummary(limit)
     bestXph = bestXph,
     avgLevelTime = average(durations),
     trendPct = trendPct,
+    bestSession = bestSession,
+    lastSession = lastSession,
+    zoneLeaders = zoneLeaders,
   }
 end

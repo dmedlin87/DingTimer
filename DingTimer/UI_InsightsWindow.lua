@@ -1,26 +1,16 @@
 local ADDON, NS = ...
 
-local MAX_ROWS = 10
+local MAX_ROWS = 8
 local MAX_SPARK_POINTS = 20
-local FRAME_WIDTH = 640
-local FRAME_HEIGHT = 440
 
 local insightsFrame = nil
 local rowTexts = {}
 local sparkLines = {}
 
---- Formats a numeric value into a standard "X / hr" string.
---- @param value number The raw rate value (e.g., XP per hour).
---- @return string The formatted rate string.
 local function formatRate(value)
-  return NS.FormatNumber(math.floor((value or 0) + 0.5)) .. " / hr"
+  return NS.FormatNumber(NS.Round(value or 0)) .. " / hr"
 end
 
---- Formats a percentage trend into a colored string.
---- Depends on a minimum number of recorded sessions to show a valid trend.
---- @param trendPct number The trend change as a raw percentage (-1.5 to 1.5, etc).
---- @param totalSessions number The total amount of available session records.
---- @return string The color-coded trend display text.
 local function formatTrend(trendPct, totalSessions)
   if totalSessions < 4 then
     return NS.C.mid .. "--" .. NS.C.r
@@ -36,34 +26,42 @@ local function formatTrend(trendPct, totalSessions)
   return string.format("%s%.1f%%%s", color, trendPct, NS.C.r)
 end
 
---- Hides all currently active sparkline segments.
+local function formatSessionRow(i, session)
+  return string.format(
+    "%02d) Lv %s-%s  %s  %s XP/hr  %s  %s  [%s]",
+    i,
+    tostring(session.levelStart or "?"),
+    tostring(session.levelEnd or "?"),
+    NS.fmtTime(session.durationSec or 0),
+    NS.FormatNumber(NS.Round(session.avgXph or 0)),
+    NS.fmtMoney(session.moneyNetCopper or 0),
+    session.zone or "Unknown",
+    session.reason or "UNKNOWN"
+  )
+end
+
 local function hideSparkline()
   for i = 1, #sparkLines do
     sparkLines[i]:Hide()
   end
 end
 
---- Renders a miniature line chart (sparkline) of recent XP/hr values.
---- @param values number[] A series of recent XP/hr numbers.
 local function drawSparkline(values)
   hideSparkline()
-
   local n = #values
-  if n < 2 then return end
-  if not insightsFrame then return end
+  if n < 2 or not insightsFrame then
+    return
+  end
 
   local area = insightsFrame.sparkArea
   local width = math.max(area:GetWidth(), 1)
   local height = math.max(area:GetHeight(), 1)
 
-  local maxValue = 0
+  local maxValue = 1
   for i = 1, n do
     if values[i] > maxValue then
       maxValue = values[i]
     end
-  end
-  if maxValue <= 0 then
-    maxValue = 1
   end
 
   local prevX, prevY = nil, nil
@@ -81,28 +79,65 @@ local function drawSparkline(values)
   end
 end
 
---- Formats a single recorded session into a readable line for the UI list.
---- @param i number The row index.
---- @param session table The stored session data record.
---- @return string The formatted textual row.
-local function formatSessionRow(i, session)
-  local reason = session.reason or "UNKNOWN"
-  local zone = session.zone or "Unknown"
-  local money = NS.fmtMoney(session.moneyNetCopper or 0)
-  local levelStart = tostring(session.levelStart or "?")
-  local levelEnd = tostring(session.levelEnd or "?")
-  local dur = NS.fmtTime(session.durationSec or 0)
-  local xph = NS.FormatNumber(math.floor((session.avgXph or 0) + 0.5))
+local function updateComparison(summary)
+  local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(GetTime()) or nil
+  local lastSession = summary.lastSession
+  if not snapshot or not lastSession then
+    insightsFrame.compareLine1:SetText("No prior session to compare against.")
+    insightsFrame.compareLine2:SetText("Complete a run to start building history context.")
+    return
+  end
 
-  return string.format(
-    "%02d) Lv %s-%s  %s  %s XP/hr  %s  %s  [%s]",
-    i, levelStart, levelEnd, dur, xph, money, zone, reason
+  local delta = snapshot.sessionXph - (lastSession.avgXph or 0)
+  local deltaColor = NS.C.mid
+  if delta > 0 then
+    deltaColor = NS.C.xp
+  elseif delta < 0 then
+    deltaColor = NS.C.bad
+  end
+
+  insightsFrame.compareLine1:SetText(string.format(
+    "Current run: %s XP/hr over %s in %s",
+    NS.FormatNumber(NS.Round(snapshot.sessionXph or 0)),
+    NS.fmtTime(snapshot.sessionElapsed or 0),
+    snapshot.zone or "Unknown"
+  ))
+  insightsFrame.compareLine2:SetText(string.format(
+    "Last run: %s XP/hr over %s  |  Delta %s%s%s",
+    NS.FormatNumber(NS.Round(lastSession.avgXph or 0)),
+    NS.fmtTime(lastSession.durationSec or 0),
+    deltaColor,
+    NS.FormatNumber(NS.Round(delta)),
+    NS.C.r
+  ))
+end
+
+local function updateZoneLeaders(summary)
+  local values = {}
+  for i = 1, 3 do
+    local zone = summary.zoneLeaders[i]
+    if zone then
+      values[i] = string.format(
+        "%d. %s  |  %s XP/hr avg across %d run%s",
+        i,
+        zone.zone or "Unknown",
+        NS.FormatNumber(NS.Round(zone.avgXph or 0)),
+        zone.sessions or 0,
+        ((zone.sessions or 0) == 1) and "" or "s"
+      )
+    end
+  end
+  NS.UI.SetRows(
+    insightsFrame.zoneRows,
+    values,
+    NS.C.mid .. "No zone leaders yet. Finish a few sessions first." .. NS.C.r
   )
 end
 
---- Re-fetches current metrics and redelivers data to the visual elements on the panel.
 local function refreshInsights()
-  if not insightsFrame or not insightsFrame:IsShown() then return end
+  if not insightsFrame or not insightsFrame:IsShown() then
+    return
+  end
 
   local summary = NS.GetInsightsSummary(MAX_ROWS)
   insightsFrame.valueMedianXPH:SetText(formatRate(summary.medianXph))
@@ -110,41 +145,49 @@ local function refreshInsights()
   insightsFrame.valueAvgLevel:SetText(NS.fmtTime(summary.avgLevelTime))
   insightsFrame.valueTrend:SetText(formatTrend(summary.trendPct, summary.totalSessions))
   insightsFrame.valueCount:SetText(tostring(summary.totalSessions))
+  insightsFrame.bestSessionValue:SetText(
+    summary.bestSession and string.format(
+      "%s in %s",
+      summary.bestSession.zone or "Unknown",
+      formatRate(summary.bestSession.avgXph or 0)
+    ) or "--"
+  )
 
   if summary.totalSessions == 0 then
-    rowTexts[1]:SetText(NS.C.mid .. "No session history yet. Start leveling to build insights." .. NS.C.r)
+    rowTexts[1]:SetText(NS.C.mid .. "No session history yet. Start leveling to build history." .. NS.C.r)
     for i = 2, MAX_ROWS do
       rowTexts[i]:SetText("")
     end
+    updateComparison(summary)
+    updateZoneLeaders(summary)
     drawSparkline({})
+    insightsFrame.recapValue:SetText("No recap stored yet.")
     return
   end
 
   for i = 1, MAX_ROWS do
     local row = summary.rows[i]
-    if row then
-      rowTexts[i]:SetText(formatSessionRow(i, row))
-    else
-      rowTexts[i]:SetText("")
-    end
+    rowTexts[i]:SetText(row and formatSessionRow(i, row) or "")
   end
 
+  local recap = (summary.lastSession and summary.lastSession.coachSummary) or (DingTimerDB.coach and DingTimerDB.coach.lastRecap) or nil
+  if recap then
+    insightsFrame.recapValue:SetText((recap.headline or "") .. "  " .. (recap.segmentLine or ""))
+  else
+    insightsFrame.recapValue:SetText("No recap stored yet.")
+  end
+
+  updateComparison(summary)
+  updateZoneLeaders(summary)
   drawSparkline(summary.chartValues or {})
 end
 
---- Initializes the insights datatable and sparkline UI frame.
---- Consolidates the historical ledger of what a player has recently earned.
---- @param parent Frame The host tab or container frame.
---- @return Frame The initialized insights panel.
 function NS.InitInsightsPanel(parent)
   if insightsFrame then return insightsFrame end
 
   insightsFrame = CreateFrame("Frame", "DingTimerInsightsPanel", parent)
   insightsFrame:SetAllPoints(parent)
 
-  -- Removed standalone window controls (movable, drag, closeBtn, title, sep)
-
-  -- Position the summary block headers
   local function createSummaryBlock(anchorX, label)
     local labelFS = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     labelFS:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", anchorX, -16)
@@ -157,26 +200,52 @@ function NS.InitInsightsPanel(parent)
   end
 
   insightsFrame.valueMedianXPH = createSummaryBlock(16, "Median XP/hr")
-  insightsFrame.valueBestXPH = createSummaryBlock(140, "Best XP/hr")
-  insightsFrame.valueAvgLevel = createSummaryBlock(264, "Avg Time in Level")
-  insightsFrame.valueTrend = createSummaryBlock(408, "Trend")
+  insightsFrame.valueBestXPH = createSummaryBlock(150, "Best XP/hr")
+  insightsFrame.valueAvgLevel = createSummaryBlock(284, "Avg Time in Level")
+  insightsFrame.valueTrend = createSummaryBlock(438, "Trend")
 
   local countLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  countLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -68)
-  countLabel:SetText("Stored Sessions")
+  countLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 572, -16)
+  countLabel:SetText("Stored Runs")
 
   insightsFrame.valueCount = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  insightsFrame.valueCount:SetPoint("LEFT", countLabel, "RIGHT", 8, 0)
+  insightsFrame.valueCount:SetPoint("TOPLEFT", countLabel, "BOTTOMLEFT", 0, -2)
   insightsFrame.valueCount:SetText("0")
 
+  local bestSessionLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  bestSessionLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -68)
+  bestSessionLabel:SetText("Best Session")
+
+  insightsFrame.bestSessionValue = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  insightsFrame.bestSessionValue:SetPoint("TOPLEFT", bestSessionLabel, "BOTTOMLEFT", 0, -4)
+  insightsFrame.bestSessionValue:SetWidth(320)
+  insightsFrame.bestSessionValue:SetJustifyH("LEFT")
+  insightsFrame.bestSessionValue:SetText("--")
+
+  local compareLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  compareLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -108)
+  compareLabel:SetText("Current vs Last Run")
+
+  insightsFrame.compareLine1 = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  insightsFrame.compareLine1:SetPoint("TOPLEFT", compareLabel, "BOTTOMLEFT", 0, -4)
+  insightsFrame.compareLine1:SetWidth(680)
+  insightsFrame.compareLine1:SetJustifyH("LEFT")
+  insightsFrame.compareLine1:SetText("")
+
+  insightsFrame.compareLine2 = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  insightsFrame.compareLine2:SetPoint("TOPLEFT", insightsFrame.compareLine1, "BOTTOMLEFT", 0, -4)
+  insightsFrame.compareLine2:SetWidth(680)
+  insightsFrame.compareLine2:SetJustifyH("LEFT")
+  insightsFrame.compareLine2:SetText("")
+
   local sparkLabel = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  sparkLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -88)
+  sparkLabel:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -162)
   sparkLabel:SetText("Recent XP/hr Trend")
 
   local sparkArea = CreateFrame("Frame", nil, insightsFrame, "BackdropTemplate")
-  sparkArea:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -108)
-  sparkArea:SetPoint("TOPRIGHT", insightsFrame, "TOPRIGHT", -16, -108)
-  sparkArea:SetHeight(92)
+  sparkArea:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -182)
+  sparkArea:SetPoint("TOPRIGHT", insightsFrame, "TOPRIGHT", -16, -182)
+  sparkArea:SetHeight(84)
   sparkArea:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -187,53 +256,42 @@ function NS.InitInsightsPanel(parent)
   sparkArea:SetBackdropBorderColor(0.25, 0.25, 0.25, 0.8)
   insightsFrame.sparkArea = sparkArea
 
-  local baseline = sparkArea:CreateTexture(nil, "ARTWORK")
-  baseline:SetColorTexture(0.35, 0.35, 0.35, 0.7)
-  baseline:SetHeight(1)
-  baseline:SetPoint("BOTTOMLEFT", sparkArea, "BOTTOMLEFT", 0, 0)
-  baseline:SetPoint("BOTTOMRIGHT", sparkArea, "BOTTOMRIGHT", 0, 0)
-
   for i = 1, MAX_SPARK_POINTS - 1 do
-    local line = sparkArea:CreateLine(nil, "OVERLAY")
+    local line = NS.CreateLineCompat(sparkArea, "OVERLAY")
     line:SetColorTexture(0.24, 0.78, 0.92, 0.95)
     line:SetThickness(2)
     line:Hide()
     sparkLines[i] = line
   end
 
+  NS.UI.CreateSectionTitle(insightsFrame, 16, -286, "Zone Leaders", "Where your best historical pace has been.")
+  insightsFrame.zoneRows = NS.UI.CreateListRows(insightsFrame, 16, -314, 680, 3, 16, "GameFontHighlightSmall")
+
+  NS.UI.CreateSectionTitle(insightsFrame, 16, -374, "Latest Recap", "The most recent coach summary stored with your runs.")
+  insightsFrame.recapValue = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  insightsFrame.recapValue:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -402)
+  insightsFrame.recapValue:SetWidth(680)
+  insightsFrame.recapValue:SetJustifyH("LEFT")
+  insightsFrame.recapValue:SetText("")
+
   local rowsHeader = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  rowsHeader:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -216)
+  rowsHeader:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -438)
   rowsHeader:SetText("Recent Sessions (newest first)")
 
-  for i = 1, MAX_ROWS do
-    local fs = insightsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetPoint("TOPLEFT", insightsFrame, "TOPLEFT", 16, -230 - ((i - 1) * 14))
-    fs:SetJustifyH("LEFT")
-    fs:SetWidth(FRAME_WIDTH - 32)
-    fs:SetText("")
-    rowTexts[i] = fs
-  end
+  rowTexts = NS.UI.CreateListRows(insightsFrame, 16, -458, 680, MAX_ROWS, 14, "GameFontHighlightSmall")
 
-  NS.CreateConfirmButton(insightsFrame, 16, 10, 120, "Clear History", "|cffff4040Confirm Clear|r", function()
+  NS.CreateConfirmButton(insightsFrame, 16, 10, 120, "Clear History", "Confirm Clear", function()
     if NS.ClearProfileSessions then
       NS.ClearProfileSessions()
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " insights history cleared for this character.")
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " history cleared for this character.")
     end
   end)
 
-  -- Removed close button since we use tabs now
-
-  insightsFrame:SetScript("OnShow", function()
-    refreshInsights()
-  end)
-
+  insightsFrame:SetScript("OnShow", refreshInsights)
   insightsFrame:Hide()
-  return insightsFrame --[[@as Frame]]
+  return insightsFrame
 end
 
--- Removed ToggleInsightsWindow and SetInsightsVisible since we use tabs
-
---- Triggers an immediate refresh if the insights window is actively visible.
 function NS.RefreshInsightsWindow()
   if insightsFrame and insightsFrame:IsShown() then
     refreshInsights()

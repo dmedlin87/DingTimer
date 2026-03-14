@@ -37,7 +37,7 @@ NS.InitStore()
 local key = NS.GetProfileKey()
 local profile = DingTimerDB.xp.profiles[key]
 
-assert_eq(DingTimerDB.schemaVersion, 7, "schemaVersion should migrate to 7")
+assert_eq(DingTimerDB.schemaVersion, 8, "schemaVersion should migrate to 8")
 assert_eq(DingTimerDB.enabled, false, "existing settings should be preserved")
 assert_eq(DingTimerDB.xp.keepSessions, 12, "keepSessions should be preserved")
 assert_true(DingTimerDB.xp.sessions == nil, "legacy xp.sessions should be removed")
@@ -52,5 +52,7 @@ assert_true(DingTimerDB.graphVisible == nil, "obsolete graph visibility flag sho
 assert_true(DingTimerDB.graphLocked == nil, "obsolete graph lock flag should be removed")
 assert_eq(DingTimerDB.mainWindowVisible, false, "main window visibility default should exist")
 assert_eq(DingTimerDB.lastOpenTab, 1, "main window tab default should exist")
+assert_eq(DingTimerDB.coach.goal, "ding", "coach goal should default during migration")
+assert_eq(DingTimerDB.coach.idleSeconds, 90, "coach idle threshold should default during migration")
 
 print("Store v7 migration test passed!")

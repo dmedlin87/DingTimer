@@ -1,136 +1,126 @@
 local ADDON, NS = ...
 
-local FRAME_WIDTH = 640
-local FRAME_HEIGHT = 440
-local CARD_GAP = 12
-local CARD_WIDTH = 188
-local CARD_HEIGHT = 52
+local FRAME_WIDTH = 690
+local CARD_WIDTH = 158
+local CARD_HEIGHT = 56
+local CARD_GAP = 10
 
 local statsFrame = nil
 
---- Creates a reusable metric card widget for the stats panel.
---- @param parent Frame The parent frame to attach the card to.
---- @param x number The X offset relative to the parent's TOPLEFT.
---- @param y number The Y offset relative to the parent's TOPLEFT.
---- @param labelText string The text for the card's header label.
---- @return table A table containing refs to the background frame and its text elements.
-local function createMetricCard(parent, x, y, labelText)
-  local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-  card:SetSize(CARD_WIDTH, CARD_HEIGHT)
-  card:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-  NS.ApplyThemeToFrame(card, true)
-
-  local accent = card:CreateTexture(nil, "ARTWORK")
-  accent:SetHeight(2)
-  accent:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -8)
-  accent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
-  accent:SetColorTexture(0.24, 0.78, 0.92, 0.75)
-
-  local label = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  label:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -12)
-  label:SetText(labelText)
-
-  local value = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
-  value:SetText("--")
-
-  local sub = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 8)
-  sub:SetText("")
-
-  return {
-    frame = card,
-    value = value,
-    sub = sub,
-  }
-end
-
---- Creates a standard action button for the stats panel.
---- @param parent Frame The parent frame to attach the button to.
---- @param x number The X offset relative to the parent's BOTTOMLEFT.
---- @param y number The Y offset relative to the parent's BOTTOMLEFT.
---- @param label string The text to display on the button.
---- @param callback function The function to call when the button is clicked.
---- @return Button The created button widget.
-local function createActionButton(parent, x, y, label, callback)
-  local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  btn:SetSize(90, 24)
-  btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
-  btn:SetText(label)
-  btn:SetScript("OnClick", callback)
-  return btn --[[@as Button]]
-end
-
---- Replaces the displayed text on a metric card.
---- @param card table The metric card object created by createMetricCard.
---- @param value string|nil The primary value text to display, defaults to "--".
---- @param subValue string|nil The secondary subtitle text to display, defaults to "".
-local function setCard(card, value, subValue)
-  card.value:SetText(value or "--")
-  card.sub:SetText(subValue or "")
-end
-
---- Computes and formats the percentage difference between current pace and session average.
---- Returns colored text indicating if the player is speeding up or slowing down.
---- @param currentXph number The player's current XP per hour pace.
---- @param sessionXph number The player's overall session XP per hour pace.
---- @return string, string The formatted value text and a subtitle text explaining it.
-local function formatPaceDelta(currentXph, sessionXph)
-  if not currentXph or currentXph <= 0 or not sessionXph or sessionXph <= 0 then
-    return NS.C.mid .. "Waiting" .. NS.C.r, "Need live and session pace"
+local function formatGoalCard(goal)
+  if not goal then
+    return "--", "Coach unavailable"
   end
-
-  local deltaPct = ((currentXph / sessionXph) - 1) * 100
-  local color = NS.C.mid
-  if deltaPct > 1 then
-    color = NS.C.xp
-  elseif deltaPct < -1 then
-    color = NS.C.bad
+  if goal.goal == "off" then
+    return "Off", "Alerts only"
   end
-
-  local sign = (deltaPct >= 0) and "+" or ""
-  return color .. sign .. NS.fmtPercent(deltaPct, 1) .. NS.C.r, "Current vs session avg"
+  if goal.targetXph and goal.targetXph > 0 then
+    return NS.FormatNumber(NS.Round(goal.targetXph)), goal.goalLabel
+  end
+  return goal.goalLabel or "Ding", goal.status or ""
 end
 
---- Called periodically to compute stats and update all displays in the stats panel.
---- Syncs UI widgets with the current tracking state via NS.GetSessionSnapshot.
-local function updateValues()
-  if not statsFrame or not statsFrame:IsShown() then
-    return
-  end
-
-  local snapshot = NS.GetSessionSnapshot(GetTime())
-  local progressPct = math.max(0, math.min(snapshot.progress * 100, 100))
-  local progressWidth = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * snapshot.progress))
-  local paceValue, paceSub = formatPaceDelta(snapshot.currentXph, snapshot.sessionXph)
-
+local function setProgress(snapshot)
+  local progressPct = math.max(0, math.min((snapshot.progress or 0) * 100, 100))
+  local width = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
-  statsFrame.progressTitle:SetText(string.format("Level %s  |  %s / %s XP  (%.1f%%)",
+  statsFrame.progressTitle:SetText(string.format(
+    "Level %s  |  %s / %s XP  (%.1f%%)",
     tostring(snapshot.level or "?"),
     NS.FormatNumber(snapshot.xp or 0),
     NS.FormatNumber(snapshot.maxXP or 0),
     progressPct
   ))
-  statsFrame.progressSub:SetText(string.format("%s XP remaining  |  %s rolling window",
+  statsFrame.progressSub:SetText(string.format(
+    "%s XP remaining  |  %s rolling window  |  %s session time",
     NS.FormatNumber(snapshot.remainingXP or 0),
-    NS.fmtTime(snapshot.rollingWindow or 0)
+    NS.fmtTime(snapshot.rollingWindow or 0),
+    NS.fmtTime(snapshot.sessionElapsed or 0)
   ))
-  statsFrame.progressFill:SetWidth(progressWidth)
-
-  setCard(statsFrame.cards.sessionTime, NS.fmtTime(snapshot.sessionElapsed), "In this run")
-  setCard(statsFrame.cards.sessionXP, NS.FormatNumber(snapshot.sessionXP), "Earned this session")
-  setCard(statsFrame.cards.currentXph, NS.FormatNumber(NS.Round(snapshot.currentXph)), "Rolling pace")
-  setCard(statsFrame.cards.sessionAvg, NS.FormatNumber(NS.Round(snapshot.sessionXph)), "Whole-session pace")
-  setCard(statsFrame.cards.ttl, NS.fmtTime(snapshot.ttl), "Estimated time to ding")
-  setCard(statsFrame.cards.paceDelta, paceValue, paceSub)
-  setCard(statsFrame.cards.sessionMoney, NS.fmtMoney(snapshot.sessionMoney), "Net this session")
-  setCard(statsFrame.cards.moneyPerHour, NS.fmtMoney(NS.Round(snapshot.moneyPerHour)) .. " / hr", "Income pace")
+  statsFrame.progressFill:SetWidth(width)
 end
 
---- Initializes the primary stats dashboard, creating all visual elements.
---- Will return the existing frame if already created.
---- @param parent Frame The parent tab container or window for this panel.
---- @return Frame The initialized stats panel frame.
+local function buildAlertRows(coach)
+  local rows = {}
+  local alerts = coach and coach.alerts or {}
+  for i = 1, #alerts do
+    rows[i] = string.format(
+      "%s ago  |  %s",
+      NS.fmtTime(math.max(1, GetTime() - (alerts[i].at or GetTime()))),
+      alerts[i].text or ""
+    )
+  end
+  return rows
+end
+
+local function buildRecapLines(coach)
+  local summary = coach and coach.lastRecap or nil
+  if not summary then
+    return {
+      "No coach recap yet. Finish a run or type /ding recap during a session.",
+    }
+  end
+  return {
+    summary.headline or "",
+    summary.detail or "",
+    summary.segmentLine or "",
+  }
+end
+
+local function updateButtons()
+  statsFrame.hudButton:SetText(DingTimerDB.float and "Hide HUD" or "Show HUD")
+end
+
+local function updateValues()
+  if not statsFrame or not statsFrame:IsShown() then
+    return
+  end
+
+  local now = GetTime()
+  local snapshot = NS.GetSessionSnapshot(now)
+  local coach = NS.GetCoachStatus and NS.GetCoachStatus(now) or nil
+  local goalValue, goalSub = formatGoalCard(coach and coach.goal)
+  local bestSegment = coach and coach.bestSegment or nil
+  local currentSegment = coach and coach.currentSegment or nil
+
+  setProgress(snapshot)
+  updateButtons()
+
+  NS.UI.SetMetricCard(statsFrame.cards.currentXph, NS.FormatNumber(NS.Round(snapshot.currentXph)), "Rolling pace")
+  NS.UI.SetMetricCard(statsFrame.cards.sessionAvg, NS.FormatNumber(NS.Round(snapshot.sessionXph)), "Whole-session pace")
+  NS.UI.SetMetricCard(statsFrame.cards.ttl, NS.fmtTime(snapshot.ttl), "Time to next ding")
+  NS.UI.SetMetricCard(statsFrame.cards.goal, goalValue, goalSub)
+  NS.UI.SetMetricCard(statsFrame.cards.sessionXP, NS.FormatNumber(snapshot.sessionXP), "Earned this run")
+  NS.UI.SetMetricCard(statsFrame.cards.sessionMoney, NS.fmtMoney(snapshot.sessionMoney), "Net session gold")
+  NS.UI.SetMetricCard(statsFrame.cards.moneyPerHour, NS.fmtMoney(NS.Round(snapshot.moneyPerHour)) .. " / hr", "Current money pace")
+  NS.UI.SetMetricCard(
+    statsFrame.cards.bestSegment,
+    bestSegment and NS.FormatNumber(NS.Round(bestSegment.avgXph or 0)) or "--",
+    bestSegment and ("Best segment: " .. tostring(bestSegment.zone or "Unknown")) or "No completed segment yet"
+  )
+
+  statsFrame.goalStatus:SetText((coach and coach.goal and coach.goal.status) or "Coach goal unavailable.")
+  statsFrame.segmentStatus:SetText(
+    currentSegment and string.format(
+      "Current segment: %s  |  %s XP/hr over %s",
+      tostring(currentSegment.zone or "Unknown"),
+      NS.FormatNumber(NS.Round(currentSegment.avgXph or 0)),
+      NS.fmtTime(currentSegment.durationSec or 0)
+    ) or "Current segment starts tracking with your next checkpoint."
+  )
+
+  NS.UI.SetRows(
+    statsFrame.alertRows,
+    buildAlertRows(coach),
+    NS.C.mid .. "No recent coach alerts. Keep moving to build guidance." .. NS.C.r
+  )
+  NS.UI.SetRows(
+    statsFrame.recapRows,
+    buildRecapLines(coach),
+    NS.C.mid .. "No recap yet." .. NS.C.r
+  )
+end
+
 function NS.InitStatsPanel(parent)
   if statsFrame then
     return statsFrame
@@ -139,21 +129,14 @@ function NS.InitStatsPanel(parent)
   statsFrame = CreateFrame("Frame", "DingTimerStatsPanel", parent)
   statsFrame:SetAllPoints(parent)
 
-  -- Removed standalone window controls (closeBtn, header, drag handlers)
-
   local zoneText = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoneText:SetPoint("TOPLEFT", 16, -16)
   zoneText:SetText("Unknown")
   statsFrame.zoneText = zoneText
 
-  local separator = statsFrame:CreateTexture(nil, "ARTWORK")
-  separator:SetColorTexture(0.2, 0.6, 0.8, 0.45)
-  separator:SetSize(FRAME_WIDTH - 32, 1)
-  separator:SetPoint("TOP", 0, -35)
-
   local progressFrame = CreateFrame("Frame", nil, statsFrame, "BackdropTemplate")
-  progressFrame:SetSize(FRAME_WIDTH - 32, 54)
-  progressFrame:SetPoint("TOPLEFT", statsFrame, "TOPLEFT", 16, -46)
+  progressFrame:SetSize(FRAME_WIDTH, 60)
+  progressFrame:SetPoint("TOPLEFT", statsFrame, "TOPLEFT", 16, -36)
   NS.ApplyThemeToFrame(progressFrame, true)
 
   local progressTitle = progressFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -167,7 +150,7 @@ function NS.InitStatsPanel(parent)
   statsFrame.progressSub = progressSub
 
   local progressBar = CreateFrame("Frame", nil, progressFrame, "BackdropTemplate")
-  progressBar:SetSize(progressFrame:GetWidth() - 20, 10)
+  progressBar:SetSize(FRAME_WIDTH - 20, 10)
   progressBar:SetPoint("BOTTOMLEFT", progressFrame, "BOTTOMLEFT", 10, 10)
   progressBar:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -175,7 +158,7 @@ function NS.InitStatsPanel(parent)
     tile = true, tileSize = 16, edgeSize = 12,
     insets = { left = 2, right = 2, top = 2, bottom = 2 },
   })
-  progressBar:SetBackdropColor(0, 0, 0, 0.5)
+  progressBar:SetBackdropColor(0, 0, 0, 0.45)
   progressBar:SetBackdropBorderColor(0.2, 0.24, 0.28, 0.8)
   statsFrame.progressBar = progressBar
 
@@ -186,41 +169,73 @@ function NS.InitStatsPanel(parent)
   progressFill:SetColorTexture(0.24, 0.78, 0.92, 0.9)
   statsFrame.progressFill = progressFill
 
-  -- Realign 3 cards per row
-  local startX = 16
   statsFrame.cards = {
-    sessionTime  = createMetricCard(statsFrame, startX, -112, "Session Time"),
-    sessionXP    = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112, "Session XP"),
-    currentXph   = createMetricCard(statsFrame, startX + (CARD_WIDTH + CARD_GAP)*2, -112, "Current XP / hr"),
-    
-    sessionAvg   = createMetricCard(statsFrame, startX, -112 - CARD_HEIGHT - CARD_GAP, "Session Avg / hr"),
-    ttl          = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112 - CARD_HEIGHT - CARD_GAP, "Time To Level"),
-    paceDelta    = createMetricCard(statsFrame, startX + (CARD_WIDTH + CARD_GAP)*2, -112 - CARD_HEIGHT - CARD_GAP, "Pace Delta"),
-    
-    sessionMoney = createMetricCard(statsFrame, startX, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Session Money"),
-    moneyPerHour = createMetricCard(statsFrame, startX + CARD_WIDTH + CARD_GAP, -112 - ((CARD_HEIGHT + CARD_GAP) * 2), "Money / hr"),
+    currentXph = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16, -112, "Current Pace"),
+    sessionAvg = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -112, "Session Avg"),
+    ttl = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -112, "Time To Level"),
+    goal = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -112, "Goal Pace"),
+    sessionXP = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16, -178, "Session XP"),
+    sessionMoney = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + CARD_WIDTH + CARD_GAP, -178, "Session Money"),
+    moneyPerHour = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 2), -178, "Money / hr"),
+    bestSegment = NS.UI.CreateMetricCard(statsFrame, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -178, "Best Segment"),
   }
 
-  -- Removed individual window buttons (Graph, Insights, Settings) since they are tabs now
+  NS.UI.CreateSectionTitle(statsFrame, 16, -254, "Session Coach", "Goal tracking, current segment status, and recent guidance.")
+  statsFrame.goalStatus = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  statsFrame.goalStatus:SetPoint("TOPLEFT", statsFrame, "TOPLEFT", 16, -282)
+  statsFrame.goalStatus:SetWidth(680)
+  statsFrame.goalStatus:SetJustifyH("LEFT")
+  statsFrame.goalStatus:SetText("")
 
-  NS.CreateConfirmButton(statsFrame, 16, 14, 90, "Reset", "|cffff4040Confirm|r", function()
+  statsFrame.segmentStatus = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  statsFrame.segmentStatus:SetPoint("TOPLEFT", statsFrame.goalStatus, "BOTTOMLEFT", 0, -6)
+  statsFrame.segmentStatus:SetWidth(680)
+  statsFrame.segmentStatus:SetJustifyH("LEFT")
+  statsFrame.segmentStatus:SetText("")
+
+  NS.UI.CreateSectionTitle(statsFrame, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
+  statsFrame.alertRows = NS.UI.CreateListRows(statsFrame, 16, -360, 680, 4, 16, "GameFontHighlightSmall")
+
+  NS.UI.CreateSectionTitle(statsFrame, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
+  statsFrame.recapRows = NS.UI.CreateListRows(statsFrame, 16, -466, 680, 3, 16, "GameFontDisableSmall")
+
+  statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 88, "Show HUD", function()
+    DingTimerDB.float = not DingTimerDB.float
+    NS.setFloatVisible(DingTimerDB.float)
+    updateButtons()
+  end)
+  NS.UI.CreateActionButton(statsFrame, 112, 12, 88, "Split", function()
+    if NS.SplitSession then
+      NS.SplitSession("MANUAL_SPLIT")
+      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " manual split recorded.")
+    end
+    updateValues()
+  end)
+  NS.UI.CreateActionButton(statsFrame, 208, 12, 88, "Analysis", function()
+    if NS.ShowMainWindow then
+      NS.ShowMainWindow(2)
+    end
+  end)
+  NS.UI.CreateActionButton(statsFrame, 304, 12, 88, "History", function()
+    if NS.ShowMainWindow then
+      NS.ShowMainWindow(3)
+    end
+  end)
+  NS.CreateConfirmButton(statsFrame, 400, 12, 100, "Reset", "Confirm Reset", function()
     if NS.RecordSession then NS.RecordSession("MANUAL_RESET") end
     NS.resetXPState()
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
 
   local footer = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  footer:SetPoint("BOTTOMLEFT", 112, 18)
-  footer:SetText("Live dashboard. Use the tabs above to navigate.")
+  footer:SetPoint("BOTTOMRIGHT", -16, 18)
+  footer:SetText("Live panel")
 
   statsFrame:Hide()
   NS.ManageFrameTicker(statsFrame, 1, updateValues, "uiWindowVisible")
-  return statsFrame --[[@as Frame]]
+  return statsFrame
 end
 
--- Removed ToggleStatsWindow since ToggleMainWindow replaces it
-
---- Triggers an immediate refresh of the stats window if it is currently visible.
 function NS.RefreshStatsWindow()
   if statsFrame and statsFrame:IsShown() then
     updateValues()
