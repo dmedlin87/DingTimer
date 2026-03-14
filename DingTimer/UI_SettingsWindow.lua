@@ -110,29 +110,31 @@ function NS.InitSettingsPanel(parent)
   settingsFrame:SetAllPoints(parent)
   settingsFrame.controls = {}
 
-  NS.UI.CreateSectionTitle(settingsFrame, 16, -18, "Output", "Chat behavior and rolling window controls.")
-  settingsFrame.controls.enabled = createCheckbox(settingsFrame, 16, -48, "Enable chat output", function(checked)
+  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 480)
+
+  NS.UI.CreateSectionTitle(scrollChild, 16, -18, "Output", "Chat behavior and rolling window controls.")
+  settingsFrame.controls.enabled = createCheckbox(scrollChild, 16, -48, "Enable chat output", function(checked)
     DingTimerDB.enabled = checked
   end, "Print XP, XP/hr, TTL, and level-up summaries to chat.")
-  createButton(settingsFrame, 16, -80, 116, "Cycle Mode", function()
+  createButton(scrollChild, 16, -80, 116, "Cycle Mode", function()
     DingTimerDB.mode = cycleValue(DingTimerDB.mode or "full", MODE_ORDER)
   end)
-  settingsFrame.controls.modeValue = NS.UI.CreateValueLabel(settingsFrame, 142, -85)
-  createButton(settingsFrame, 16, -114, 44, "1m", function() NS.SetRollingWindowSeconds(60) end)
-  createButton(settingsFrame, 68, -114, 44, "5m", function() NS.SetRollingWindowSeconds(300) end)
-  createButton(settingsFrame, 120, -114, 52, "10m", function() NS.SetRollingWindowSeconds(600) end)
-  createButton(settingsFrame, 180, -114, 52, "15m", function() NS.SetRollingWindowSeconds(900) end)
-  settingsFrame.controls.windowValue = NS.UI.CreateValueLabel(settingsFrame, 242, -119)
+  settingsFrame.controls.modeValue = NS.UI.CreateValueLabel(scrollChild, 142, -85)
+  createButton(scrollChild, 16, -114, 44, "1m", function() NS.SetRollingWindowSeconds(60) end)
+  createButton(scrollChild, 68, -114, 44, "5m", function() NS.SetRollingWindowSeconds(300) end)
+  createButton(scrollChild, 120, -114, 52, "10m", function() NS.SetRollingWindowSeconds(600) end)
+  createButton(scrollChild, 180, -114, 52, "15m", function() NS.SetRollingWindowSeconds(900) end)
+  settingsFrame.controls.windowValue = NS.UI.CreateValueLabel(scrollChild, 242, -119)
 
-  NS.UI.CreateSectionTitle(settingsFrame, 360, -18, "HUD", "On-screen visibility and launcher behavior.")
-  settingsFrame.controls.float = createCheckbox(settingsFrame, 360, -48, "Show floating HUD", function(checked)
+  NS.UI.CreateSectionTitle(scrollChild, 360, -18, "HUD", "On-screen visibility and launcher behavior.")
+  settingsFrame.controls.float = createCheckbox(scrollChild, 360, -48, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
     NS.setFloatVisible(checked)
   end, "Display the compact TTL and pace HUD above your character.")
-  settingsFrame.controls.floatLocked = createCheckbox(settingsFrame, 360, -76, "Lock floating HUD", function(checked)
+  settingsFrame.controls.floatLocked = createCheckbox(scrollChild, 360, -76, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
   end, "Prevent the floating HUD from being dragged.")
-  settingsFrame.controls.minimapHidden = createCheckbox(settingsFrame, 360, -104, "Hide minimap button", function(checked)
+  settingsFrame.controls.minimapHidden = createCheckbox(scrollChild, 360, -104, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
       if checked then
@@ -143,85 +145,85 @@ function NS.InitSettingsPanel(parent)
     end
   end, "Remove the DingTimer launcher from the minimap ring.")
 
-  NS.UI.CreateSectionTitle(settingsFrame, 16, -168, "Coach", "Goal presets, alert behavior, and recap access.")
-  createButton(settingsFrame, 16, -198, 116, "Cycle Goal", function()
+  NS.UI.CreateSectionTitle(scrollChild, 16, -168, "Coach", "Goal presets, alert behavior, and recap access.")
+  createButton(scrollChild, 16, -198, 116, "Cycle Goal", function()
     local coach = ensureCoachConfig()
     coach.goal = cycleValue(coach.goal, GOAL_ORDER)
   end)
-  settingsFrame.controls.goalValue = NS.UI.CreateValueLabel(settingsFrame, 142, -203)
-  settingsFrame.controls.alertsEnabled = createCheckbox(settingsFrame, 16, -232, "Enable coach alerts", function(checked)
+  settingsFrame.controls.goalValue = NS.UI.CreateValueLabel(scrollChild, 142, -203)
+  settingsFrame.controls.alertsEnabled = createCheckbox(scrollChild, 16, -232, "Enable coach alerts", function(checked)
     ensureCoachConfig().alertsEnabled = checked
   end, "Store idle, pace-drop, and best-segment alerts during the session.")
-  settingsFrame.controls.chatAlerts = createCheckbox(settingsFrame, 16, -260, "Print coach alerts to chat", function(checked)
+  settingsFrame.controls.chatAlerts = createCheckbox(scrollChild, 16, -260, "Print coach alerts to chat", function(checked)
     ensureCoachConfig().chatAlerts = checked
   end, "Echo coach alerts into chat in addition to the Live panel.")
-  createButton(settingsFrame, 16, -294, 88, "Recap", function()
+  createButton(scrollChild, 16, -294, 88, "Recap", function()
     if NS.ShowCoachRecap then
       NS.ShowCoachRecap()
     end
   end)
-  settingsFrame.controls.coachInfo = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 112, -300)
+  settingsFrame.controls.coachInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 112, -300)
   settingsFrame.controls.coachInfo:SetWidth(220)
   settingsFrame.controls.coachInfo:SetJustifyH("LEFT")
   settingsFrame.controls.coachInfo:SetText("")
 
-  NS.UI.CreateSectionTitle(settingsFrame, 360, -168, "Graph", "Analysis scaling and zoom behavior.")
-  createButton(settingsFrame, 360, -198, 116, "Cycle Scale", function()
+  NS.UI.CreateSectionTitle(scrollChild, 360, -168, "Graph", "Analysis scaling and zoom behavior.")
+  createButton(scrollChild, 360, -198, 116, "Cycle Scale", function()
     if NS.CycleGraphScaleMode then
       NS.CycleGraphScaleMode()
     end
   end)
-  createButton(settingsFrame, 484, -198, 70, "Fit", function()
+  createButton(scrollChild, 484, -198, 70, "Fit", function()
     if NS.SetGraphScale then
       NS.SetGraphScale("visible")
     end
   end)
-  createButton(settingsFrame, 562, -198, 28, "-", function()
+  createButton(scrollChild, 562, -198, 28, "-", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(-25000)
     end
   end)
-  createButton(settingsFrame, 596, -198, 28, "+", function()
+  createButton(scrollChild, 596, -198, 28, "+", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(25000)
     end
   end)
-  settingsFrame.controls.graphScaleValue = NS.UI.CreateValueLabel(settingsFrame, 360, -231)
-  settingsFrame.controls.graphMaxValue = NS.UI.CreateValueLabel(settingsFrame, 360, -250)
-  settingsFrame.controls.graphZoomValue = NS.UI.CreateValueLabel(settingsFrame, 360, -269)
-  createButton(settingsFrame, 360, -286, 40, "3m", function() NS.SetGraphZoom("3m") end)
-  createButton(settingsFrame, 406, -286, 40, "5m", function() NS.SetGraphZoom("5m") end)
-  createButton(settingsFrame, 452, -286, 40, "15m", function() NS.SetGraphZoom("15m") end)
-  createButton(settingsFrame, 498, -286, 40, "30m", function() NS.SetGraphZoom("30m") end)
-  createButton(settingsFrame, 544, -286, 40, "60m", function() NS.SetGraphZoom("60m") end)
+  settingsFrame.controls.graphScaleValue = NS.UI.CreateValueLabel(scrollChild, 360, -231)
+  settingsFrame.controls.graphMaxValue = NS.UI.CreateValueLabel(scrollChild, 360, -250)
+  settingsFrame.controls.graphZoomValue = NS.UI.CreateValueLabel(scrollChild, 360, -269)
+  createButton(scrollChild, 360, -286, 40, "3m", function() NS.SetGraphZoom("3m") end)
+  createButton(scrollChild, 406, -286, 40, "5m", function() NS.SetGraphZoom("5m") end)
+  createButton(scrollChild, 452, -286, 40, "15m", function() NS.SetGraphZoom("15m") end)
+  createButton(scrollChild, 498, -286, 40, "30m", function() NS.SetGraphZoom("30m") end)
+  createButton(scrollChild, 544, -286, 40, "60m", function() NS.SetGraphZoom("60m") end)
 
-  NS.UI.CreateSectionTitle(settingsFrame, 16, -360, "Data", "Run maintenance, history retention, and recovery actions.")
-  createButton(settingsFrame, 16, -390, 120, "Open History", function()
+  NS.UI.CreateSectionTitle(scrollChild, 16, -360, "Data", "Run maintenance, history retention, and recovery actions.")
+  createButton(scrollChild, 16, -390, 120, "Open History", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(3)
     end
   end)
-  createButton(settingsFrame, 144, -390, 92, "Keep 10", function()
+  createButton(scrollChild, 144, -390, 92, "Keep 10", function()
     DingTimerDB.xp.keepSessions = 10
     if NS.GetProfileStore and NS.TrimSessions then
       NS.TrimSessions(NS.GetProfileStore(true), 10)
     end
   end)
-  createButton(settingsFrame, 244, -390, 92, "Keep 30", function()
+  createButton(scrollChild, 244, -390, 92, "Keep 30", function()
     DingTimerDB.xp.keepSessions = 30
     if NS.GetProfileStore and NS.TrimSessions then
       NS.TrimSessions(NS.GetProfileStore(true), 30)
     end
   end)
-  createButton(settingsFrame, 344, -390, 92, "Keep 50", function()
+  createButton(scrollChild, 344, -390, 92, "Keep 50", function()
     DingTimerDB.xp.keepSessions = 50
     if NS.GetProfileStore and NS.TrimSessions then
       NS.TrimSessions(NS.GetProfileStore(true), 50)
     end
   end)
-  settingsFrame.controls.keepValue = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -422)
+  settingsFrame.controls.keepValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -422)
   settingsFrame.controls.keepValue:SetText("")
 
   NS.CreateConfirmButton(settingsFrame, 16, 14, 140, "Reset Session", "Confirm Reset", function()

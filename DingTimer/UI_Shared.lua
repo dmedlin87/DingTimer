@@ -93,3 +93,15 @@ function NS.UI.SetRows(rows, values, emptyText)
     end
   end
 end
+
+function NS.UI.CreateScrollFrame(parent, childWidth, childHeight)
+  local scrollFrame = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+  scrollFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, -50)
+  scrollFrame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -30, 40)
+
+  local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+  scrollChild:SetSize(childWidth or 680, childHeight or 500)
+  scrollFrame:SetScrollChild(scrollChild)
+
+  return scrollFrame, scrollChild
+end
