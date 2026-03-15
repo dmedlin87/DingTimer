@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package addon zip
+        run: |
+          zip -r DingTimer.zip DingTimer/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DingTimer.zip
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger BronzeForge manifest publish
+        env:
+          GH_TOKEN: ${{ secrets.BRONZEFORGE_DISPATCH_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/dmedlin87/MedlinForge/dispatches \
+            -d '{"event_type":"publish-update-manifests","client_payload":{"sourceRepo":"${{ github.repository }}","tag":"${{ github.ref_name }}"}}'
