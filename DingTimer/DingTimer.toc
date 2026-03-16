@@ -24,6 +24,7 @@ SessionCoach.lua
 Commands.lua
 Core_DingTimer.lua
 GraphMath.lua
+UI_Shared.lua
 UI_MainWindow.lua
 UI_StatsWindow.lua
 UI_XPGraphWindow.lua
