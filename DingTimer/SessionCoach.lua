@@ -226,7 +226,9 @@ function NS.NoteCoachXP(delta, now)
   if not coach.currentSegment then
     beginSegment(at, "SESSION_START", coach.currentZone or getZone())
   end
-  coach.currentSegment.xpGained = (coach.currentSegment.xpGained or 0) + delta
+  local seg = coach.currentSegment
+  if not seg then return end
+  seg.xpGained = (seg.xpGained or 0) + delta
   coach.lastXPAt = at
 end
 
@@ -239,7 +241,9 @@ function NS.NoteCoachMoney(delta, now)
   if not coach.currentSegment then
     beginSegment(at, "SESSION_START", coach.currentZone or getZone())
   end
-  coach.currentSegment.moneyNetCopper = (coach.currentSegment.moneyNetCopper or 0) + delta
+  local seg = coach.currentSegment
+  if not seg then return end
+  seg.moneyNetCopper = (seg.moneyNetCopper or 0) + delta
 end
 
 function NS.PushCoachAlert(kind, message, now)

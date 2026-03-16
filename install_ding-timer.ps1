@@ -21,6 +21,7 @@ $TargetAddonDir = if (Test-Path $DirectAddonDir) { $DirectAddonDir } else { $Fla
 $TargetPath = Join-Path $TargetAddonDir $AddonName
 
 function Confirm-Path {
+    
     param($path)
     if (!(Test-Path $path)) {
         Write-Error "Path not found: $path"

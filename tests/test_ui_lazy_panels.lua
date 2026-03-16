@@ -40,6 +40,6 @@ end)
 assert_true(ok, "opening settings should not fail if another panel init errors")
 assert_true(DingTimerMainWindow:IsShown(), "main window should still show")
 assert_eq(DingTimerDB.lastOpenTab, 4, "settings tab should become active")
-assert_true(LazySettingsPanel:IsShown(), "settings panel should still load lazily")
+assert_true(_G.LazySettingsPanel:IsShown(), "settings panel should still load lazily")
 
 print("UI lazy panel test passed!")

@@ -220,6 +220,7 @@ function NS.RecordSession(reason)
   end
 
   local profile = NS.GetProfileStore(true)
+  if not profile then return end
   table.insert(profile.sessions, record)
   NS.TrimSessions(profile)
 

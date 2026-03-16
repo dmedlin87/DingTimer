@@ -21,6 +21,7 @@ local function formatGoalCard(goal)
 end
 
 local function setProgress(snapshot)
+  if not statsFrame then return end
   local progressPct = math.max(0, math.min((snapshot.progress or 0) * 100, 100))
   local width = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
@@ -68,6 +69,7 @@ local function buildRecapLines(coach)
 end
 
 local function updateButtons()
+  if not statsFrame then return end
   statsFrame.hudButton:SetText(DingTimerDB.float and "Hide HUD" or "Show HUD")
 end
 
