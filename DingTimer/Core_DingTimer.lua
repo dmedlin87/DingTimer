@@ -116,7 +116,6 @@ function NS.GetSessionSnapshot(now)
   local sessionMoney = NS.state.sessionMoney or 0
   local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
   local currentXph = NS.computeXPPerHour(now, window)
-  NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, currentXph or 0)
   local sessionXph = (sessionXP / sessionElapsed) * 3600
   local moneyPerHour = NS.computeMoneyPerHour(now, window)
   local remainingXP = math.max(0, maxXP - xp)
@@ -321,6 +320,7 @@ function NS.onXPUpdate()
   end
 
   local xph = NS.computeXPPerHour(now, DingTimerDB.windowSeconds or 600)
+  NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, xph or 0)
   local remaining = maxXP - xp
   local ttl = (xph > 0) and (remaining / (xph / 3600)) or math.huge
 

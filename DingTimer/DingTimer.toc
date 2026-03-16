@@ -8,6 +8,8 @@
 Util.lua
 Insights.lua
 Store.lua
+# NOTE: Load order is significant. Store.lua must load before SessionCoach.lua
+# because Store.lua provides fallback stubs that SessionCoach.lua overrides.
 SessionCoach.lua
 Commands.lua
 UI_Shared.lua

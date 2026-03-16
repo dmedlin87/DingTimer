@@ -261,9 +261,6 @@ function NS.InitStore()
     local sessions = existingProfile.sessions or {}
     for i = 1, #sessions do
       sessions[i].segments = sessions[i].segments or {}
-      if sessions[i].coachSummary == nil then
-        sessions[i].coachSummary = nil
-      end
     end
   end
 
