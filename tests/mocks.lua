@@ -124,6 +124,8 @@ local function newTexture()
   tx.ClearAllPoints = function() end
   tx.SetAllPoints = function() end
   tx.SetColorTexture = function() end
+  tx.SetVertexColor = function() end
+  tx.SetAlpha = function() end
   tx.SetHeight = function() end
   tx.SetWidth = function() end
   tx.SetTexCoord = function() end

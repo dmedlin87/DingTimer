@@ -5,14 +5,23 @@
 ## Version: 0.6.0
 ## SavedVariables: DingTimerDB
 
+# --- Load-order constraints (do NOT reorder without reading these) ---
+# 1. Util.lua       -- must be first; every module calls NS.chat, NS.C, NS.fmtTime, etc.
+# 2. Insights.lua   -- must precede Store.lua; Store calls NS.GetProfileKey and
+#                      NS.TrimSessions, both defined here.
+# 3. Store.lua      -- must precede SessionCoach.lua; Store provides fallback stubs
+#                      (InitCoachState, NoteCoachXP, NoteCoachMoney, etc.) that
+#                      SessionCoach overrides with full implementations.
+# 4. Core_DingTimer -- must follow SessionCoach.lua; onXPUpdate calls NoteCoachXP /
+#                      NoteCoachMoney which SessionCoach defines.
+# 5. GraphMath.lua  -- must precede UI_XPGraphWindow.lua; the graph panel calls
+#                      NS.AggregateVisibleSegments, NS.BuildAverageSeries, etc.
+# ---------------------------------------------------------------------
 Util.lua
 Insights.lua
 Store.lua
-# NOTE: Load order is significant. Store.lua must load before SessionCoach.lua
-# because Store.lua provides fallback stubs that SessionCoach.lua overrides.
 SessionCoach.lua
 Commands.lua
-UI_Shared.lua
 Core_DingTimer.lua
 GraphMath.lua
 UI_MainWindow.lua

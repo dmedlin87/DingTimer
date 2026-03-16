@@ -9,33 +9,9 @@ local function ensureCoachConfig()
   if NS.EnsureCoachConfig then
     return NS.EnsureCoachConfig()
   end
-
-  DingTimerDB.coach = DingTimerDB.coach or {}
-  if DingTimerDB.coach.goal ~= "off" and DingTimerDB.coach.goal ~= "ding" and DingTimerDB.coach.goal ~= "30m" and DingTimerDB.coach.goal ~= "60m" then
-    DingTimerDB.coach.goal = "ding"
-  end
-  if DingTimerDB.coach.alertsEnabled == nil then DingTimerDB.coach.alertsEnabled = true end
-  if DingTimerDB.coach.chatAlerts == nil then DingTimerDB.coach.chatAlerts = true end
-
-  local idleSeconds = math.floor(tonumber(DingTimerDB.coach.idleSeconds) or 90)
-  if idleSeconds < 30 then idleSeconds = 30 end
-  DingTimerDB.coach.idleSeconds = idleSeconds
-
-  local paceDropPct = math.floor(tonumber(DingTimerDB.coach.paceDropPct) or 15)
-  if paceDropPct < 5 then paceDropPct = 5 end
-  if paceDropPct > 50 then paceDropPct = 50 end
-  DingTimerDB.coach.paceDropPct = paceDropPct
-
-  local alertCooldownSeconds = math.floor(tonumber(DingTimerDB.coach.alertCooldownSeconds) or 90)
-  if alertCooldownSeconds < 30 then alertCooldownSeconds = 30 end
-  DingTimerDB.coach.alertCooldownSeconds = alertCooldownSeconds
-
-  local alertHistoryLimit = math.floor(tonumber(DingTimerDB.coach.alertHistoryLimit) or 4)
-  if alertHistoryLimit < 1 then alertHistoryLimit = 1 end
-  if alertHistoryLimit > 8 then alertHistoryLimit = 8 end
-  DingTimerDB.coach.alertHistoryLimit = alertHistoryLimit
-
-  return DingTimerDB.coach
+  -- Fallback: SessionCoach not loaded yet; return raw DB table so the
+  -- settings panel can still open without throwing.
+  return DingTimerDB.coach or {}
 end
 
 local function createCheckbox(parent, x, y, label, callback, tooltipText)

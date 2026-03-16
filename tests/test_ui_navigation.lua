@@ -53,13 +53,13 @@ assert_eq(DingTimerDB.lastOpenTab, 1, "left-click should target the live tab")
 minimapClick(DingTimerMinimapButton, "LeftButton")
 assert_true(not DingTimerMainWindow:IsShown(), "left-click on the active live tab should hide the main window")
 
-minimapClick(DingTimerMinimapButton, "MiddleButton")
-assert_true(DingTimerMainWindow:IsShown(), "middle-click should show the analysis tab")
-assert_eq(DingTimerDB.lastOpenTab, 2, "middle-click should target the analysis tab")
-
 minimapClick(DingTimerMinimapButton, "RightButton")
-assert_true(DingTimerMainWindow:IsShown(), "right-click should keep the main window open")
-assert_eq(DingTimerDB.lastOpenTab, 4, "right-click should switch to the settings tab")
+assert_true(DingTimerMainWindow:IsShown(), "right-click should show the analysis tab")
+assert_eq(DingTimerDB.lastOpenTab, 2, "right-click should target the analysis tab")
+
+minimapClick(DingTimerMinimapButton, "MiddleButton")
+assert_true(DingTimerMainWindow:IsShown(), "middle-click should keep the main window open")
+assert_eq(DingTimerDB.lastOpenTab, 4, "middle-click should switch to the settings tab")
 
 SlashCmdList.DINGTIMER("graph on")
 assert_true(DingTimerMainWindow:IsShown(), "graph on should show the main window")
