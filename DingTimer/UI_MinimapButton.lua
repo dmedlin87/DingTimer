@@ -28,7 +28,8 @@ label:SetTextColor(1, 0.82, 0.1)               -- XP-bar gold
 
 -- Thin accent bar below the letters for a badge feel
 local bar = f:CreateTexture(nil, "ARTWORK")
-bar:SetTexture(1, 0.76, 0.1, 0.9)              -- solid gold via vertex color
+bar:SetTexture("Interface/Buttons/WHITE8X8")     -- solid white pixel, tinted below
+bar:SetVertexColor(1, 0.76, 0.1, 0.9)            -- XP-bar gold
 bar:SetSize(14, 1)
 bar:SetPoint("TOP", label, "BOTTOM", 0, -1)
 
