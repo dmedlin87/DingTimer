@@ -101,8 +101,11 @@ function Assert-Administrator {
         (Format-Argument $WowPath)
         "-Flavor"
         (Format-Argument $Flavor)
-        "-PauseOnExit"
     ) -join ' '
+
+    if ($PauseOnExit) {
+        $argList += ' -PauseOnExit'
+    }
 
     try {
         Start-Process PowerShell -Verb RunAs -ArgumentList $argList | Out-Null
