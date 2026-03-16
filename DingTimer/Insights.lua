@@ -17,22 +17,6 @@ local function clampKeepSessions(n)
 end
 
 --- Safely converts a value to a string, returning a fallback if invalid or empty.
---- @param value any The value to convert.
---- @param fallback string The fallback string to use if the value is invalid.
---- @return string The valid string or the fallback.
-local function safeString(value, fallback)
-  if type(value) == "string" and value ~= "" then
-    return value
-  end
-  if value ~= nil then
-    local s = tostring(value)
-    if s ~= "" then
-      return s
-    end
-  end
-  return fallback
-end
-
 --- Computes the arithmetic mean of an array of numbers.
 --- @param values number[] The array of numbers.
 --- @return number The average, or 0 if the array is empty.
@@ -77,17 +61,17 @@ function NS.GetProfileKey()
 
   if UnitName then
     local unitName, unitRealm = UnitName("player")
-    name = safeString(unitName, name)
-    realm = safeString(unitRealm, realm)
+    name = NS.SafeString(unitName, name)
+    realm = NS.SafeString(unitRealm, realm)
   end
 
   if (realm == "Unknown" or realm == "") and GetRealmName then
-    realm = safeString(GetRealmName(), realm)
+    realm = NS.SafeString(GetRealmName(), realm)
   end
 
   if UnitClass then
     local _, classFile = UnitClass("player")
-    classToken = safeString(classFile, classToken)
+    classToken = NS.SafeString(classFile, classToken)
   end
 
   return string.format("%s:%s:%s", realm, name, classToken)
@@ -176,7 +160,7 @@ function NS.RecordSession(reason)
   local levelEnd = (UnitLevel and UnitLevel("player")) or levelStart
   local zone = "Unknown"
   if GetZoneText then
-    zone = safeString(GetZoneText(), "Unknown")
+    zone = NS.SafeString(GetZoneText(), "Unknown")
   end
 
   local sampleCount = (type(NS.state.events) == "table") and #NS.state.events or 0
@@ -279,7 +263,7 @@ function NS.GetInsightsSummary(limit)
       bestSession = s
     end
 
-    local zoneKey = safeString(s.zone, "Unknown")
+    local zoneKey = NS.SafeString(s.zone, "Unknown")
     local zoneEntry = zoneStats[zoneKey]
     if not zoneEntry then
       zoneEntry = { zone = zoneKey, totalXph = 0, sessions = 0 }

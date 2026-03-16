@@ -36,27 +36,6 @@ local function copyTable(source)
   return out
 end
 
-local function safeNumber(value, fallback)
-  local n = tonumber(value)
-  if not n or n ~= n or n == math.huge or n == -math.huge then
-    return fallback
-  end
-  return n
-end
-
-local function safeString(value, fallback)
-  if type(value) == "string" and value ~= "" then
-    return value
-  end
-  if value ~= nil then
-    local str = tostring(value)
-    if str ~= "" then
-      return str
-    end
-  end
-  return fallback
-end
-
 local function normalizeGoal(goal)
   if goal == "off" or goal == "ding" or goal == "30m" or goal == "60m" then
     return goal
@@ -80,13 +59,13 @@ end
 
 local function getZone()
   if GetZoneText then
-    return safeString(GetZoneText(), "Unknown")
+    return NS.SafeString(GetZoneText(), "Unknown")
   end
   return "Unknown"
 end
 
 local function getReasonLabel(reason)
-  return REASON_LABELS[reason] or safeString(reason, "Checkpoint")
+  return REASON_LABELS[reason] or NS.SafeString(reason, "Checkpoint")
 end
 
 local function beginSegment(now, reason, zone)
@@ -144,7 +123,7 @@ local function finalizeSegment(now, reason, keepEmpty)
         string.format(
           "New best segment: %s XP/hr in %s.",
           NS.FormatNumber(NS.Round(record.avgXph)),
-          safeString(record.zone, "Unknown")
+          NS.SafeString(record.zone, "Unknown")
         ),
         now
       )
@@ -192,10 +171,10 @@ function NS.EnsureCoachConfig(db)
     end
   end
   db.coach.goal = normalizeGoal(db.coach.goal)
-  db.coach.idleSeconds = math.max(30, math.floor(safeNumber(db.coach.idleSeconds, DEFAULTS.idleSeconds)))
-  db.coach.paceDropPct = math.max(5, math.min(50, math.floor(safeNumber(db.coach.paceDropPct, DEFAULTS.paceDropPct))))
-  db.coach.alertCooldownSeconds = math.max(30, math.floor(safeNumber(db.coach.alertCooldownSeconds, DEFAULTS.alertCooldownSeconds)))
-  db.coach.alertHistoryLimit = math.max(1, math.min(8, math.floor(safeNumber(db.coach.alertHistoryLimit, DEFAULTS.alertHistoryLimit))))
+  db.coach.idleSeconds = math.max(30, math.floor(NS.SafeNumber(db.coach.idleSeconds, DEFAULTS.idleSeconds)))
+  db.coach.paceDropPct = math.max(5, math.min(50, math.floor(NS.SafeNumber(db.coach.paceDropPct, DEFAULTS.paceDropPct))))
+  db.coach.alertCooldownSeconds = math.max(30, math.floor(NS.SafeNumber(db.coach.alertCooldownSeconds, DEFAULTS.alertCooldownSeconds)))
+  db.coach.alertHistoryLimit = math.max(1, math.min(8, math.floor(NS.SafeNumber(db.coach.alertHistoryLimit, DEFAULTS.alertHistoryLimit))))
   return db.coach
 end
 
@@ -294,7 +273,7 @@ end
 function NS.HandleZoneChange(zone, now)
   local at = now or GetTime()
   local coach = getCoachRuntime(at)
-  local newZone = safeString(zone, getZone())
+  local newZone = NS.SafeString(zone, getZone())
   if coach.currentZone == newZone then
     return false
   end
@@ -530,7 +509,7 @@ function NS.BuildCoachSummary(record)
 
   local segmentLine = bestSegment and string.format(
     "Best segment: %s at %s XP/hr.",
-    safeString(bestSegment.zone, "Unknown"),
+    NS.SafeString(bestSegment.zone, "Unknown"),
     NS.FormatNumber(NS.Round(bestSegment.avgXph or 0))
   ) or "No completed coach segments yet."
 
@@ -572,10 +551,10 @@ function NS.DeliverCoachSummary(summary)
     NS.chat(NS.C.base .. "[COACH]" .. NS.C.r .. " No recap is available yet.")
     return false
   end
-  NS.chat(NS.C.base .. "[COACH]" .. NS.C.r .. " " .. safeString(summary.headline, ""))
-  NS.chat("  " .. safeString(summary.detail, ""))
-  NS.chat("  " .. safeString(summary.segmentLine, ""))
-  NS.chat("  " .. safeString(summary.goalLine, ""))
+  NS.chat(NS.C.base .. "[COACH]" .. NS.C.r .. " " .. NS.SafeString(summary.headline, ""))
+  NS.chat("  " .. NS.SafeString(summary.detail, ""))
+  NS.chat("  " .. NS.SafeString(summary.segmentLine, ""))
+  NS.chat("  " .. NS.SafeString(summary.goalLine, ""))
   return true
 end
 

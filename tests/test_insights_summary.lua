@@ -3,6 +3,7 @@ dofile("tests/mocks.lua")
 SetProfileIdentity("Analyst", "Azeroth", "MAGE", 70, "Mage")
 
 local NS = {}
+LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Insights.lua", NS)
 
 DingTimerDB = {

@@ -130,6 +130,27 @@ end
 
 ensureUIHelpers()
 
+function NS.SafeNumber(value, fallback)
+  local n = tonumber(value)
+  if not n or n ~= n or n == math.huge or n == -math.huge then
+    return fallback
+  end
+  return n
+end
+
+function NS.SafeString(value, fallback)
+  if type(value) == "string" and value ~= "" then
+    return value
+  end
+  if value ~= nil then
+    local str = tostring(value)
+    if str ~= "" then
+      return str
+    end
+  end
+  return fallback
+end
+
 function NS.FormatNumber(num)
   if not num then return "0" end
   if num ~= num or num == math.huge or num == -math.huge then return "0" end
