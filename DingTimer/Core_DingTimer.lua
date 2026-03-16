@@ -313,7 +313,8 @@ function NS.onXPUpdate()
 
   if delta > 0 then
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
-    table.insert(NS.state.events, { t = now, xp = delta })
+    -- ⚡ Bolt: Use direct indexing instead of table.insert to reduce function call overhead
+    NS.state.events[#NS.state.events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
     if NS.NoteCoachXP then NS.NoteCoachXP(delta, now) end
     if NS.GraphFeedXP then NS.GraphFeedXP(delta, now) end
@@ -370,7 +371,8 @@ function NS.onMoneyUpdate()
   pruneEvents(NS.state.moneyEvents, now, windowSeconds, "windowMoney", "money")
 
   if delta > 0 then
-    table.insert(NS.state.moneyEvents, { t = now, money = delta })
+    -- ⚡ Bolt: Use direct indexing instead of table.insert to reduce function call overhead
+    NS.state.moneyEvents[#NS.state.moneyEvents + 1] = { t = now, money = delta }
     NS.state.windowMoney = (NS.state.windowMoney or 0) + delta
   end
 end
