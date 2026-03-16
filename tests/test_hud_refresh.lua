@@ -57,6 +57,9 @@ DingTimerDB = {
   },
 }
 
+
+
+LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/SessionCoach.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 
@@ -73,17 +76,17 @@ SetXP(100, 1000)
 NS.onXPUpdate()
 
 assert_true(capturedFrame ~= nil, "floating HUD frame should be created")
-assertStringMatch("6000 XP/hr", capturedFrame.subText:GetText(), "HUD should show the rolling XP/hr immediately after a gain")
+assertStringMatch("6,000 XP/hr", capturedFrame.subText:GetText(), "HUD should show the rolling XP/hr immediately after a gain")
 assert_eq(100, NS.state.windowXP, "window XP should include the fresh gain")
-assert_true(string.find(capturedFrame.subText:GetText(), "Session 6000", 1, true) ~= nil, "HUD should show session average")
-assert_true(string.find(capturedFrame.subText:GetText(), "High 6000", 1, true) == nil, "HUD should not duplicate session average as the goal benchmark")
+assert_true(string.find(capturedFrame.subText:GetText(), "Session 6,000", 1, true) ~= nil, "HUD should show session average")
+assert_true(string.find(capturedFrame.subText:GetText(), "High 6,000", 1, true) == nil, "HUD should not duplicate session average as the goal benchmark")
 
 SetTime(121)
 heartbeatTicker:Fire()
 
 assert_eq(0, #NS.state.events, "heartbeat refresh should prune expired XP events")
 assert_eq(0, NS.state.windowXP, "window XP should decay when the rolling window expires")
-assertStringMatch("No XP in 1m", capturedFrame.subText:GetText(), "HUD should show when the rolling window is empty")
-assert_true(string.find(capturedFrame.subText:GetText(), "6000 XP/hr", 1, true) == nil, "HUD should stop showing stale rolling XP/hr")
+assertStringMatch("No XP in 60s", capturedFrame.subText:GetText(), "HUD should show when the rolling window is empty")
+assert_true(string.find(capturedFrame.subText:GetText(), "6,000 XP/hr", 1, true) == nil, "HUD should stop showing stale rolling XP/hr")
 
 print("HUD rolling refresh test passed!")
