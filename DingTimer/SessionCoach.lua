@@ -38,7 +38,7 @@ end
 
 local function safeNumber(value, fallback)
   local n = tonumber(value)
-  if not n or n ~= n or n == math.huge or n == -math.huge then
+  if not n or NS.IsInvalidNumber(n) then
     return fallback
   end
   return n

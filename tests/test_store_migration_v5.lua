@@ -4,6 +4,7 @@ SetProfileIdentity("Hero", "Azeroth", "HUNTER", 70, "Hunter")
 
 local NS = {}
 LoadAddonFile("DingTimer/Insights.lua", NS)
+LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 
 DingTimerDB = {
