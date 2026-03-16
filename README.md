@@ -12,7 +12,7 @@
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
 ![Version](https://img.shields.io/badge/version-0.6.0-blue?style=flat-square)
-![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
+![WoW](https://img.shields.io/badge/WoW-WotLK%20Classic%2030300-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
 
@@ -51,7 +51,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 2. Extract the `DingTimer` folder into your addons directory:
 
    ```text
-   World of Warcraft\_retail_\Interface\AddOns\DingTimer\
+   World of Warcraft\_classic_\Interface\AddOns\DingTimer\
    ```
 
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
