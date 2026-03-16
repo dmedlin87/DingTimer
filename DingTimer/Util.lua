@@ -130,9 +130,13 @@ end
 
 ensureUIHelpers()
 
+function NS.IsInvalidNumber(n)
+  return n ~= n or n == math.huge or n == -math.huge
+end
+
 function NS.FormatNumber(num)
   if not num then return "0" end
-  if num ~= num or num == math.huge or num == -math.huge then return "0" end
+  if NS.IsInvalidNumber(num) then return "0" end
   local n = math.floor(num)
   local absNum = tostring(math.abs(n))
   local neg = (n < 0) and "-" or ""
@@ -150,7 +154,7 @@ end
 
 function NS.fmtTime(seconds)
   -- 🛡️ Sentinel: Validate numeric inputs to prevent NaN/Infinity from crashing UI logic (DoS risk)
-  if not seconds or seconds ~= seconds or seconds <= 0 or seconds == math.huge then return "??" end
+  if not seconds or NS.IsInvalidNumber(seconds) or seconds <= 0 then return "??" end
   local s = math.floor(seconds + 0.5)
   if s < 120 then
     return string.format("%ds", s)
@@ -162,7 +166,7 @@ function NS.fmtTime(seconds)
 end
 
 function NS.fmtMoney(copper)
-  if not copper or copper == 0 or copper ~= copper or copper == math.huge or copper == -math.huge then return "0|cffeda55fc|r" end
+  if not copper or copper == 0 or NS.IsInvalidNumber(copper) then return "0|cffeda55fc|r" end
   local isNegative = copper < 0
   copper = math.abs(copper)
 
@@ -188,7 +192,7 @@ function NS.fmtMoney(copper)
 end
 
 function NS.ttlColor(ttl, lastTTL)
-  if not ttl or ttl ~= ttl or not lastTTL or lastTTL ~= lastTTL or lastTTL == math.huge or lastTTL == -math.huge then return NS.C.val end
+  if not ttl or NS.IsInvalidNumber(ttl) or not lastTTL or NS.IsInvalidNumber(lastTTL) then return NS.C.val end
 
   -- If TTL went down => improved => green. Up => red.
   -- Use a small dead-zone to avoid flicker on tiny changes.
@@ -200,7 +204,7 @@ function NS.ttlColor(ttl, lastTTL)
 end
 
 function NS.ttlDeltaText(ttl, lastTTL)
-  if not ttl or ttl ~= ttl or ttl == math.huge or ttl == -math.huge or not lastTTL or lastTTL ~= lastTTL or lastTTL == math.huge or lastTTL == -math.huge then
+  if not ttl or NS.IsInvalidNumber(ttl) or not lastTTL or NS.IsInvalidNumber(lastTTL) then
     return ""
   end
   local diff = ttl - lastTTL
@@ -236,7 +240,7 @@ function NS.Round(value)
 end
 
 function NS.fmtPercent(value, digits)
-  if value == nil or value ~= value or value == math.huge or value == -math.huge then
+  if value == nil or NS.IsInvalidNumber(value) then
     return "--"
   end
   return string.format("%." .. tostring(digits or 0) .. "f%%", value)
