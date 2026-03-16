@@ -92,7 +92,7 @@ local function updateValues()
   NS.UI.SetMetricCard(statsFrame.cards.goal, goalValue, goalSub)
   NS.UI.SetMetricCard(statsFrame.cards.sessionXP, NS.FormatNumber(snapshot.sessionXP), "Earned this run")
   NS.UI.SetMetricCard(statsFrame.cards.sessionMoney, NS.fmtMoney(snapshot.sessionMoney), "Net session gold")
-  NS.UI.SetMetricCard(statsFrame.cards.moneyPerHour, NS.fmtMoney(NS.Round(snapshot.moneyPerHour)) .. " / hr", "Current money pace")
+  NS.UI.SetMetricCard(statsFrame.cards.moneyPerHour, NS.fmtMoney(NS.Round(snapshot.moneyPerHour)) .. " / hr", "Gross income / hr")
   NS.UI.SetMetricCard(
     statsFrame.cards.bestSegment,
     bestSegment and NS.FormatNumber(NS.Round(bestSegment.avgXph or 0)) or "--",

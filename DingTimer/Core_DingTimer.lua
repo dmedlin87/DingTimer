@@ -320,7 +320,12 @@ function NS.onXPUpdate()
   end
 
   local xph = NS.computeXPPerHour(now, DingTimerDB.windowSeconds or 600)
-  NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, xph or 0)
+  -- Only record peak once the rate has a full confidence window; avoids the first-kill
+  -- spike (elapsed=1s → inflated XP/hr) from becoming the permanent pace-drop benchmark.
+  local MIN_RATE_CONFIDENCE_SECONDS = 60
+  if (now - (NS.state.sessionStartTime or now)) >= MIN_RATE_CONFIDENCE_SECONDS then
+    NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, xph or 0)
+  end
   local remaining = maxXP - xp
   local ttl = (xph > 0) and (remaining / (xph / 3600)) or math.huge
 

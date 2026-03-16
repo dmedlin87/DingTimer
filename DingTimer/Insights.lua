@@ -174,11 +174,6 @@ function NS.RecordSession(reason)
 
   local levelStart = NS.state.levelStart or ((UnitLevel and UnitLevel("player")) or 0)
   local levelEnd = (UnitLevel and UnitLevel("player")) or levelStart
-  local zone = "Unknown"
-  if GetZoneText then
-    zone = safeString(GetZoneText(), "Unknown")
-  end
-
   local sampleCount = (type(NS.state.events) == "table") and #NS.state.events or 0
   local avgXph = (xpGained / durationSec) * 3600
   local avgMoneyPh = (moneyNetCopper / durationSec) * 3600
@@ -186,6 +181,20 @@ function NS.RecordSession(reason)
   local segments = {}
   if NS.FinalizeSessionSegments then
     segments = NS.FinalizeSessionSegments(reason, now)
+  end
+
+  -- Default to current zone, then override with whichever segment earned the most XP.
+  -- This prevents "reset from Orgrimmar after farming Hillsbrad" from misattributing the session.
+  local zone = "Unknown"
+  if GetZoneText then
+    zone = safeString(GetZoneText(), "Unknown")
+  end
+  local primaryZoneXP = 0
+  for _, seg in ipairs(segments) do
+    if (seg.xpGained or 0) > primaryZoneXP and safeString(seg.zone, "") ~= "" and seg.zone ~= "Unknown" then
+      primaryZoneXP = seg.xpGained
+      zone = seg.zone
+    end
   end
 
   local record = {

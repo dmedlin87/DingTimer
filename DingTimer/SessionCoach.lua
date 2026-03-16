@@ -136,7 +136,12 @@ local function finalizeSegment(now, reason, keepEmpty)
   coach.segments[#coach.segments + 1] = record
   coach.currentSegment = nil
 
-  if record.xpGained > 0 and record.avgXph > (coach.bestSegmentXph or 0) then
+  -- Ignore sub-30s segments: durationSec is clamped to 1 so a zone transition that fires
+  -- 0.1s after a kill would otherwise report ~36× the real XP/hr as the "best segment".
+  local MIN_SIGNIFICANT_SEGMENT_SECONDS = 30
+  if record.xpGained > 0
+      and record.durationSec >= MIN_SIGNIFICANT_SEGMENT_SECONDS
+      and record.avgXph > (coach.bestSegmentXph or 0) then
     coach.bestSegmentXph = record.avgXph
     if NS.PushCoachAlert then
       NS.PushCoachAlert(
