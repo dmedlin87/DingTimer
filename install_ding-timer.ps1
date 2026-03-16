@@ -35,8 +35,8 @@ function Wait-ForExitAcknowledgement {
     }
 
     Write-Host ""
-    Write-Host "Press Enter to close this window..." -ForegroundColor DarkGray
-    [void](Read-Host)
+    Write-Host "Press any key to close this window..." -ForegroundColor DarkGray
+    [void][System.Console]::ReadKey($true)
 }
 
 function Exit-Script {
