@@ -1,5 +1,11 @@
 dofile("tests/mocks.lua")
 
+---@class RegisteredDriverCall
+---@field frame any
+---@field state string
+---@field value string
+
+---@type RegisteredDriverCall?
 local registeredDriver = nil
 RegisterStateDriver = function(frame, state, value)
   registeredDriver = {
@@ -43,11 +49,21 @@ DingTimerDB = {
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 
 NS.setFloatVisible(true)
-assert_eq(registeredDriver.state, "visibility", "HUD should register the visibility state driver")
-assert_eq(registeredDriver.value, "[combat] hide; show", "HUD should hide during combat by default")
+assert_true(registeredDriver ~= nil, "RegisterStateDriver should be called")
+local firstDriver = registeredDriver
+if not firstDriver then
+  error("RegisterStateDriver should be called")
+end
+assert_eq(firstDriver.state, "visibility", "HUD should register the visibility state driver")
+assert_eq(firstDriver.value, "[combat] hide; show", "HUD should hide during combat by default")
 
 DingTimerDB.floatShowInCombat = true
 NS.setFloatVisible(true)
-assert_eq(registeredDriver.value, "show", "HUD should stay visible during combat when enabled")
+assert_true(registeredDriver ~= nil, "RegisterStateDriver should be called")
+local secondDriver = registeredDriver
+if not secondDriver then
+  error("RegisterStateDriver should be called")
+end
+assert_eq(secondDriver.value, "show", "HUD should stay visible during combat when enabled")
 
 print("HUD visibility toggle test passed!")
