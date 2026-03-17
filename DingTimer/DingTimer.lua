@@ -85,56 +85,61 @@ end
 
 frame:SetScript("OnEvent", function(self, event, ...)
   local arg1 = ...
-  if event == "ADDON_LOADED" and arg1 == ADDON then
-    NS.InitStore()
-    NS.ensureFloat()
-    return
-  end
-
-  if event == "PLAYER_LOGIN" then
-    onPlayerLogin()
-    return
-  end
-
-  if event == "PLAYER_XP_UPDATE" then
-    if arg1 == "player" then
-      NS.onXPUpdate()
+  local ok, err = pcall(function()
+    if event == "ADDON_LOADED" and arg1 == ADDON then
+      NS.InitStore()
+      NS.ensureFloat()
+      return
     end
-    return
-  end
 
-  if event == "PLAYER_LEVEL_UP" then
-    onLevelUp(arg1)
-    return
-  end
-
-  if event == "PLAYER_MONEY" then
-    NS.onMoneyUpdate()
-    return
-  end
-
-  if event == "PLAYER_LOGOUT" then
-    if NS.RecordSession then
-      NS.RecordSession("LOGOUT")
+    if event == "PLAYER_LOGIN" then
+      onPlayerLogin()
+      return
     end
-    return
-  end
 
-  if event == "PLAYER_REGEN_ENABLED" then
-    NS.setFloatVisible(DingTimerDB.float)
-    return
-  end
+    if event == "PLAYER_XP_UPDATE" then
+      if arg1 == "player" then
+        NS.onXPUpdate()
+      end
+      return
+    end
 
-  if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
-    if NS.HandleZoneChange then
-      NS.HandleZoneChange(GetZoneText and GetZoneText() or "Unknown", GetTime())
+    if event == "PLAYER_LEVEL_UP" then
+      onLevelUp(arg1)
+      return
     end
-    if NS.RefreshStatsWindow then
-      NS.RefreshStatsWindow()
+
+    if event == "PLAYER_MONEY" then
+      NS.onMoneyUpdate()
+      return
     end
-    if NS.RefreshInsightsWindow then
-      NS.RefreshInsightsWindow()
+
+    if event == "PLAYER_LOGOUT" then
+      if NS.RecordSession then
+        NS.RecordSession("LOGOUT")
+      end
+      return
     end
+
+    if event == "PLAYER_REGEN_ENABLED" then
+      NS.setFloatVisible(DingTimerDB.float)
+      return
+    end
+
+    if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+      if NS.HandleZoneChange then
+        NS.HandleZoneChange(GetZoneText and GetZoneText() or "Unknown", GetTime())
+      end
+      if NS.RefreshStatsWindow then
+        NS.RefreshStatsWindow()
+      end
+      if NS.RefreshInsightsWindow then
+        NS.RefreshInsightsWindow()
+      end
+    end
+  end)
+  if not ok then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff4040[DingTimer] Error:|r " .. tostring(err))
   end
 end)
 
