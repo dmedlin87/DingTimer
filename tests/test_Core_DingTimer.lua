@@ -74,4 +74,38 @@ test_single_element_remove()
 test_normal_pruning()
 test_all_elements_removed()
 
+-- Tests for SetRollingWindowSeconds
+function test_set_rolling_window_seconds_invalid_inputs()
+    DingTimerDB = {}
+    assert_false(NS.SetRollingWindowSeconds(nil), "Should return false for nil")
+    assert_false(NS.SetRollingWindowSeconds("abc"), "Should return false for non-numeric string")
+    assert_false(NS.SetRollingWindowSeconds({}), "Should return false for table")
+    assert_equal(nil, DingTimerDB.windowSeconds, "windowSeconds should not be updated for invalid inputs")
+end
+
+function test_set_rolling_window_seconds_out_of_bounds()
+    DingTimerDB = {}
+    assert_false(NS.SetRollingWindowSeconds(29), "Should return false for n < 30")
+    assert_false(NS.SetRollingWindowSeconds(86401), "Should return false for n > 86400")
+    assert_equal(nil, DingTimerDB.windowSeconds, "windowSeconds should not be updated for out-of-bounds inputs")
+end
+
+function test_set_rolling_window_seconds_valid()
+    DingTimerDB = {}
+    assert_true(NS.SetRollingWindowSeconds(60), "Should return true for valid integer")
+    assert_equal(60, DingTimerDB.windowSeconds, "windowSeconds should be updated to integer value")
+
+    DingTimerDB = {}
+    assert_true(NS.SetRollingWindowSeconds("300"), "Should return true for valid numeric string")
+    assert_equal(300, DingTimerDB.windowSeconds, "windowSeconds should be updated to parsed numeric value")
+
+    DingTimerDB = {}
+    assert_true(NS.SetRollingWindowSeconds(30.5), "Should return true for valid float")
+    assert_equal(30, DingTimerDB.windowSeconds, "windowSeconds should be updated to floored value")
+end
+
+test_set_rolling_window_seconds_invalid_inputs()
+test_set_rolling_window_seconds_out_of_bounds()
+test_set_rolling_window_seconds_valid()
+
 print("All Core_DingTimer tests passed!")
