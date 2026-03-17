@@ -1,4 +1,4 @@
-require("tests.mocks")
+dofile("tests/mocks.lua")
 
 local NS = {}
 local ADDON = "DingTimer"

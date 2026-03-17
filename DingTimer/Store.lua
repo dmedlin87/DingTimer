@@ -1,5 +1,10 @@
 local ADDON, NS = ...
 
+-- CANONICAL SOURCE of coach default values.
+-- Store.lua loads before SessionCoach.lua, so this table and the stubs below are
+-- the authoritative definitions. SessionCoach.lua overrides the stubs with its full
+-- implementations but reads defaults via NS.GetCoachDefaults() (defined below).
+-- Do NOT duplicate these values in SessionCoach.lua.
 local COACH_DEFAULTS = {
   goal = "ding",
   alertsEnabled = true,
@@ -94,12 +99,7 @@ local function normalizeScaleMode(mode, fixedMax)
 end
 
 local function ensureCoachConfig()
-  DingTimerDB.coach = DingTimerDB.coach or {}
-  for key, value in pairs(COACH_DEFAULTS) do
-    if DingTimerDB.coach[key] == nil then
-      DingTimerDB.coach[key] = value
-    end
-  end
+  -- NS.EnsureCoachConfig handles all default-filling and clamping internally.
   NS.EnsureCoachConfig(DingTimerDB)
 end
 
@@ -229,10 +229,11 @@ function NS.InitStore()
     end
 
     if DingTimerDB.schemaVersion < 8 then
+      -- v8: No data transformation needed. This version bump was reserved to
+      -- allow coach.lastRecap and coach.pendingRecap to be recognised as valid
+      -- fields by EnsureCoachConfig without being wiped on first load.
       DingTimerDB.schemaVersion = 8
       DingTimerDB.coach = DingTimerDB.coach or {}
-      DingTimerDB.coach.lastRecap = DingTimerDB.coach.lastRecap or nil
-      DingTimerDB.coach.pendingRecap = DingTimerDB.coach.pendingRecap or nil
     end
   end
 

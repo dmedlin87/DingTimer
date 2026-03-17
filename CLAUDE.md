@@ -48,13 +48,13 @@ git tag v0.7.0 && git push origin v0.7.0
 
 **WoW target:** Private WotLK server (Bronzebeard). `## Interface: 30300` and the `_retail_` install path are both correct — do not change them.
 
-**Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store defines fallback stubs that SessionCoach overrides. See the comment in the `.toc`.
+**Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store provides fallback stubs for `GetCoachDefaults` and `EnsureCoachConfig` (used only when SessionCoach is absent). SessionCoach overrides these and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 
 **Shared namespace:** All modules share a single `NS` table passed as the second vararg (`local ADDON, NS = ...`). Runtime state lives in `NS.state`; persistent state in `DingTimerDB` (SavedVariables).
 
 **Running totals:** `NS.state.windowXP` and `NS.state.windowMoney` are maintained as running sums by `pruneEvents`. Any reset must clear both the events list and the running total atomically — `resetXPState()` does this correctly.
 
-**`GetSessionSnapshot` is read-only:** `sessionPeakXph` is updated in `onXPUpdate`, not in the snapshot getter.
+**`GetSessionSnapshot` has a pruning side effect:** It calls `computeXPPerHour` → `pruneEvents`, which removes expired events from `NS.state.events` and decrements `NS.state.windowXP`. This is idempotent for a given `now` value (calling it twice with the same timestamp is safe), but it is not a pure read. `sessionPeakXph` is updated separately in `onXPUpdate`, not here.
 
 **Test styles:** The test suite has two styles — `it()/run_tests()` (preferred) and bare function calls. Both work; new tests should use `it()/run_tests()`.
 

@@ -184,10 +184,6 @@ function NS.ensureFloat()
 
   floatFrame:SetScript("OnDragStart", function(self)
     if DingTimerDB.floatLocked then return end
-    if InCombatLockdown() then
-      NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " can't move the float in combat.")
-      return
-    end
     self:StartMoving()
   end)
   

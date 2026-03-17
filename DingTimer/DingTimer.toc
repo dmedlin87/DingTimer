@@ -10,8 +10,10 @@
 # 2. Insights.lua   -- must precede Store.lua; Store calls NS.GetProfileKey and
 #                      NS.TrimSessions, both defined here.
 # 3. Store.lua      -- must precede SessionCoach.lua; Store provides fallback stubs
-#                      (InitCoachState, NoteCoachXP, NoteCoachMoney, etc.) that
-#                      SessionCoach overrides with full implementations.
+#                      for GetCoachDefaults and EnsureCoachConfig (used when
+#                      SessionCoach.lua is absent). SessionCoach.lua overrides these
+#                      with its full implementations and defines InitCoachState,
+#                      NoteCoachXP, NoteCoachMoney, etc.
 # 4. Core_DingTimer -- must follow SessionCoach.lua; onXPUpdate calls NoteCoachXP /
 #                      NoteCoachMoney which SessionCoach defines.
 # 5. GraphMath.lua  -- must precede UI_XPGraphWindow.lua; the graph panel calls

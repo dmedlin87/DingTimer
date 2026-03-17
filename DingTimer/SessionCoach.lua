@@ -1,14 +1,8 @@
 local ADDON, NS = ...
 
-local DEFAULTS = {
-  goal = "ding",
-  alertsEnabled = true,
-  chatAlerts = true,
-  idleSeconds = 90,
-  paceDropPct = 15,
-  alertCooldownSeconds = 90,
-  alertHistoryLimit = 4,
-}
+-- Canonical defaults are defined in Store.lua (loaded first). Pull them here so
+-- there is only one authoritative source of default values.
+local DEFAULTS = NS.GetCoachDefaults()
 
 local GOAL_MINUTES = {
   ["30m"] = 30,
@@ -44,18 +38,7 @@ local function safeNumber(value, fallback)
   return n
 end
 
-local function safeString(value, fallback)
-  if type(value) == "string" and value ~= "" then
-    return value
-  end
-  if value ~= nil then
-    local str = tostring(value)
-    if str ~= "" then
-      return str
-    end
-  end
-  return fallback
-end
+local safeString = function(value, fallback) return NS.safeString(value, fallback) end
 
 local function normalizeGoal(goal)
   if goal == "off" or goal == "ding" or goal == "30m" or goal == "60m" then
@@ -442,7 +425,9 @@ function NS.GetCoachStatus(now)
   local bestSegment = nil
   for i = 1, #segments do
     local segment = segments[i]
-    if segment.xpGained and segment.xpGained > 0 then
+    -- Skip the live current segment: its avgXph uses durationSec clamped to 1s when
+    -- newly started, producing a wildly inflated rate that isn't meaningful as "best".
+    if not segment.isCurrent and segment.xpGained and segment.xpGained > 0 then
       if not bestSegment or (segment.avgXph or 0) > (bestSegment.avgXph or 0) then
         bestSegment = segment
       end

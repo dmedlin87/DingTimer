@@ -130,6 +130,19 @@ end
 
 ensureUIHelpers()
 
+function NS.safeString(value, fallback)
+  if type(value) == "string" and value ~= "" then
+    return value
+  end
+  if value ~= nil then
+    local s = tostring(value)
+    if s ~= "" then
+      return s
+    end
+  end
+  return fallback
+end
+
 function NS.IsInvalidNumber(n)
   return n ~= n or n == math.huge or n == -math.huge
 end

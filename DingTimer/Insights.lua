@@ -16,22 +16,7 @@ local function clampKeepSessions(n)
   return n
 end
 
---- Safely converts a value to a string, returning a fallback if invalid or empty.
---- @param value any The value to convert.
---- @param fallback string The fallback string to use if the value is invalid.
---- @return string The valid string or the fallback.
-local function safeString(value, fallback)
-  if type(value) == "string" and value ~= "" then
-    return value
-  end
-  if value ~= nil then
-    local s = tostring(value)
-    if s ~= "" then
-      return s
-    end
-  end
-  return fallback
-end
+local safeString = function(value, fallback) return NS.safeString(value, fallback) end
 
 --- Computes the arithmetic mean of an array of numbers.
 --- @param values number[] The array of numbers.

@@ -121,7 +121,11 @@ function NS.BuildAverageSeries(events, baselineSessionXP, now, sessionStart, anc
   local firstSegIdx = currentSegIdx - (segmentCount - 1)
   local firstSegStart = anchor + firstSegIdx * segSeconds
 
-  -- Binary search: find last event before the visible window
+  -- Binary search: find last event before the visible window.
+  -- Note: events[i].sessionXP is an optional pre-computed cumulative XP field.
+  -- Core_DingTimer currently stores events as {t, xp} without sessionXP, so the
+  -- fallback path (cumulativeXP + event.xp) is always taken. The sessionXP field
+  -- is reserved for a future optimisation where callers pre-stamp cumulative totals.
   local low, high = 1, #events
   while low <= high do
     local mid = math.floor((low + high) / 2)

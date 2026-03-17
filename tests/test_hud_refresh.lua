@@ -60,6 +60,8 @@ DingTimerDB = {
 
 
 LoadAddonFile("DingTimer/Util.lua", NS)
+LoadAddonFile("DingTimer/Insights.lua", NS)
+LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/SessionCoach.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 
