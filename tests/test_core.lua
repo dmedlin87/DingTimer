@@ -5,6 +5,9 @@ local NS = {}
 DingTimerDB = {
     windowSeconds = 600,
     enabled = true,
+    coach = {
+        stabilizeEarlyPace = true,
+    },
 }
 
 -- Mock some dependencies in NS
@@ -56,7 +59,26 @@ SetTime(801)
 xph = NS.computeXPPerHour(801, 600) -- event at 200 is now pruned (801-200 > 600)
 assert_near(xph, 100 * 3600 / 600, 0.1, "XP/hr should be 600 after pruning")
 
+-- Test 4b: Early pace stabilization in snapshots
+NS.resetXPState()
+SetTime(811)
+SetXP(400, 1000)
+NS.onXPUpdate() -- +100 XP after 10s
+local snapshot = NS.GetSessionSnapshot(811)
+assert_near(snapshot.rawCurrentXph, 36000, 0.1, "raw current pace should keep the immediate spike")
+assert_near(snapshot.currentXph, 6000, 0.1, "stabilized pace should normalize over 60s during warmup")
+assert_true(snapshot.showSettledOverlay, "warmup snapshot should advertise the settled overlay")
+
+DingTimerDB.coach.stabilizeEarlyPace = false
+NS.InvalidateTickCache()
+snapshot = NS.GetSessionSnapshot(811)
+assert_near(snapshot.currentXph, 36000, 0.1, "disabling stabilization should restore raw pace as current pace")
+assert_true(not snapshot.showSettledOverlay, "overlay should disappear when stabilization is disabled")
+DingTimerDB.coach.stabilizeEarlyPace = true
+NS.InvalidateTickCache()
+
 -- Test 5: Level Up (XP Rollover)
+SetXP(300, 1000)
 NS.resetXPState() -- start at t=801, XP=300, max=1000
 SetTime(900)
 SetXP(50, 1000) -- Leveled up! 700 XP from old level + 50 XP from new level = 750 delta

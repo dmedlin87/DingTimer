@@ -13,6 +13,7 @@ local COACH_DEFAULTS = {
   paceDropPct = 15,
   alertCooldownSeconds = 90,
   alertHistoryLimit = 4,
+  stabilizeEarlyPace = true,
 }
 
 local function copyCoachDefaults()

@@ -141,13 +141,25 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls.chatAlerts = createCheckbox(scrollChild, 16, -260, "Print coach alerts to chat", function(checked)
     ensureCoachConfig().chatAlerts = checked
   end, "Echo coach alerts into chat in addition to the Live panel.")
-  createButton(scrollChild, 16, -294, 88, "Recap", function()
+  settingsFrame.controls.stabilizeEarlyPace = createCheckbox(scrollChild, 16, -288, "Stabilize early pace display", function(checked)
+    ensureCoachConfig().stabilizeEarlyPace = checked
+    if NS.InvalidateTickCache then
+      NS.InvalidateTickCache()
+    end
+    if NS.RefreshStatsWindow then
+      NS.RefreshStatsWindow()
+    end
+    if NS.RefreshFloatingHUD then
+      NS.RefreshFloatingHUD()
+    end
+  end, "Show a normalized pace beside early spikes and use that stabilized pace for TTL and coach comparisons during the first minute.")
+  createButton(scrollChild, 16, -322, 88, "Recap", function()
     if NS.ShowCoachRecap then
       NS.ShowCoachRecap()
     end
   end)
   settingsFrame.controls.coachInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 112, -300)
+  settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 112, -328)
   settingsFrame.controls.coachInfo:SetWidth(220)
   settingsFrame.controls.coachInfo:SetJustifyH("LEFT")
   settingsFrame.controls.coachInfo:SetText("")
@@ -233,6 +245,7 @@ function NS.InitSettingsPanel(parent)
     self.controls.minimapHidden:SetChecked(DingTimerDB.minimapHidden)
     self.controls.alertsEnabled:SetChecked(coach.alertsEnabled)
     self.controls.chatAlerts:SetChecked(coach.chatAlerts)
+    self.controls.stabilizeEarlyPace:SetChecked(coach.stabilizeEarlyPace ~= false)
 
     local modeText = (DingTimerDB.mode == "ttl") and "TTL only" or "Full output"
     self.controls.modeValue:SetText("Mode: " .. modeText)
