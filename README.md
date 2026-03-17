@@ -18,6 +18,18 @@ Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraf
 
 ---
 
+## Project Docs
+
+- [ROADMAP](./ROADMAP.md) - current scope and documented follow-ups
+- [AGENTS](./AGENTS.md) - repo operating notes for automation and contributors
+- [CLAUDE](./CLAUDE.md) - agent handoff notes and module-level guidance
+- [CONTRIBUTING](./CONTRIBUTING.md) - how to test and submit changes
+- [SECURITY](./SECURITY.md) - how to report security concerns
+- [CHANGELOG](./CHANGELOG.md) - release history
+- [CODE OF CONDUCT](./CODE_OF_CONDUCT.md) - community standards
+
+---
+
 ## What is DingTimer?
 
 DingTimer is a **leveling efficiency addon** that answers the eternal question every grinder has asked: *"How long until I ding?"*
@@ -51,13 +63,15 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 2. Extract the `DingTimer` folder into your addons directory:
 
    ```text
-   World of Warcraft\_retail_\Interface\AddOns\DingTimer\
+   <WoW client>\Interface\AddOns\DingTimer\
    ```
+
+   The bundled PowerShell installer also supports the Ascension Launcher client path plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
 
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically
 
-> The minimap button will appear on login. Left-click it to toggle the Dashboard tab.
+> The minimap button will appear on login. Left-click it to toggle the Live tab.
 
 ---
 
@@ -88,8 +102,8 @@ All commands work with either `/ding` or `/dt`.
 | `/ding ui`              | Toggle the Live tab                           |
 | `/ding live`            | Same as above                                 |
 | `/ding stats`           | Same as above                                 |
-| `/ding settings`        | Open the settings window                      |
-| `/ding history`         | Toggle the History window                     |
+| `/ding settings`        | Open the Settings tab                         |
+| `/ding history`         | Toggle the History tab                        |
 | `/ding insights`        | Alias for History                             |
 | `/ding reset`           | Reset current session data                    |
 | `/ding goal <preset>`   | Set the coach goal: `off`, `ding`, `30m`, `60m` |
@@ -151,16 +165,16 @@ All commands work with either `/ding` or `/dt`.
 
 The minimap button lives on the edge of your minimap and is your primary launcher.
 
-- **Left-click** — Toggle the Dashboard tab
+- **Left-click** — Toggle the Live tab
 - **Right-click** — Toggle the Analysis tab
-- **Middle-click** — Toggle the Control Center tab
+- **Middle-click** — Toggle the Settings tab
 - **Drag** — Slide it anywhere around the minimap rim
 
-You can hide it entirely from the Settings Window if you prefer slash commands.
+You can hide it entirely from the Settings tab if you prefer slash commands.
 
 ---
 
-### Stats Dashboard
+### Live Panel
 
 A denser live dashboard showing your entire session at a glance.
 
@@ -230,11 +244,11 @@ A dedicated analysis window for long-term improvement over multiple leveling ses
 
 ---
 
-### Control Center
+### Settings Tab
 
 A larger control hub for all major options:
 
-- Quick-open buttons for Dashboard, Graph, Insights, and Graph Reset
+- Quick-open buttons for History, keep-retention presets, graph scaling, and session maintenance
 - Visibility toggles for chat output, floating HUD, graph, and minimap button
 - Output controls for chat mode and rolling-window presets
 - Graph controls for scale mode, fixed max, zoom presets, and remembered size

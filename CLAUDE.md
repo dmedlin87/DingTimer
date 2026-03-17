@@ -1,5 +1,7 @@
 # DingTimer
 
+See @AGENTS.md for repository guidance and operating notes.
+
 WoW addon (Lua 5.1) for real-time XP/hr tracking, time-to-ding, session coaching, and leveling analytics.
 
 ## Project Layout
@@ -50,7 +52,7 @@ git tag v0.7.0 && git push origin v0.7.0
 
 ## Key Gotchas
 
-**WoW target:** Private WotLK server (Bronzebeard). `## Interface: 30300` and the `_retail_` install path are both correct — do not change them.
+**WoW target:** Private WotLK server (Bronzebeard). `## Interface: 30300` is the addon target, and the installer supports the Ascension Launcher client path plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
 
 **Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store provides fallback stubs for `GetCoachDefaults` and `EnsureCoachConfig` (used only when SessionCoach is absent). SessionCoach overrides these and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 
