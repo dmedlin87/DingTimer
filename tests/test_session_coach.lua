@@ -93,4 +93,7 @@ DingTimerDB.coach.lastRecap = "dummy_recap"
 NS.StoreCoachSummary(nil)
 assert_eq(DingTimerDB.coach.lastRecap, "dummy_recap", "StoreCoachSummary should not modify lastRecap when summary is nil")
 
+DingTimerDB.coach.pendingRecap = nil
+assert_eq(NS.DeliverPendingCoachSummary(), false, "DeliverPendingCoachSummary should return false when pending recap is nil")
+
 print("Session coach tests passed!")
