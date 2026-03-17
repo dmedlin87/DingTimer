@@ -39,7 +39,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, session pace, and timed-goal pace when relevant
 - **Live Panel** — A refreshed home view for progress, coach status, recent alerts, and quick actions
 - **Settings Hub** — Grouped controls for output, HUD, coach, graph, and data maintenance
-- **Minimap Button** — Left-click for Live, middle-click for Analysis, right-click for Settings, drag to reposition
+- **Minimap Button** — Left-click for Live, right-click for Analysis, middle-click for Settings, drag to reposition
 - **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
 - **Persistent Sessions** — Settings, main window/HUD placement, and per-character session history saved between sessions
 
@@ -66,8 +66,8 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | You want to...        | Do this                                            |
 | --------------------- | -------------------------------------------------- |
 | Open Live             | Left-click the minimap button or `/ding live`      |
-| Change settings       | Right-click the minimap button or `/ding settings` |
-| Open Analysis         | Middle-click the minimap button or `/ding graph`   |
+| Change settings       | Middle-click the minimap button or `/ding settings` |
+| Open Analysis         | Right-click the minimap button or `/ding graph`     |
 | Open History          | `/ding history` or `/ding insights`                |
 | Set a coach goal      | `/ding goal ding` or `/ding goal 30m`              |
 | Record a checkpoint   | `/ding split`                                      |
@@ -84,7 +84,7 @@ All commands work with either `/ding` or `/dt`.
 | Command                 | What it does                                  |
 | ----------------------- | --------------------------------------------- |
 | `/ding`                 | Show the help menu                            |
-| `/ding help <command>`  | Detailed help for a specific command          |
+| `/ding help`            | Show the help menu                            |
 | `/ding ui`              | Toggle the Live tab                           |
 | `/ding live`            | Same as above                                 |
 | `/ding stats`           | Same as above                                 |
@@ -152,8 +152,8 @@ All commands work with either `/ding` or `/dt`.
 The minimap button lives on the edge of your minimap and is your primary launcher.
 
 - **Left-click** — Toggle the Dashboard tab
-- **Middle-click** — Toggle the Graph tab
-- **Right-click** — Toggle the Control Center tab
+- **Right-click** — Toggle the Analysis tab
+- **Middle-click** — Toggle the Control Center tab
 - **Drag** — Slide it anywhere around the minimap rim
 
 You can hide it entirely from the Settings Window if you prefer slash commands.

@@ -31,7 +31,11 @@ Requires Lua + LuaRocks installed at `%LOCALAPPDATA%\Programs\Lua\`. Runs all `t
 
 **Linux / CI:**
 ```bash
-for f in tests/test_*.lua; do lua5.4 "$f" || exit 1; done
+for lua_bin in lua5.1 lua5.4; do
+  for f in tests/test_*.lua; do
+    "$lua_bin" "$f" || exit 1
+  done
+done
 ```
 
 `run_tests.py` is Linux-only (uses `.so` shared libs) — don't use it on Windows.
