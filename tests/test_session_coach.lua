@@ -89,4 +89,8 @@ assert_true(record.segments ~= nil and #record.segments >= 1, "recorded sessions
 assert_true(record.coachSummary ~= nil, "recorded sessions should include a coach summary")
 assert_true(DingTimerDB.coach.lastRecap ~= nil, "coach recaps should persist to the store")
 
+DingTimerDB.coach.lastRecap = "dummy_recap"
+NS.StoreCoachSummary(nil)
+assert_eq(DingTimerDB.coach.lastRecap, "dummy_recap", "StoreCoachSummary should not modify lastRecap when summary is nil")
+
 print("Session coach tests passed!")
