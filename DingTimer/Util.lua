@@ -315,13 +315,10 @@ function NS.GetGraphScaleModeLabel(mode, compact)
 end
 
 function NS.ClampGraphFixedMax(value)
-  local n = math_floor(tonumber(value) or 100000)
-  if n < 10000 then
-    n = 10000
-  elseif n > 5000000 then
-    n = 5000000
-  end
-  return n
+  local n = tonumber(value)
+  if not n then return 500000 end
+  -- Provide reasonable guardrails
+  return math.max(10000, math.min(10000000, n))
 end
 
 function NS.ClampGraphWindowSize(width, height)
