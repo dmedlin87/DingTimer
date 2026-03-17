@@ -20,6 +20,14 @@ NS.resetXPState()
 
 assert_eq(DingTimerDB.coach.goal, "ding", "coach goal should default to ding")
 
+local beforeXPAt = NS.state.coach.lastXPAt
+NS.NoteCoachXP(nil, 150)
+assert_eq(NS.state.coach.lastXPAt, beforeXPAt, "NoteCoachXP should ignore nil delta")
+NS.NoteCoachXP(0, 150)
+assert_eq(NS.state.coach.lastXPAt, beforeXPAt, "NoteCoachXP should ignore 0 delta")
+NS.NoteCoachXP(-10, 150)
+assert_eq(NS.state.coach.lastXPAt, beforeXPAt, "NoteCoachXP should ignore negative delta")
+
 SetTime(130)
 SetXP(300, 1000)
 NS.onXPUpdate()
