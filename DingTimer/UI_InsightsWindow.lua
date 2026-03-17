@@ -80,11 +80,16 @@ local function drawSparkline(values)
 end
 
 local function updateComparison(summary)
+  local frame = insightsFrame
+  if not frame or not frame.compareLine1 or not frame.compareLine2 then
+    return
+  end
+
   local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(GetTime()) or nil
   local lastSession = summary.lastSession
   if not snapshot or not lastSession then
-    insightsFrame.compareLine1:SetText("No prior session to compare against.")
-    insightsFrame.compareLine2:SetText("Complete a run to start building history context.")
+    frame.compareLine1:SetText("No prior session to compare against.")
+    frame.compareLine2:SetText("Complete a run to start building history context.")
     return
   end
 
@@ -96,13 +101,13 @@ local function updateComparison(summary)
     deltaColor = NS.C.bad
   end
 
-  insightsFrame.compareLine1:SetText(string.format(
+  frame.compareLine1:SetText(string.format(
     "Current run: %s XP/hr over %s in %s",
     NS.FormatNumber(NS.Round(snapshot.sessionXph or 0)),
     NS.fmtTime(snapshot.sessionElapsed or 0),
     snapshot.zone or "Unknown"
   ))
-  insightsFrame.compareLine2:SetText(string.format(
+  frame.compareLine2:SetText(string.format(
     "Last run: %s XP/hr over %s  |  Delta %s%s%s",
     NS.FormatNumber(NS.Round(lastSession.avgXph or 0)),
     NS.fmtTime(lastSession.durationSec or 0),
@@ -113,6 +118,11 @@ local function updateComparison(summary)
 end
 
 local function updateZoneLeaders(summary)
+  local frame = insightsFrame
+  if not frame or not frame.zoneRows then
+    return
+  end
+
   local values = {}
   for i = 1, 3 do
     local zone = summary.zoneLeaders[i]
@@ -128,7 +138,7 @@ local function updateZoneLeaders(summary)
     end
   end
   NS.UI.SetRows(
-    insightsFrame.zoneRows,
+    frame.zoneRows,
     values,
     NS.C.mid .. "No zone leaders yet. Finish a few sessions first." .. NS.C.r
   )

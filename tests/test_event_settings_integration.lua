@@ -32,22 +32,31 @@ SetMoney(0)
 SetZone("Elwynn")
 
 assert_true(eventFrame ~= nil, "event frame should be created by DingTimer.lua")
-local onEvent = eventFrame:GetScript("OnEvent")
-assert_true(onEvent ~= nil, "event frame should have an OnEvent handler")
+---@type table<string, any>?
+local eventFrameRef = eventFrame
+if not eventFrameRef then
+  error("event frame should be created by DingTimer.lua")
+end
 
-onEvent(eventFrame, "ADDON_LOADED", "DingTimer")
+local onEvent = eventFrameRef._scripts and eventFrameRef._scripts["OnEvent"] or nil
+assert_true(onEvent ~= nil, "event frame should have an OnEvent handler")
+if not onEvent then
+  error("event frame should have an OnEvent handler")
+end
+
+onEvent(eventFrameRef, "ADDON_LOADED", "DingTimer")
 assert_true(DingTimerDB ~= nil, "ADDON_LOADED should initialize the store")
 
-onEvent(eventFrame, "PLAYER_LOGIN")
+onEvent(eventFrameRef, "PLAYER_LOGIN")
 assert_eq(10, NS.state.sessionStartTime, "PLAYER_LOGIN should reset session state")
 
 SetTime(70)
 SetXP(150, 1000)
-onEvent(eventFrame, "PLAYER_XP_UPDATE", "player")
+onEvent(eventFrameRef, "PLAYER_XP_UPDATE", "player")
 assert_eq(150, NS.state.sessionXP, "PLAYER_XP_UPDATE should route through core XP handling")
 
 SetTime(90)
-onEvent(eventFrame, "PLAYER_LOGOUT")
+onEvent(eventFrameRef, "PLAYER_LOGOUT")
 local profile = NS.GetProfileStore(true)
 assert_eq(1, #profile.sessions, "PLAYER_LOGOUT should record the current session")
 assert_eq("LOGOUT", profile.sessions[1].reason, "logout record should carry the LOGOUT reason")
