@@ -329,6 +329,12 @@ function assert_true(value, message)
   end
 end
 
+function assert_false(value, message)
+  if value then
+    error(message or "Assertion failed: expected false", 2)
+  end
+end
+
 function assert_near(actual, expected, tolerance, message)
   if math.abs(actual - expected) > (tolerance or 0.001) then
     error(string.format("%s: expected ~%s, got %s",
