@@ -77,6 +77,9 @@ NS.RunCoachHeartbeat(360)
 alerts = NS.GetCoachAlerts(10)
 assert_eq(alerts[1].kind, "pace_drop", "slow pace against a timed goal should create a pace drop alert")
 
+local result_nil = NS.DeliverCoachSummary(nil)
+assert_eq(result_nil, false, "DeliverCoachSummary should return false when given a nil summary")
+
 local record = NS.RecordSession("MANUAL_RESET")
 assert_true(record ~= nil, "recording a coached session should return a session record")
 assert_true(record.segments ~= nil and #record.segments >= 1, "recorded sessions should include segments")
