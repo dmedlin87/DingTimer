@@ -80,6 +80,9 @@ assert_eq(alerts[1].kind, "pace_drop", "slow pace against a timed goal should cr
 local result_nil = NS.DeliverCoachSummary(nil)
 assert_eq(result_nil, false, "DeliverCoachSummary should return false when given a nil summary")
 
+local summary_nil = NS.BuildCoachSummary(nil)
+assert_eq(summary_nil, nil, "BuildCoachSummary should return nil when given a nil record")
+
 local record = NS.RecordSession("MANUAL_RESET")
 assert_true(record ~= nil, "recording a coached session should return a session record")
 assert_true(record.segments ~= nil and #record.segments >= 1, "recorded sessions should include segments")
