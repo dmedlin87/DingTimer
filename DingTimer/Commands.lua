@@ -71,11 +71,8 @@ ROOT_COMMANDS.off = function()
 end
 
 ROOT_COMMANDS.reset = function()
-  if NS.RecordSession then
-    NS.RecordSession("MANUAL_RESET")
-  end
-  if NS.resetXPState then
-    NS.resetXPState()
+  if NS.ResetSession then
+    NS.ResetSession("MANUAL_RESET")
   end
   chat("session reset.")
 end
@@ -91,18 +88,13 @@ ROOT_COMMANDS.goal = function(arg)
     chat("coach is unavailable.")
     return
   end
-  local config = NS.EnsureCoachConfig()
-  if goal ~= "off" and goal ~= "ding" and goal ~= "30m" and goal ~= "60m" then
-    chat("Invalid goal. Use: off, ding, 30m, 60m")
-    return
-  end
-  config.goal = goal
-  chat("coach goal = " .. goal)
-  if NS.RefreshStatsWindow then
-    NS.RefreshStatsWindow()
-  end
-  if NS.RefreshSettingsPanel then
-    NS.RefreshSettingsPanel()
+  if NS.SetCoachGoal then
+    local ok, result = NS.SetCoachGoal(goal)
+    if not ok then
+      chat(result)
+      return
+    end
+    chat("coach goal = " .. result)
   end
 end
 
@@ -174,8 +166,8 @@ ROOT_COMMANDS.insights = function(arg)
     return
   end
   if sub == "clear" then
-    if NS.ClearProfileSessions then
-      NS.ClearProfileSessions()
+    if NS.ClearCurrentProfileHistory then
+      NS.ClearCurrentProfileHistory()
     end
     chat("history cleared for this character.")
     return
@@ -186,24 +178,14 @@ ROOT_COMMANDS.insights = function(arg)
       chat("insights keep = " .. tostring(keep))
       return
     end
-    local n = tonumber(rest)
-    if not n then
-      chat("Please provide a number (e.g., /ding insights keep 30).")
-      return
+    if NS.SetKeepSessions then
+      local ok, result = NS.SetKeepSessions(rest)
+      if not ok then
+        chat(result)
+        return
+      end
+      chat("insights keep = " .. tostring(result))
     end
-    if n < 5 or n > 100 then
-      chat("insights keep must be between 5 and 100.")
-      return
-    end
-    DingTimerDB.xp = DingTimerDB.xp or {}
-    DingTimerDB.xp.keepSessions = math.floor(n)
-    if NS.GetProfileStore and NS.TrimSessions then
-      NS.TrimSessions(NS.GetProfileStore(true), DingTimerDB.xp.keepSessions)
-    end
-    if NS.RefreshInsightsWindow then
-      NS.RefreshInsightsWindow()
-    end
-    chat("insights keep = " .. tostring(DingTimerDB.xp.keepSessions))
     return
   end
   chat("Unknown history command. Use: clear, keep")

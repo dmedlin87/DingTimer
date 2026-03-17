@@ -5,6 +5,7 @@ LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Insights.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/SessionCoach.lua", NS)
+LoadAddonFile("DingTimer/Actions.lua", NS)
 LoadAddonFile("DingTimer/Commands.lua", NS)
 
 NS.RefreshStatsWindow = function() end

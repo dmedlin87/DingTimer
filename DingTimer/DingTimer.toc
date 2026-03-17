@@ -16,13 +16,15 @@
 #                      NoteCoachXP, NoteCoachMoney, etc.
 # 4. Core_DingTimer -- must follow SessionCoach.lua; onXPUpdate calls NoteCoachXP /
 #                      NoteCoachMoney which SessionCoach defines.
-# 5. GraphMath.lua  -- must precede UI_XPGraphWindow.lua; the graph panel calls
+# 5. Actions.lua    -- shared user actions used by commands and settings panels.
+# 6. GraphMath.lua  -- must precede UI_XPGraphWindow.lua; the graph panel calls
 #                      NS.AggregateVisibleSegments, NS.BuildAverageSeries, etc.
 # ---------------------------------------------------------------------
 Util.lua
 Insights.lua
 Store.lua
 SessionCoach.lua
+Actions.lua
 Commands.lua
 Core_DingTimer.lua
 GraphMath.lua

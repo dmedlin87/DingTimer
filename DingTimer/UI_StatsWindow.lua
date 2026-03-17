@@ -227,8 +227,9 @@ function NS.InitStatsPanel(parent)
     end
   end)
   NS.CreateConfirmButton(statsFrame, 400, 12, 100, "Reset", "Confirm Reset", function()
-    if NS.RecordSession then NS.RecordSession("MANUAL_RESET") end
-    NS.resetXPState()
+    if NS.ResetSession then
+      NS.ResetSession("MANUAL_RESET")
+    end
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
 

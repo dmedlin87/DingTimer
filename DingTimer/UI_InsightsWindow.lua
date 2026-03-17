@@ -283,8 +283,8 @@ function NS.InitInsightsPanel(parent)
   rowTexts = NS.UI.CreateListRows(scrollChild, 16, -458, 680, MAX_ROWS, 14, "GameFontHighlightSmall")
 
   NS.CreateConfirmButton(insightsFrame, 16, 10, 120, "Clear History", "Confirm Clear", function()
-    if NS.ClearProfileSessions then
-      NS.ClearProfileSessions()
+    if NS.ClearCurrentProfileHistory then
+      NS.ClearCurrentProfileHistory()
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " history cleared for this character.")
     end
   end)

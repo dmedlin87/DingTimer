@@ -128,9 +128,11 @@ function NS.InitSettingsPanel(parent)
   end, "Remove the DingTimer launcher from the minimap ring.")
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -168, "Coach", "Goal presets, alert behavior, and recap access.")
-  createButton(scrollChild, 16, -198, 116, "Cycle Goal", function()
+  settingsFrame.controls.cycleGoalButton = createButton(scrollChild, 16, -198, 116, "Cycle Goal", function()
     local coach = ensureCoachConfig()
-    coach.goal = cycleValue(coach.goal, GOAL_ORDER)
+    if NS.SetCoachGoal then
+      NS.SetCoachGoal(cycleValue(coach.goal, GOAL_ORDER))
+    end
   end)
   settingsFrame.controls.goalValue = NS.UI.CreateValueLabel(scrollChild, 142, -203)
   settingsFrame.controls.alertsEnabled = createCheckbox(scrollChild, 16, -232, "Enable coach alerts", function(checked)
@@ -186,22 +188,19 @@ function NS.InitSettingsPanel(parent)
       NS.ShowMainWindow(3)
     end
   end)
-  createButton(scrollChild, 144, -390, 92, "Keep 10", function()
-    DingTimerDB.xp.keepSessions = 10
-    if NS.GetProfileStore and NS.TrimSessions then
-      NS.TrimSessions(NS.GetProfileStore(true), 10)
+  settingsFrame.controls.keep10Button = createButton(scrollChild, 144, -390, 92, "Keep 10", function()
+    if NS.SetKeepSessions then
+      NS.SetKeepSessions(10)
     end
   end)
-  createButton(scrollChild, 244, -390, 92, "Keep 30", function()
-    DingTimerDB.xp.keepSessions = 30
-    if NS.GetProfileStore and NS.TrimSessions then
-      NS.TrimSessions(NS.GetProfileStore(true), 30)
+  settingsFrame.controls.keep30Button = createButton(scrollChild, 244, -390, 92, "Keep 30", function()
+    if NS.SetKeepSessions then
+      NS.SetKeepSessions(30)
     end
   end)
-  createButton(scrollChild, 344, -390, 92, "Keep 50", function()
-    DingTimerDB.xp.keepSessions = 50
-    if NS.GetProfileStore and NS.TrimSessions then
-      NS.TrimSessions(NS.GetProfileStore(true), 50)
+  settingsFrame.controls.keep50Button = createButton(scrollChild, 344, -390, 92, "Keep 50", function()
+    if NS.SetKeepSessions then
+      NS.SetKeepSessions(50)
     end
   end)
   settingsFrame.controls.keepValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -209,13 +208,14 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls.keepValue:SetText("")
 
   NS.CreateConfirmButton(settingsFrame, 16, 14, 140, "Reset Session", "Confirm Reset", function()
-    if NS.RecordSession then NS.RecordSession("MANUAL_RESET") end
-    NS.resetXPState()
+    if NS.ResetSession then
+      NS.ResetSession("MANUAL_RESET")
+    end
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
   NS.CreateConfirmButton(settingsFrame, 166, 14, 140, "Clear History", "Confirm Clear", function()
-    if NS.ClearProfileSessions then
-      NS.ClearProfileSessions()
+    if NS.ClearCurrentProfileHistory then
+      NS.ClearCurrentProfileHistory()
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " history cleared for this character.")
     end
   end)
