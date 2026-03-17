@@ -110,7 +110,13 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls.floatLocked = createCheckbox(scrollChild, 360, -76, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
   end, "Prevent the floating HUD from being dragged.")
-  settingsFrame.controls.minimapHidden = createCheckbox(scrollChild, 360, -104, "Hide minimap button", function(checked)
+  settingsFrame.controls.floatShowInCombat = createCheckbox(scrollChild, 360, -104, "Show floating HUD in combat", function(checked)
+    DingTimerDB.floatShowInCombat = checked
+    if DingTimerDB.float then
+      NS.setFloatVisible(true)
+    end
+  end, "Keep the floating HUD visible during combat instead of hiding it automatically.")
+  settingsFrame.controls.minimapHidden = createCheckbox(scrollChild, 360, -132, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
       if checked then
@@ -223,6 +229,7 @@ function NS.InitSettingsPanel(parent)
     self.controls.enabled:SetChecked(DingTimerDB.enabled)
     self.controls.float:SetChecked(DingTimerDB.float)
     self.controls.floatLocked:SetChecked(DingTimerDB.floatLocked)
+    self.controls.floatShowInCombat:SetChecked(DingTimerDB.floatShowInCombat)
     self.controls.minimapHidden:SetChecked(DingTimerDB.minimapHidden)
     self.controls.alertsEnabled:SetChecked(coach.alertsEnabled)
     self.controls.chatAlerts:SetChecked(coach.chatAlerts)

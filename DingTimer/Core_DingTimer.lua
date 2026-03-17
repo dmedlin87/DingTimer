@@ -269,8 +269,9 @@ end
 function NS.setFloatVisible(on)
   if on then
     NS.ensureFloat()
+    local visibilityDriver = (DingTimerDB and DingTimerDB.floatShowInCombat) and "show" or "[combat] hide; show"
     ---@diagnostic disable-next-line: redundant-parameter
-    RegisterStateDriver(floatFrame, "visibility", "[combat] hide; show")
+    RegisterStateDriver(floatFrame, "visibility", visibilityDriver)
     if NS.RefreshFloatingHUD then
       NS.RefreshFloatingHUD()
     end

@@ -135,6 +135,7 @@ function NS.InitStore()
     minXPDeltaToPrint = 1,
     mode = "full",
     float = false,
+    floatShowInCombat = false,
     floatLocked = true,
     graphWindowSeconds = 300,
     graphScaleMode = "visible",
@@ -188,6 +189,7 @@ function NS.InitStore()
       DingTimerDB.minXPDeltaToPrint = DingTimerDB.minXPDeltaToPrint or defaults.minXPDeltaToPrint
       DingTimerDB.mode = DingTimerDB.mode or defaults.mode
       DingTimerDB.float = (DingTimerDB.float ~= nil) and DingTimerDB.float or defaults.float
+      DingTimerDB.floatShowInCombat = (DingTimerDB.floatShowInCombat ~= nil) and DingTimerDB.floatShowInCombat or defaults.floatShowInCombat
       DingTimerDB.floatLocked = (DingTimerDB.floatLocked ~= nil) and DingTimerDB.floatLocked or defaults.floatLocked
       
       -- Remove cpc data if it exists
@@ -245,6 +247,7 @@ function NS.InitStore()
   if DingTimerDB.mainWindowVisible == nil then DingTimerDB.mainWindowVisible = defaults.mainWindowVisible end
   if DingTimerDB.mainWindowPosition == nil then DingTimerDB.mainWindowPosition = defaults.mainWindowPosition end
   if DingTimerDB.lastOpenTab == nil then DingTimerDB.lastOpenTab = defaults.lastOpenTab end
+  if DingTimerDB.floatShowInCombat == nil then DingTimerDB.floatShowInCombat = defaults.floatShowInCombat end
   if DingTimerDB.coach == nil then DingTimerDB.coach = copyCoachDefaults() end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
   cleanupObsoleteWindowState()
