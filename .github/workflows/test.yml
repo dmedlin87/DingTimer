@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lua-version: ['5.1', '5.4']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Lua
+        run: sudo apt-get install -y lua${{ matrix.lua-version }}
+
+      - name: Run tests
+        run: |
+          for f in tests/test_*.lua; do
+            echo "→ $f (Lua ${{ matrix.lua-version }})"
+            lua${{ matrix.lua-version }} "$f" || exit 1
+          done
