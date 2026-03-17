@@ -1,5 +1,13 @@
 local ADDON, NS = ...
 
+-- ⚡ Localize frequently-used globals
+local math_max = math.max
+local math_min = math.min
+local math_floor = math.floor
+local math_abs = math.abs
+local math_huge = math.huge
+local string_format = string.format
+
 -- Canonical defaults are defined in Store.lua (loaded first). Pull them here so
 -- there is only one authoritative source of default values.
 local DEFAULTS = NS.GetCoachDefaults()
@@ -95,7 +103,7 @@ local function finalizeSegment(now, reason, keepEmpty)
     return nil
   end
 
-  local durationSec = math.max(1, (now or GetTime()) - (segment.startedAt or (now or GetTime())))
+  local durationSec = math_max(1, (now or GetTime()) - (segment.startedAt or (now or GetTime())))
   local xpGained = segment.xpGained or 0
   local moneyNetCopper = segment.moneyNetCopper or 0
   if not keepEmpty and xpGained <= 0 and moneyNetCopper == 0 then
@@ -104,7 +112,7 @@ local function finalizeSegment(now, reason, keepEmpty)
   end
 
   local record = {
-    id = string.format("%d-%d", math.floor((now or GetTime()) + 0.5), (#coach.segments or 0) + 1),
+    id = string_format("%d-%d", math_floor((now or GetTime()) + 0.5), (#coach.segments or 0) + 1),
     startedAt = segment.startedAt,
     endedAt = now,
     durationSec = durationSec,
@@ -129,7 +137,7 @@ local function finalizeSegment(now, reason, keepEmpty)
     if NS.PushCoachAlert then
       NS.PushCoachAlert(
         "best_segment",
-        string.format(
+        string_format(
           "New best segment: %s XP/hr in %s.",
           NS.FormatNumber(NS.Round(record.avgXph)),
           safeString(record.zone, "Unknown")
@@ -149,7 +157,7 @@ local function buildCurrentSegment(now)
     return nil
   end
 
-  local durationSec = math.max(1, (now or GetTime()) - (current.startedAt or (now or GetTime())))
+  local durationSec = math_max(1, (now or GetTime()) - (current.startedAt or (now or GetTime())))
   local xpGained = current.xpGained or 0
   local moneyNetCopper = current.moneyNetCopper or 0
   return {
@@ -171,7 +179,15 @@ function NS.GetCoachDefaults()
   return copyTable(DEFAULTS)
 end
 
+-- ⚡ Cache validated coach config; invalidated by NS.InvalidateCoachConfig()
+local cachedCoachConfig = nil
+
 function NS.EnsureCoachConfig(db)
+  -- Fast path: return cached config if already validated and using the default DB
+  if cachedCoachConfig and not db then
+    return cachedCoachConfig
+  end
+
   db = db or DingTimerDB or {}
   db.coach = db.coach or {}
   for key, value in pairs(DEFAULTS) do
@@ -180,11 +196,19 @@ function NS.EnsureCoachConfig(db)
     end
   end
   db.coach.goal = normalizeGoal(db.coach.goal)
-  db.coach.idleSeconds = math.max(30, math.floor(safeNumber(db.coach.idleSeconds, DEFAULTS.idleSeconds)))
-  db.coach.paceDropPct = math.max(5, math.min(50, math.floor(safeNumber(db.coach.paceDropPct, DEFAULTS.paceDropPct))))
-  db.coach.alertCooldownSeconds = math.max(30, math.floor(safeNumber(db.coach.alertCooldownSeconds, DEFAULTS.alertCooldownSeconds)))
-  db.coach.alertHistoryLimit = math.max(1, math.min(8, math.floor(safeNumber(db.coach.alertHistoryLimit, DEFAULTS.alertHistoryLimit))))
+  db.coach.idleSeconds = math_max(30, math_floor(safeNumber(db.coach.idleSeconds, DEFAULTS.idleSeconds)))
+  db.coach.paceDropPct = math_max(5, math_min(50, math_floor(safeNumber(db.coach.paceDropPct, DEFAULTS.paceDropPct))))
+  db.coach.alertCooldownSeconds = math_max(30, math_floor(safeNumber(db.coach.alertCooldownSeconds, DEFAULTS.alertCooldownSeconds)))
+  db.coach.alertHistoryLimit = math_max(1, math_min(8, math_floor(safeNumber(db.coach.alertHistoryLimit, DEFAULTS.alertHistoryLimit))))
+
+  if not db or db == DingTimerDB then
+    cachedCoachConfig = db.coach
+  end
   return db.coach
+end
+
+function NS.InvalidateCoachConfig()
+  cachedCoachConfig = nil
 end
 
 function NS.InitCoachState(now)
@@ -254,8 +278,15 @@ function NS.PushCoachAlert(kind, message, now)
   local alerts = coach.alerts
   alerts[#alerts + 1] = entry
 
-  while #alerts > config.alertHistoryLimit do
-    table.remove(alerts, 1)
+  local alertLen = #alerts
+  local overflow = alertLen - config.alertHistoryLimit
+  if overflow > 0 then
+    for j = 1, config.alertHistoryLimit do
+      alerts[j] = alerts[j + overflow]
+    end
+    for j = alertLen, config.alertHistoryLimit + 1, -1 do
+      alerts[j] = nil
+    end
   end
 
   if config.chatAlerts and NS.chat then
@@ -266,10 +297,10 @@ end
 
 function NS.GetCoachAlerts(limit)
   local alerts = recentAlerts()
-  local count = math.min(#alerts, math.max(1, math.floor(limit or #alerts)))
+  local count = math_min(#alerts, math_max(1, math_floor(limit or #alerts)))
   local result = {}
   local index = 0
-  for i = #alerts, math.max(1, #alerts - count + 1), -1 do
+  for i = #alerts, math_max(1, #alerts - count + 1), -1 do
     index = index + 1
     result[index] = alerts[i]
   end
@@ -339,21 +370,21 @@ function NS.GetCoachGoalStatus(snapshot)
     local delta = benchmark and (snapshot.currentXph - benchmark) or 0
     local status
     if benchmark and benchmark > 0 then
-      if math.abs(delta) < 0.5 then
+      if math_abs(delta) < 0.5 then
         status = "Current pace is matching your session high."
       elseif delta > 0 then
-        status = string.format(
+        status = string_format(
           "Ahead of session high by %s XP/hr.",
           NS.FormatNumber(NS.Round(delta))
         )
       else
-        status = string.format(
+        status = string_format(
           "Behind session high by %s XP/hr.",
-          NS.FormatNumber(NS.Round(math.abs(delta)))
+          NS.FormatNumber(NS.Round(math_abs(delta)))
         )
       end
     else
-      status = (snapshot.ttl and snapshot.ttl < math.huge)
+      status = (snapshot.ttl and snapshot.ttl < math_huge)
         and ("Current ETA: " .. NS.fmtTime(snapshot.ttl))
         or "Need XP to estimate time-to-ding."
     end
@@ -378,22 +409,22 @@ function NS.GetCoachGoalStatus(snapshot)
   local delta = snapshot.currentXph - requiredXph
   local status
   if delta >= 0 then
-    status = string.format(
+    status = string_format(
       "Ahead by %s XP/hr toward a %dm ding.",
       NS.FormatNumber(NS.Round(delta)),
       goalMinutes
     )
   else
-    status = string.format(
+    status = string_format(
       "Behind by %s XP/hr for a %dm ding.",
-      NS.FormatNumber(NS.Round(math.abs(delta))),
+      NS.FormatNumber(NS.Round(math_abs(delta))),
       goalMinutes
     )
   end
 
   return {
     goal = goal,
-    goalLabel = string.format("Ding in %dm", goalMinutes),
+    goalLabel = string_format("Ding in %dm", goalMinutes),
     shortLabel = "Goal",
     targetXph = requiredXph,
     benchmarkXph = requiredXph,
@@ -419,32 +450,49 @@ end
 
 function NS.GetCoachStatus(now)
   local at = now or GetTime()
+
+  -- ⚡ Return cached coach status if already computed for this tick
+  if NS._tickCoachNow == at and NS._tickCoachStatus then
+    return NS._tickCoachStatus
+  end
+
   local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(at) or nil
   local goal = NS.GetCoachGoalStatus(snapshot)
-  local segments = NS.GetCoachSegments(true, at)
+
+  -- ⚡ Avoid deep-copying segments for read-only display. Walk the raw segments
+  -- array and build the current segment on the fly instead of copyTable on each.
+  local coach = getCoachRuntime(at)
+  local rawSegments = coach.segments
   local bestSegment = nil
-  for i = 1, #segments do
-    local segment = segments[i]
-    -- Skip the live current segment: its avgXph uses durationSec clamped to 1s when
-    -- newly started, producing a wildly inflated rate that isn't meaningful as "best".
-    if not segment.isCurrent and segment.xpGained and segment.xpGained > 0 then
+  for i = 1, #rawSegments do
+    local segment = rawSegments[i]
+    if segment.xpGained and segment.xpGained > 0 then
       if not bestSegment or (segment.avgXph or 0) > (bestSegment.avgXph or 0) then
         bestSegment = segment
       end
     end
   end
 
-  local currentSegment = segments[#segments]
-  if currentSegment and not currentSegment.isCurrent then
-    currentSegment = nil
-  end
+  local currentSegment = buildCurrentSegment(at)
 
+  local segCount = #rawSegments
   local recent = {}
-  for i = #segments, math.max(1, #segments - 4), -1 do
-    recent[#recent + 1] = segments[i]
+  local recentStart = math_max(1, segCount - 3)
+  for i = segCount, recentStart, -1 do
+    recent[#recent + 1] = rawSegments[i]
+  end
+  if currentSegment then
+    -- Insert current segment at the front (most recent)
+    local shifted = { currentSegment }
+    for i = 1, #recent do
+      if #shifted < 5 then
+        shifted[#shifted + 1] = recent[i]
+      end
+    end
+    recent = shifted
   end
 
-  return {
+  local result = {
     snapshot = snapshot,
     goal = goal,
     alerts = NS.GetCoachAlerts(4),
@@ -453,6 +501,10 @@ function NS.GetCoachStatus(now)
     recentSegments = recent,
     lastRecap = DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.lastRecap or nil,
   }
+
+  NS._tickCoachNow = at
+  NS._tickCoachStatus = result
+  return result
 end
 
 function NS.MaybeRunCoach(now)
@@ -467,7 +519,7 @@ function NS.MaybeRunCoach(now)
   if (at - (coach.lastXPAt or at)) >= config.idleSeconds then
     NS.PushCoachAlert(
       "idle",
-      string.format("No XP for %s. Route change or break?", NS.fmtTime(at - (coach.lastXPAt or at))),
+      string_format("No XP for %s. Route change or break?", NS.fmtTime(at - (coach.lastXPAt or at))),
       at
     )
   end
@@ -479,7 +531,7 @@ function NS.MaybeRunCoach(now)
     if snapshot.currentXph < threshold then
       NS.PushCoachAlert(
         "pace_drop",
-        string.format(
+        string_format(
           "Pace dropped to %s XP/hr against a %s XP/hr benchmark.",
           NS.FormatNumber(NS.Round(snapshot.currentXph)),
           NS.FormatNumber(NS.Round(benchmark))
@@ -507,14 +559,14 @@ function NS.BuildCoachSummary(record)
   end
 
   local goal = normalizeGoal((DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or DEFAULTS.goal)
-  local headline = string.format(
+  local headline = string_format(
     "%s XP in %s at %s XP/hr.",
     NS.FormatNumber(record.xpGained or 0),
     NS.fmtTime(record.durationSec or 0),
     NS.FormatNumber(NS.Round(record.avgXph or 0))
   )
 
-  local detail = string.format(
+  local detail = string_format(
     "Ended by %s with %s net and %d segment%s.",
     getReasonLabel(record.reason),
     NS.fmtMoney(record.moneyNetCopper or 0),
@@ -522,7 +574,7 @@ function NS.BuildCoachSummary(record)
     (#segments == 1) and "" or "s"
   )
 
-  local segmentLine = bestSegment and string.format(
+  local segmentLine = bestSegment and string_format(
     "Best segment: %s at %s XP/hr.",
     safeString(bestSegment.zone, "Unknown"),
     NS.FormatNumber(NS.Round(bestSegment.avgXph or 0))

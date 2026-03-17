@@ -1,5 +1,13 @@
 local ADDON, NS = ...
 
+-- ⚡ Localize frequently-used globals to avoid repeated table lookups in hot paths
+local math_max = math.max
+local math_min = math.min
+local math_floor = math.floor
+local math_abs = math.abs
+local math_huge = math.huge
+local string_format = string.format
+
 NS.state = {
   sessionStartTime = 0,
   levelStart = 0,
@@ -17,6 +25,10 @@ NS.state = {
 }
 
 local coachTicker = nil
+
+-- ⚡ Per-tick cache: snapshot and coach status are computed once per heartbeat tick
+-- and shared across all callers (HUD, stats panel, graph, coach) for the same `now`.
+local tickCache = { now = 0, snapshot = nil, coachStatus = nil }
 
 function NS.resetXPState()
   local now = GetTime()
@@ -51,10 +63,12 @@ local function pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
     i = i + 1
   end
   if i > 1 then
-    for j = 1, (#evList - i + 1) do
+    local len = #evList
+    local newLen = len - i + 1
+    for j = 1, newLen do
       evList[j] = evList[j + i - 1]
     end
-    for j = #evList, (#evList - i + 2), -1 do
+    for j = len, newLen + 1, -1 do
       evList[j] = nil
     end
   end
@@ -74,7 +88,7 @@ local function computeRatePerHour(evList, now, windowSeconds, valueKey, sumKey)
   local sessionElapsed = now - sessionStart
 
   -- Use the full window size, or session elapsed if we haven't played that long yet
-  local elapsed = math.min(sessionElapsed, windowSeconds)
+  local elapsed = math_min(sessionElapsed, windowSeconds)
   if elapsed <= 0 then elapsed = 1 end
 
   return (sum / elapsed) * 3600
@@ -97,7 +111,7 @@ function NS.SetRollingWindowSeconds(seconds)
     return false
   end
 
-  DingTimerDB.windowSeconds = math.floor(n)
+  DingTimerDB.windowSeconds = math_floor(n)
   if NS.RefreshStatsWindow then
     NS.RefreshStatsWindow()
   end
@@ -107,25 +121,30 @@ end
 function NS.GetSessionSnapshot(now)
   now = now or GetTime()
 
+  -- ⚡ Return cached snapshot if already computed for this tick
+  if tickCache.snapshot and tickCache.now == now then
+    return tickCache.snapshot
+  end
+
   local xp = UnitXP("player") or 0
   local maxXP = UnitXPMax("player") or 0
   local level = (UnitLevel and UnitLevel("player")) or 0
   local sessionStart = NS.state.sessionStartTime or now
-  local sessionElapsed = math.max(1, now - sessionStart)
+  local sessionElapsed = math_max(1, now - sessionStart)
   local sessionXP = NS.state.sessionXP or 0
   local sessionMoney = NS.state.sessionMoney or 0
   local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
   local currentXph = NS.computeXPPerHour(now, window)
   local sessionXph = (sessionXP / sessionElapsed) * 3600
   local moneyPerHour = NS.computeMoneyPerHour(now, window)
-  local remainingXP = math.max(0, maxXP - xp)
-  local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math.huge
+  local remainingXP = math_max(0, maxXP - xp)
+  local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
   local zone = "Unknown"
   if GetZoneText then
     zone = GetZoneText() or zone
   end
 
-  return {
+  local snapshot = {
     now = now,
     level = level,
     xp = xp,
@@ -144,6 +163,19 @@ function NS.GetSessionSnapshot(now)
     zone = zone,
     coachGoal = (DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or "ding",
   }
+
+  tickCache.now = now
+  tickCache.snapshot = snapshot
+  NS._tickCoachNow = 0  -- invalidate coach cache when snapshot changes
+  NS._tickCoachStatus = nil
+  return snapshot
+end
+
+function NS.InvalidateTickCache()
+  tickCache.now = 0
+  tickCache.snapshot = nil
+  NS._tickCoachNow = 0
+  NS._tickCoachStatus = nil
 end
 
 function NS.RunCoachHeartbeat(now)
@@ -280,7 +312,7 @@ function NS.RefreshFloatingHUD(now)
   if coach and coach.goal and coach.goal.targetXph and coach.goal.targetXph > 0 then
     local goalLabel = coach.goal.shortLabel or "Goal"
     if not snapshot.sessionXph
-      or math.abs((coach.goal.targetXph or 0) - (snapshot.sessionXph or 0)) > 0.5 then
+      or math_abs((coach.goal.targetXph or 0) - (snapshot.sessionXph or 0)) > 0.5 then
       paceParts[#paceParts + 1] = goalLabel .. " " .. NS.FormatNumber(NS.Round(coach.goal.targetXph))
     end
   end
@@ -322,10 +354,10 @@ function NS.onXPUpdate()
   -- spike (elapsed=1s → inflated XP/hr) from becoming the permanent pace-drop benchmark.
   local MIN_RATE_CONFIDENCE_SECONDS = 60
   if (now - (NS.state.sessionStartTime or now)) >= MIN_RATE_CONFIDENCE_SECONDS then
-    NS.state.sessionPeakXph = math.max(NS.state.sessionPeakXph or 0, xph or 0)
+    NS.state.sessionPeakXph = math_max(NS.state.sessionPeakXph or 0, xph or 0)
   end
   local remaining = maxXP - xp
-  local ttl = (xph > 0) and (remaining / (xph / 3600)) or math.huge
+  local ttl = (xph > 0) and (remaining / (xph / 3600)) or math_huge
 
   local tcol = NS.ttlColor(ttl, NS.state.lastTTL)
   local trend = NS.ttlDeltaText(ttl, NS.state.lastTTL)
@@ -339,7 +371,7 @@ function NS.onXPUpdate()
     else
       local msg = header
         .. "+" .. NS.C.base .. delta .. NS.C.r .. " XP  "
-        .. NS.C.base .. string.format("%.0f", xph) .. NS.C.r .. " XP/hr  "
+        .. NS.C.base .. string_format("%.0f", xph) .. NS.C.r .. " XP/hr  "
         .. "TTL " .. NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. tcol .. trend .. NS.C.r
 
       NS.chat(msg)

@@ -98,6 +98,51 @@ function NS.ComputeHistoryPeakXPH(events, now, anchor, segSeconds, currentSegIdx
   return peak
 end
 
+--- ⚡ Merged single-pass version that computes both visible segments and history peak
+--- in one traversal of the events list, avoiding the redundant second iteration.
+--- @param events table The list of XP events: each has fields {t, xp}.
+--- @param now number The current time.
+--- @param segSeconds number The size of a single segment bucket.
+--- @param segmentCount number The total number of visible segments.
+--- @param anchor number The origin timestamp grid.
+--- @param maxRetentionSeconds number How far back to look for history peak.
+--- @return table Visible segments (sparse array of XP per segment index).
+--- @return number currentSegIdx The index of the current active segment.
+--- @return number historyPeak The highest per-segment XP/hr in the retention window.
+function NS.AggregateAndComputePeak(events, now, segSeconds, segmentCount, anchor, maxRetentionSeconds)
+  local currentSegIdx = NS.GetSegmentIndex(now, anchor, segSeconds)
+  local firstVisibleIdx = currentSegIdx - segmentCount + 1
+  local firstRetainedIdx = NS.GetSegmentIndex(now - maxRetentionSeconds, anchor, segSeconds)
+  local visibleSegments = {}
+  local historySegmentXP = {}
+
+  for i = #events, 1, -1 do
+    local ev = events[i]
+    local segIdx = NS.GetSegmentIndex(ev.t, anchor, segSeconds)
+    if segIdx < firstRetainedIdx then
+      break
+    end
+    if segIdx <= currentSegIdx then
+      -- Accumulate for history peak
+      historySegmentXP[segIdx] = (historySegmentXP[segIdx] or 0) + ev.xp
+      -- Also accumulate for visible segments if in range
+      if segIdx >= firstVisibleIdx then
+        visibleSegments[segIdx] = (visibleSegments[segIdx] or 0) + ev.xp
+      end
+    end
+  end
+
+  local peak = 0
+  for _, xp in pairs(historySegmentXP) do
+    local xph = (xp / segSeconds) * 3600
+    if xph > peak then
+      peak = xph
+    end
+  end
+
+  return visibleSegments, currentSegIdx, peak
+end
+
 -- ──────────────────────────────────────────────────────────────────────────────
 -- Session average overlay
 

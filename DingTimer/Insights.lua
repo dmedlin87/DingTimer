@@ -123,9 +123,15 @@ function NS.TrimSessions(profile, keepN)
   local keep = clampKeepSessions(keepN or (DingTimerDB and DingTimerDB.xp and DingTimerDB.xp.keepSessions) or 30)
   local sessions = profile.sessions
   local overflow = #sessions - keep
+  if overflow <= 0 then return end
 
-  for _ = 1, overflow do
-    table.remove(sessions, 1)
+  -- ⚡ Shift in one O(N) pass instead of O(N^2) table.remove(t,1) loop
+  local len = #sessions
+  for i = 1, keep do
+    sessions[i] = sessions[i + overflow]
+  end
+  for i = len, keep + 1, -1 do
+    sessions[i] = nil
   end
 end
 

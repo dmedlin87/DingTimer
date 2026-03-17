@@ -44,10 +44,11 @@ end
 local function buildAlertRows(coach)
   local rows = {}
   local alerts = coach and coach.alerts or {}
+  local now = GetTime()
   for i = 1, #alerts do
     rows[i] = string.format(
       "%s ago  |  %s",
-      NS.fmtTime(math.max(1, GetTime() - (alerts[i].at or GetTime()))),
+      NS.fmtTime(math.max(1, now - (alerts[i].at or now))),
       alerts[i].text or ""
     )
   end

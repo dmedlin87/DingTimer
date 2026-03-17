@@ -15,6 +15,12 @@ local ZOOM_LEVELS = {
   { label = "60m", seconds = 3600 },
 }
 
+-- ⚡ Pre-built lookup table to replace ipairs search in hot path
+local ZOOM_SECONDS_TO_LABEL = {}
+for _, z in ipairs(ZOOM_LEVELS) do
+  ZOOM_SECONDS_TO_LABEL[z.seconds] = z.label
+end
+
 local COLOR_GREEN = { 0.22, 0.82, 0.46, 0.95 }
 local COLOR_RED = { 0.92, 0.32, 0.32, 0.95 }
 local COLOR_GRAY = { 0.42, 0.46, 0.54, 0.55 }
@@ -43,6 +49,9 @@ local graphState = {
   cachedScaleMax = 1,
   cachedVisiblePeak = 0,
   cachedHistoryPeak = 0,
+  lastAxisScaleMax = nil,
+  lastAxisWidth = nil,
+  lastAxisHeight = nil,
 }
 
 local function pruneGraphEvents(now)
@@ -66,12 +75,7 @@ end
 
 
 local function zoomLabelForSeconds(seconds)
-  for _, z in ipairs(ZOOM_LEVELS) do
-    if z.seconds == seconds then
-      return z.label
-    end
-  end
-  return NS.fmtTime(seconds)
+  return ZOOM_SECONDS_TO_LABEL[seconds] or NS.fmtTime(seconds)
 end
 
 local function formatRate(value)
@@ -177,30 +181,44 @@ local function updateAxis(scaleMax, now, windowSeconds)
   local areaWidth = math.max(graphArea:GetWidth(), 1)
   local areaHeight = math.max(graphArea:GetHeight(), 1)
 
-  for i = 1, GRID_LINE_COUNT do
-    local frac = i / GRID_LINE_COUNT
-    local y = frac * areaHeight
-    local value = scaleMax * frac
-    local line = gridLines[i]
+  -- ⚡ Only reposition grid lines and Y-axis labels when scale or dimensions change
+  local gridDirty = (graphState.lastAxisScaleMax ~= scaleMax
+    or graphState.lastAxisWidth ~= areaWidth
+    or graphState.lastAxisHeight ~= areaHeight)
 
-    line:ClearAllPoints()
-    line:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", 0, y)
-    line:SetPoint("BOTTOMRIGHT", graphArea, "BOTTOMRIGHT", 0, y)
-    line:Show()
+  if gridDirty then
+    for i = 1, GRID_LINE_COUNT do
+      local frac = i / GRID_LINE_COUNT
+      local y = frac * areaHeight
+      local value = scaleMax * frac
+      local line = gridLines[i]
 
-    local label = yAxisLabels[i]
-    label:ClearAllPoints()
-    label:SetPoint("RIGHT", graphArea, "BOTTOMLEFT", -8, y)
-    label:SetText(NS.FormatNumber(NS.Round(value)))
+      line:ClearAllPoints()
+      line:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", 0, y)
+      line:SetPoint("BOTTOMRIGHT", graphArea, "BOTTOMRIGHT", 0, y)
+      line:Show()
+
+      local label = yAxisLabels[i]
+      label:ClearAllPoints()
+      label:SetPoint("RIGHT", graphArea, "BOTTOMLEFT", -8, y)
+      label:SetText(NS.FormatNumber(NS.Round(value)))
+    end
+
+    graphState.lastAxisScaleMax = scaleMax
+    graphState.lastAxisWidth = areaWidth
+    graphState.lastAxisHeight = areaHeight
   end
 
+  -- Time labels always update (they show "Xm Ys ago" which changes every second)
   for i = 1, TIME_LABEL_COUNT do
     local frac = (i - 1) / (TIME_LABEL_COUNT - 1)
     local secondsAgo = math.floor((1 - frac) * windowSeconds + 0.5)
     local label = timeAxisLabels[i]
 
-    label:ClearAllPoints()
-    label:SetPoint("TOP", graphArea, "BOTTOMLEFT", frac * areaWidth, -6)
+    if gridDirty then
+      label:ClearAllPoints()
+      label:SetPoint("TOP", graphArea, "BOTTOMLEFT", frac * areaWidth, -6)
+    end
     if i == TIME_LABEL_COUNT then
       label:SetText("Now")
     else
@@ -346,7 +364,10 @@ local function redrawGraph()
   end
 
   graphState.dirty = false
-  local segments = NS.AggregateVisibleSegments(graphState.events, now, segSeconds, segmentCount, anchor)
+  -- ⚡ Single-pass aggregation: computes both visible segments and history peak together
+  local segments, segIdx_out, historyPeak = NS.AggregateAndComputePeak(
+    graphState.events, now, segSeconds, segmentCount, anchor, MAX_RETENTION_SECONDS
+  )
   local gap = 2
   local barWidth = math.max(3, (areaWidth - ((segmentCount - 1) * gap)) / segmentCount)
 
@@ -387,7 +408,6 @@ local function redrawGraph()
     end
   end
 
-  local historyPeak = NS.ComputeHistoryPeakXPH(graphState.events, now, anchor, segSeconds, currentSegIdx, MAX_RETENTION_SECONDS)
   local scaleMax = NS.ResolveGraphScaleMax(DingTimerDB.graphScaleMode, visiblePeak, avgPeak, historyPeak, DingTimerDB.graphFixedMaxXPH)
   graphState.lastSegmentIndex = currentSegIdx
   graphState.lastAreaWidth = areaWidth
@@ -722,6 +742,9 @@ function NS.GraphReset()
   graphState.cachedScaleMax = 1
   graphState.cachedVisiblePeak = 0
   graphState.cachedHistoryPeak = 0
+  graphState.lastAxisScaleMax = nil
+  graphState.lastAxisWidth = nil
+  graphState.lastAxisHeight = nil
 
   if graphFrame and graphFrame:IsShown() then
     redrawGraph()

@@ -1,5 +1,16 @@
 local ADDON, NS = ...
 
+-- ⚡ Localize frequently-used globals to avoid repeated table lookups in hot paths
+local math_floor = math.floor
+local math_abs = math.abs
+local math_max = math.max
+local math_min = math.min
+local math_huge = math.huge
+local math_ceil = math.ceil
+local string_format = string.format
+local tostring = tostring
+local tonumber = tonumber
+
 NS.C = {
   base = "|cff3fc7eb",   -- bluish
   xp   = "|cff00ff00",   -- green
@@ -144,17 +155,39 @@ function NS.safeString(value, fallback)
 end
 
 function NS.IsInvalidNumber(n)
-  return n ~= n or n == math.huge or n == -math.huge
+  return n ~= n or n == math_huge or n == -math_huge
 end
 
 function NS.FormatNumber(num)
   if not num then return "0" end
   if NS.IsInvalidNumber(num) then return "0" end
-  local n = math.floor(num)
-  local absNum = tostring(math.abs(n))
-  local neg = (n < 0) and "-" or ""
-  local formatted = string.reverse(string.gsub(string.reverse(absNum), "(%d%d%d)", "%1,")):gsub("^,", "")
-  return neg .. formatted
+  local n = math_floor(num)
+  if n >= -999 and n <= 999 then
+    return tostring(n)
+  end
+  local neg = ""
+  if n < 0 then
+    neg = "-"
+    n = -n
+  end
+  -- ⚡ Build comma-separated string with integer math instead of reverse/gsub/reverse
+  local parts = {}
+  local count = 0
+  while n >= 1000 do
+    count = count + 1
+    parts[count] = string_format("%03d", n % 1000)
+    n = math_floor(n / 1000)
+  end
+  count = count + 1
+  parts[count] = tostring(n)
+  -- Reverse the parts array in-place
+  local lo, hi = 1, count
+  while lo < hi do
+    parts[lo], parts[hi] = parts[hi], parts[lo]
+    lo = lo + 1
+    hi = hi - 1
+  end
+  return neg .. table.concat(parts, ",")
 end
 
 function NS.chat(msg)
@@ -168,34 +201,34 @@ end
 function NS.fmtTime(seconds)
   -- 🛡️ Sentinel: Validate numeric inputs to prevent NaN/Infinity from crashing UI logic (DoS risk)
   if not seconds or NS.IsInvalidNumber(seconds) or seconds <= 0 then return "??" end
-  local s = math.floor(seconds + 0.5)
+  local s = math_floor(seconds + 0.5)
   if s < 120 then
-    return string.format("%ds", s)
+    return string_format("%ds", s)
   end
-  local h = math.floor(s / 3600); s = s % 3600
-  local m = math.floor(s / 60);   s = s % 60
-  if h > 0 then return string.format("%dh %dm", h, m) end
-  return string.format("%dm %ds", m, s)
+  local h = math_floor(s / 3600); s = s % 3600
+  local m = math_floor(s / 60);   s = s % 60
+  if h > 0 then return string_format("%dh %dm", h, m) end
+  return string_format("%dm %ds", m, s)
 end
 
 function NS.fmtMoney(copper)
   if not copper or copper == 0 or NS.IsInvalidNumber(copper) then return "0|cffeda55fc|r" end
   local isNegative = copper < 0
-  copper = math.abs(copper)
+  copper = math_abs(copper)
 
-  local g = math.floor(copper / 10000)
-  local s = math.floor((copper % 10000) / 100)
+  local g = math_floor(copper / 10000)
+  local s = math_floor((copper % 10000) / 100)
   local c = copper % 100
 
   -- ⚡ Bolt: Use direct string formatting instead of sequential concatenation
   -- and regex trimming (str:match). This results in a ~4x performance speedup.
   local str
   if g > 0 then
-    str = string.format("%d|cffffd700g|r %d|cffc7c7cfs|r %d|cffeda55fc|r", g, s, c)
+    str = string_format("%d|cffffd700g|r %d|cffc7c7cfs|r %d|cffeda55fc|r", g, s, c)
   elseif s > 0 then
-    str = string.format("%d|cffc7c7cfs|r %d|cffeda55fc|r", s, c)
+    str = string_format("%d|cffc7c7cfs|r %d|cffeda55fc|r", s, c)
   else
-    str = string.format("%d|cffeda55fc|r", c)
+    str = string_format("%d|cffeda55fc|r", c)
   end
   
   if isNegative then
@@ -210,7 +243,7 @@ function NS.ttlColor(ttl, lastTTL)
   -- If TTL went down => improved => green. Up => red.
   -- Use a small dead-zone to avoid flicker on tiny changes.
   local diff = ttl - lastTTL
-  if math.abs(diff) < 2 then
+  if math_abs(diff) < 2 then
     return NS.C.mid
   end
   return (diff < 0) and NS.C.xp or NS.C.bad
@@ -221,15 +254,15 @@ function NS.ttlDeltaText(ttl, lastTTL)
     return ""
   end
   local diff = ttl - lastTTL
-  if math.abs(diff) < 2 then return "" end
+  if math_abs(diff) < 2 then return "" end
 
-  local seconds = math.floor(math.abs(diff) + 0.5)
+  local seconds = math_floor(math_abs(diff) + 0.5)
   if diff < 0 then
     -- ↓ (using character codes for reliability)
-    return string.format(" (%s %s)", "\226\134\147", NS.fmtTime(seconds))
+    return string_format(" (%s %s)", "\226\134\147", NS.fmtTime(seconds))
   else
     -- ↑
-    return string.format(" (%s %s)", "\226\134\145", NS.fmtTime(seconds))
+    return string_format(" (%s %s)", "\226\134\145", NS.fmtTime(seconds))
   end
 end
 
@@ -247,16 +280,22 @@ end
 function NS.Round(value)
   local n = tonumber(value) or 0
   if n >= 0 then
-    return math.floor(n + 0.5)
+    return math_floor(n + 0.5)
   end
-  return math.ceil(n - 0.5)
+  return math_ceil(n - 0.5)
 end
 
 function NS.fmtPercent(value, digits)
   if value == nil or NS.IsInvalidNumber(value) then
     return "--"
   end
-  return string.format("%." .. tostring(digits or 0) .. "f%%", value)
+  local d = digits or 0
+  if d == 0 then
+    return string_format("%.0f%%", value)
+  elseif d == 1 then
+    return string_format("%.1f%%", value)
+  end
+  return string_format("%." .. tostring(d) .. "f%%", value)
 end
 
 function NS.NormalizeGraphScaleMode(mode)
@@ -282,7 +321,7 @@ function NS.GetGraphScaleModeLabel(mode, compact)
 end
 
 function NS.ClampGraphFixedMax(value)
-  local n = math.floor(tonumber(value) or 100000)
+  local n = math_floor(tonumber(value) or 100000)
   if n < 10000 then
     n = 10000
   elseif n > 5000000 then
@@ -293,8 +332,8 @@ end
 
 function NS.ClampGraphWindowSize(width, height)
   local bounds = NS.GraphWindowDefaults
-  local w = math.floor(NS.Clamp(width, bounds.minWidth, bounds.maxWidth))
-  local h = math.floor(NS.Clamp(height, bounds.minHeight, bounds.maxHeight))
+  local w = math_floor(NS.Clamp(width, bounds.minWidth, bounds.maxWidth))
+  local h = math_floor(NS.Clamp(height, bounds.minHeight, bounds.maxHeight))
   return w, h
 end
 
