@@ -212,7 +212,8 @@ function NS.RecordSession(reason)
 
   local profile = NS.GetProfileStore(true)
   if not profile then return end
-  table.insert(profile.sessions, record)
+  local sessions = profile.sessions
+  sessions[#sessions + 1] = record
   NS.TrimSessions(profile)
 
   if record.coachSummary and NS.StoreCoachSummary then
