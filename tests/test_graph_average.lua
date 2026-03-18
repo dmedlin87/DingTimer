@@ -9,13 +9,15 @@ local averages = NS.BuildAverageSeries(
     { t = 130, xp = 100, sessionXP = 1000 },
     { t = 190, xp = 50, sessionXP = 1050 },
   },
-  900,
-  190,
-  0,
-  0,
-  60,
-  3,
-  3
+  {
+    baselineSessionXP = 900,
+    now = 190,
+    sessionStart = 0,
+    anchor = 0,
+    segSeconds = 60,
+    currentSegIdx = 3,
+    segmentCount = 3
+  }
 )
 
 assert_near(averages[1], 27000, 0.001, "first visible segment should include pruned session XP")

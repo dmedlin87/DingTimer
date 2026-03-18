@@ -150,21 +150,22 @@ end
 --- Uses a binary search to start from the correct event, then walks forward
 --- accumulating cumulative XP to compute the per-point average.
 --- @param events table Events sorted by time: each has {t, xp, sessionXP?}.
---- @param baselineSessionXP number Cumulative session XP from pruned-away events.
---- @param now number The current time.
---- @param sessionStart number The time the current session began.
---- @param anchor number The origin timestamp grid.
---- @param segSeconds number Duration of one segment.
---- @param currentSegIdx number Index of the current active segment.
---- @param segmentCount number Total number of visible bars.
+--- @param ctx table Grouped parameters for session aggregation. Must contain:
+---   baselineSessionXP: number Cumulative session XP from pruned-away events.
+---   now: number The current time.
+---   sessionStart: number The time the current session began.
+---   anchor: number The origin timestamp grid.
+---   segSeconds: number Duration of one segment.
+---   currentSegIdx: number Index of the current active segment.
+---   segmentCount: number Total number of visible bars.
 --- @return table Array of per-bar average XP/hr values (1..segmentCount).
-function NS.BuildAverageSeries(events, baselineSessionXP, now, sessionStart, anchor, segSeconds, currentSegIdx, segmentCount)
+function NS.BuildAverageSeries(events, ctx)
   local averages = {}
-  local cumulativeXP = baselineSessionXP or 0
+  local cumulativeXP = ctx.baselineSessionXP or 0
   local eventIndex = 1
 
-  local firstSegIdx = currentSegIdx - (segmentCount - 1)
-  local firstSegStart = anchor + firstSegIdx * segSeconds
+  local firstSegIdx = ctx.currentSegIdx - (ctx.segmentCount - 1)
+  local firstSegStart = ctx.anchor + firstSegIdx * ctx.segSeconds
 
   -- Binary search: find last event before the visible window.
   -- Note: events[i].sessionXP is an optional pre-computed cumulative XP field.
@@ -186,10 +187,10 @@ function NS.BuildAverageSeries(events, baselineSessionXP, now, sessionStart, anc
     eventIndex = high + 1
   end
 
-  for i = 1, segmentCount do
-    local segIdx = currentSegIdx - (segmentCount - i)
-    local segEnd = anchor + (segIdx + 1) * segSeconds
-    local pointTime = math.min(segEnd, now)
+  for i = 1, ctx.segmentCount do
+    local segIdx = ctx.currentSegIdx - (ctx.segmentCount - i)
+    local segEnd = ctx.anchor + (segIdx + 1) * ctx.segSeconds
+    local pointTime = math.min(segEnd, ctx.now)
 
     while events[eventIndex] and events[eventIndex].t <= pointTime do
       local event = events[eventIndex]
@@ -197,7 +198,7 @@ function NS.BuildAverageSeries(events, baselineSessionXP, now, sessionStart, anc
       eventIndex = eventIndex + 1
     end
 
-    local elapsed = pointTime - sessionStart
+    local elapsed = pointTime - ctx.sessionStart
     if elapsed < 1 then
       elapsed = 1
     end

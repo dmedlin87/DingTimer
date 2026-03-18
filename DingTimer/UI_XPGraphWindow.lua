@@ -374,13 +374,15 @@ local function redrawGraph()
   local sessionStart = NS.state.sessionStartTime or now
   local avgSeries = NS.BuildAverageSeries(
     graphState.events,
-    graphState.lastPrunedSessionXP,
-    now,
-    sessionStart,
-    anchor,
-    segSeconds,
-    currentSegIdx,
-    segmentCount
+    {
+      baselineSessionXP = graphState.lastPrunedSessionXP,
+      now = now,
+      sessionStart = sessionStart,
+      anchor = anchor,
+      segSeconds = segSeconds,
+      currentSegIdx = currentSegIdx,
+      segmentCount = segmentCount,
+    }
   )
 
   local barData = {}
