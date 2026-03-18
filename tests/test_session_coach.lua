@@ -107,4 +107,15 @@ assert_eq(DingTimerDB.coach.lastRecap, "dummy_recap", "StoreCoachSummary should 
 DingTimerDB.coach.pendingRecap = nil
 assert_eq(NS.DeliverPendingCoachSummary(), false, "DeliverPendingCoachSummary should return false when pending recap is nil")
 
+local origGetSessionSnapshot = NS.GetSessionSnapshot
+NS.GetSessionSnapshot = function(...) return nil end
+local success_nil = pcall(NS.MaybeRunCoach, GetTime())
+assert_true(success_nil, "MaybeRunCoach should return safely without error when snapshot is nil")
+
+NS.GetSessionSnapshot = function(...) return {sessionXP = 0} end
+local success_zero = pcall(NS.MaybeRunCoach, GetTime())
+assert_true(success_zero, "MaybeRunCoach should return safely without error when sessionXP is 0")
+
+NS.GetSessionSnapshot = origGetSessionSnapshot
+
 print("Session coach tests passed!")
