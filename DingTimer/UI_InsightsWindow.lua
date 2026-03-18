@@ -277,7 +277,9 @@ function NS.InitInsightsPanel(parent)
   end
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -286, "Zone Leaders", "Where your best historical pace has been.")
-  insightsFrame.zoneRows = NS.UI.CreateListRows(scrollChild, 16, -314, 680, 3, 16, "GameFontHighlightSmall")
+  insightsFrame.zoneRows = NS.UI.CreateListRows(scrollChild, {
+    startX = 16, startY = -314, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontHighlightSmall"
+  })
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -374, "Latest Recap", "The most recent coach summary stored with your runs.")
   insightsFrame.recapValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -290,7 +292,9 @@ function NS.InitInsightsPanel(parent)
   rowsHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -438)
   rowsHeader:SetText("Recent Sessions (newest first)")
 
-  rowTexts = NS.UI.CreateListRows(scrollChild, 16, -458, 680, MAX_ROWS, 14, "GameFontHighlightSmall")
+  rowTexts = NS.UI.CreateListRows(scrollChild, {
+    startX = 16, startY = -458, width = 680, rowCount = MAX_ROWS, spacing = 14, fontObject = "GameFontHighlightSmall"
+  })
 
   NS.CreateConfirmButton(insightsFrame, 16, 10, 120, "Clear History", "Confirm Clear", function()
     if NS.ClearCurrentProfileHistory then
