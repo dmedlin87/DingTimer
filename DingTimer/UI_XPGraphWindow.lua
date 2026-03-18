@@ -592,7 +592,9 @@ function NS.InitGraphPanel(parent)
   segmentSummaryLabel:SetText("")
   graphFrame.segmentSummaryLabel = segmentSummaryLabel
 
-  segmentRows = NS.UI.CreateListRows(graphFrame, 16, -1, 640, 4, 16, "GameFontDisableSmall")
+  segmentRows = NS.UI.CreateListRows(graphFrame, {
+    startX = 16, startY = -1, width = 640, rowCount = 4, spacing = 16, fontObject = "GameFontDisableSmall"
+  })
 
   local zoomFooter = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoomFooter:SetText("Zoom")
@@ -802,12 +804,12 @@ function NS.CycleGraphScaleMode()
 end
 
 function NS.SetGraphFixedMax(value)
-  DingTimerDB.graphFixedMaxXPH = NS.ClampGraphFixedMax(value)
-  graphState.dirty = true
-  if graphFrame and graphFrame:IsShown() then
-    redrawGraph()
-  end
-  return DingTimerDB.graphFixedMaxXPH
+  local n = tonumber(value)
+  if not n then return end
+  DingTimerDB.graph.fixedMax = NS.ClampGraphFixedMax(n)
+  DingTimerDB.graph.scaleMode = "fixed"
+  if NS.RefreshSettingsPanel then NS.RefreshSettingsPanel() end
+  NS.GraphSetNeedsUpdate()
 end
 
 function NS.AdjustGraphFixedMax(delta)
