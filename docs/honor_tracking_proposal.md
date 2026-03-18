@@ -3,7 +3,7 @@
 ## Overview
 DingTimer currently provides top-tier tracking for XP and Gold. To support players focused on Player vs. Player (PvP) progression, we propose expanding DingTimer's core capabilities to track **Honor Points** and **Honor Kills (HKs)**.
 
-This feature will mirror the existing highly-polished XP tracking but tailor the metrics for battlegrounds, world PvP, and arena grinds.
+This feature will mirror the existing highly-polished XP tracking but tailor the metrics primarily for Honor-based PvP workflows such as battlegrounds and world PvP. Arena and Conquest-based progression involve different currencies and reward structures; those modes are not assumed to have parity with an Honor-first model unless explicitly scoped in.
 
 ## Proposed Features
 
@@ -45,6 +45,24 @@ This feature will mirror the existing highly-polished XP tracking but tailor the
 ## Implementation Guidelines
 - **Zero Code Clutter**: The underlying math engine for rolling windows and graph data should be abstracted so it can process generic "events" (XP, Gold, or Honor) rather than duplicating the logic.
 - **Settings Segregation**: Keep PvP settings clearly grouped in the Settings Hub so players who only PvE aren't overwhelmed by Honor settings, and vice versa.
+
+---
+
+## Ascension-Specific PvP Scope
+
+Ascension PvP progression spans more than Honor alone. In newer progression models, **Conquest Points replace Arena Points** and are earned across end-game PvP activities including Battlegrounds, Arenas, and Crow's Cache. This means an Honor-first implementation does not automatically cover all PvP progression paths.
+
+**This proposal must explicitly define v1 scope as one of:**
+
+- **Option A — Honor + HK tracking only:** Focused on battleground and world-PvP-style workflows. Arena and Conquest-oriented progression are intentionally out of scope for v1.
+- **Option B — Broader PvP tracking foundation:** Honor, HKs, and Conquest are tracked as separate currencies from the start, with per-currency UI and storage designed for future expansion.
+
+Until that choice is made, implementation decisions (schema layout, UI labels, mode-switching triggers) risk embedding assumptions that are hard to undo.
+
+**Additional scoping notes:**
+
+- **HKs/hr** should be treated as an engagement/activity metric, not a primary gearing or progression currency. Labels and documentation should reflect that distinction.
+- **All addon API and event assumptions** — for Honor, HKs, arena reward delivery, and Conquest — remain **provisional** until verified in-game on Bronzebeard. Ascension's private-server implementation may differ from standard WotLK API behavior.
 
 ---
 
