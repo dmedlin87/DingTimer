@@ -802,12 +802,12 @@ function NS.CycleGraphScaleMode()
 end
 
 function NS.SetGraphFixedMax(value)
-  DingTimerDB.graphFixedMaxXPH = NS.ClampGraphFixedMax(value)
-  graphState.dirty = true
-  if graphFrame and graphFrame:IsShown() then
-    redrawGraph()
-  end
-  return DingTimerDB.graphFixedMaxXPH
+  local n = tonumber(value)
+  if not n then return end
+  DingTimerDB.graph.fixedMax = NS.ClampGraphFixedMax(n)
+  DingTimerDB.graph.scaleMode = "fixed"
+  if NS.RefreshSettingsPanel then NS.RefreshSettingsPanel() end
+  NS.GraphSetNeedsUpdate()
 end
 
 function NS.AdjustGraphFixedMax(delta)
