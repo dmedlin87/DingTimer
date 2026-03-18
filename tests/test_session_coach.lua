@@ -28,6 +28,9 @@ assert_eq(NS.state.coach.lastXPAt, beforeXPAt, "NoteCoachXP should ignore 0 delt
 NS.NoteCoachXP(-10, 150)
 assert_eq(NS.state.coach.lastXPAt, beforeXPAt, "NoteCoachXP should ignore negative delta")
 
+local success = pcall(NS.NoteCoachMoney, nil, 150)
+assert_true(success, "NoteCoachMoney should handle nil delta safely without error")
+
 SetTime(130)
 SetXP(300, 1000)
 NS.onXPUpdate()
