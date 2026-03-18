@@ -3,7 +3,7 @@
 ## Overview
 DingTimer currently provides top-tier tracking for XP and Gold. To support players focused on Player vs. Player (PvP) progression, we propose expanding DingTimer's core capabilities to track **Honor Points** and **Honor Kills (HKs)**.
 
-This feature will mirror the existing highly-polished XP tracking but tailor the metrics for battlegrounds, world PvP, and arena grinds.
+This feature will mirror the existing highly-polished XP tracking but tailor the metrics for battlegrounds and world PvP. **Arena / conquest-style currency is explicitly out of scope for v1** pending verification of Ascension Bronzebeard's actual reward model (see Risks §1).
 
 ## Proposed Features
 
@@ -16,8 +16,8 @@ This feature will mirror the existing highly-polished XP tracking but tailor the
 - **Custom Item Goals**: Players can set a custom Honor goal (e.g., 30,000 Honor for a new weapon). The TTG metric will dynamically update based on their current Honor/hr pace.
 
 ### 3. Dedicated PvP Mode
-- **Smart Auto-Switching**: DingTimer can detect when a player enters a Battleground or Arena and automatically transition the UI from "XP Mode" to "PvP Mode".
-- **Manual Toggle**: Players at max level or doing World PvP can manually toggle PvP mode via a slash command (e.g., `/ding pvp`) or through the Settings Hub.
+- **Smart Auto-Switching**: DingTimer can detect when a player enters a Battleground and automatically transition the UI from "XP Mode" to "PvP Mode". Arena auto-switching is deferred to a later phase pending reward-model verification.
+- **Manual Toggle**: Players at max level or doing World PvP can manually toggle PvP mode via slash command or through the Settings Hub. The full command surface is defined in Risks §6.
 
 ### 4. UI Integrations & High-Quality UX
 
@@ -46,11 +46,42 @@ This feature will mirror the existing highly-polished XP tracking but tailor the
 - **Zero Code Clutter**: The underlying math engine for rolling windows and graph data should be abstracted so it can process generic "events" (XP, Gold, or Honor) rather than duplicating the logic.
 - **Settings Segregation**: Keep PvP settings clearly grouped in the Settings Hub so players who only PvE aren't overwhelmed by Honor settings, and vice versa.
 
+## Phased Rollout
+
+Breaking this into phases reduces implementation risk and lets each layer be tested before the next is built.
+
+| Phase | Scope | Gate |
+|-------|-------|------|
+| **1 — Core metrics** | Manual `/ding pvp` toggle; Honor/hr + HK/hr rolling window; HUD and Live Panel swap; session reset. BG and world PvP only. | API feasibility confirmed (see Risks §1) |
+| **2 — Match recaps & history** | Auto-switch on BG zone-in; match-level recap on exit; PvP history rows in Insights with BG metadata. | Phase 1 shipped and stable |
+| **3 — Persistent goals & coach** | TTG to cap; custom item goals that survive logout; coach alerts for Honor milestones. | Session/match/goal boundary definitions finalised (see Risks §3) |
+| **4 — Arena / conquest (conditional)** | Arena currency tracking, arena-specific TTG, rating display. | Ascension arena reward model verified and distinct from Honor (see Risks §1) |
+
+Each phase ships a schema migration (`Store.lua` v9, v10, …). Phases 1–3 assume the parallel-namespace approach (Option A in Risks §4) unless the team decides otherwise before Phase 1 starts.
+
 ---
 
 ## Open Questions / Risks
 
-### 1. Honor/HK Measurement Contract (Highest Priority)
+### 1. Realm and API Feasibility (Hard Blocker)
+
+**This feature must not enter active development until the following is confirmed on Ascension Bronzebeard.**
+
+DingTimer targets a private WotLK server (`## Interface: 30300`). Private servers vary in which Blizzard API events they implement, which events fire with correct payloads, and whether honor and HK data surfaces through the same paths as on official Blizzard WotLK. Because the addon's core state, store, and slash-command flows are still entirely XP-centric, discovering mid-implementation that a key event does not fire — or fires with wrong data — would invalidate significant work.
+
+**Required verification before any code is written:**
+- Does `HONOR_GAINED` (or the WotLK equivalent) fire on Ascension with a correct honor delta?
+- Does `UPDATE_BATTLEFIELD_SCORE` fire at BG end with populated score data?
+- Does `GetHonorInfo()` return current, max, and rank data accurately in-session?
+- Are HK counts exposed through the score frame API or a separate event?
+- **Arena currency:** Ascension's PvP documentation distinguishes Honor (BG progression) from Arena/Conquest points and rating. If arenas award a separate currency rather than Honor, then "Honor/hr in arena" is the wrong product framing entirely. Verify whether Bronzebeard arenas award Honor, arena points, both, or neither before scoping arena support.
+
+**Outcome of verification:**
+- If Honor events work cleanly → proceed with Phases 1–3 as designed.
+- If Honor events are partial or unreliable → descope to polling `GetHonorInfo()` on a heartbeat and document the accuracy limitations.
+- If arena awards a distinct currency → keep arena out of scope for all phases until a separate currency model is designed.
+
+### 2. Honor/HK Measurement Contract (Highest Priority)
 
 **Source of truth:** Honor and HK values must be sourced from specific WoW API events. The implementation must decide whether to rely on `HONOR_GAINED` (or equivalent), `UPDATE_BATTLEFIELD_SCORE`, periodic polling of `GetHonorInfo()`, or a combination. Each source has different timing and granularity characteristics.
 
@@ -63,7 +94,7 @@ This feature will mirror the existing highly-polished XP tracking but tailor the
 - Are HK counts sourced from the same event, or a separate kill-event listener?
 - Does the rolling window receive the full lump sum at delivery time, or is it spread across the match duration?
 
-### 2. Session / Match / Persistent-Goal Boundary Definitions (Highest Priority)
+### 3. Session / Match / Persistent-Goal Boundary Definitions (Highest Priority)
 
 The proposal currently uses "match recap," "session honor," "TTG to cap," and "separate PvP history" interchangeably. They are distinct units and must be defined explicitly:
 
@@ -75,7 +106,7 @@ The proposal currently uses "match recap," "session honor," "TTG to cap," and "s
 
 **Design decision required:** The rolling Honor/hr window is session-scoped or match-scoped? The HUD TTG number is driven by session pace or match pace? The History tab stores match rows, session rows, or both?
 
-### 3. Schema and Migration Strategy (Highest Priority)
+### 4. Schema and Migration Strategy (Highest Priority)
 
 This feature is larger than a UI change. The current `DingTimerDB` schema is organized around XP-named fields (`xp`, `xpHistory`, graph fields with XP semantics). A concrete migration plan is required:
 
@@ -88,17 +119,49 @@ This feature is larger than a UI change. The current `DingTimerDB` schema is org
 - Ensure backward compatibility so existing XP session history is not corrupted on upgrade.
 - Document what happens to PvP data on a schema downgrade or addon disable.
 
-### 4. Auto-Switching Edge Cases
+### 5. Auto-Switching and Partial-Match Policy
 
-"Enter BG/Arena = switch to PvP mode" is underspecified. The following cases must each have an explicit rule:
+"Enter BG = switch to PvP mode" is underspecified. Every case below must have an explicit rule before Phase 2 ships:
 
-- **Mixed play:** Player queues for a BG while leveling; returns to leveling after. Does XP mode resume automatically?
-- **World PvP at max level:** No BG zone entered; honor earned from open-world kills. Does auto-switch trigger? On what event?
-- **Queue time:** Player is in queue but not yet in the instance. Is this PvP mode or XP mode?
-- **PvP zones without honor:** Player is in Wintergrasp/Tol Barad during a non-active battle. Mode?
-- **Default behavior:** Is auto-switching on by default, or opt-in? A wrong default will feel invasive to PvE players and confusing to PvP players who never configured it.
+**Mode switching:**
+- **Mixed play:** Player queues for a BG while leveling; returns to leveling after. Does XP mode resume automatically on BG exit?
+- **World PvP at max level:** No BG zone entered; honor earned from open-world kills. Does auto-switch trigger, and on what event?
+- **Queue time:** Player is in queue but not yet inside the instance. XP mode or PvP mode?
+- **PvP zones without active honor:** Player is in Wintergrasp/Tol Barad during a non-battle window. Mode?
+- **Default behavior:** Is auto-switching on by default or opt-in? Getting this wrong is invasive to PvE players and confusing to PvP players who never configured it.
 
-### 5. Honor Cap / Spend / Overflow Behavior
+**Partial-match and exit policy (must be first-class, not left to implementation):**
+- **Queue time:** Is time spent in queue counted toward Honor/hr denominator? Almost certainly not — but this must be explicit.
+- **Loading screen / instance transition time:** Counted or excluded from match duration?
+- **Early leave (voluntary):** Match ends incomplete. Is a partial recap written to history? Is Honor/hr for that match marked as incomplete?
+- **Disconnect mid-match:** Player reconnects inside or outside the instance. Is the gap in event timestamps treated as idle time, excluded time, or a session break?
+- **Deserter debuff exit:** Same as early leave, but the client may not fire a clean zone-change event. Needs a separate detection path.
+
+Each of these materially changes the Honor/hr number a user sees. A disconnected 20-minute AV where the player was offline for 15 minutes should not report 4× inflated Honor/hr.
+
+### 6. Slash Command and Settings Contract
+
+The proposal mentions `/ding pvp` but the addon has an explicit command dispatch model (`Commands.lua`). The full command surface must be defined before implementation to avoid UX ambiguity and rework:
+
+**Proposed command surface (to be confirmed):**
+
+| Command | Behavior |
+|---------|----------|
+| `/ding pvp on` | Force PvP mode; suppresses XP HUD output |
+| `/ding pvp off` | Force XP mode; restores XP HUD output |
+| `/ding pvp auto` | Enable auto-switching on BG zone-in/out (default) |
+| `/ding pvp goal cap` | Set TTG target to honor cap (75,000) |
+| `/ding pvp goal <amount>` | Set TTG target to a specific honor amount |
+| `/ding pvp goal off` | Clear TTG goal; hide TTG field |
+| `/ding pvp reset` | Clear current PvP session metrics (does not clear persistent goal progress) |
+| `/ding pvp status` | Print current mode, goal, session honor, and Honor/hr to chat |
+
+**Settings Hub decisions required:**
+- Which of the above are also exposed as checkboxes/inputs in the Settings Hub PvP group?
+- Does toggling PvP mode in Settings Hub immediately affect the HUD, or only take effect on next login/reload?
+- Is there a "pause XP chat announcements while in PvP mode" toggle, separate from the global announcements setting?
+
+### 7. Honor Cap / Spend / Overflow Behavior
 
 The UI must define explicit states for boundary conditions:
 
@@ -108,7 +171,7 @@ The UI must define explicit states for boundary conditions:
 - **Overshooting a custom item goal:** Similar to cap — display "Goal Reached" rather than a negative or nonsensical TTG.
 - **No goal set:** The TTG field must have a defined empty state (hidden, dashes, or "Set a goal").
 
-### 6. Insights / History Normalization
+### 8. Insights / History Normalization
 
 "Best Honor/hr by battleground" requires metadata that is not currently stored. Before implementing History tab PvP rows, define the schema for each stored entry:
 
@@ -120,7 +183,7 @@ The UI must define explicit states for boundary conditions:
 
 Without these fields, "best session" and "median pace" comparisons are noisy across battlegrounds with very different match durations (a 5-minute WSG vs. a 90-minute AV are not comparable on raw Honor/hr).
 
-### 7. Graph Retention and Long-Goal Mismatch
+### 9. Graph Retention and Long-Goal Mismatch
 
 The current graph retains up to 60 minutes of rolling event history — appropriate for XP pacing within a level. Honor goals can span many matches or multiple sessions. The proposal must decide:
 
@@ -130,7 +193,7 @@ The current graph retains up to 60 minutes of rolling event history — appropri
 
 Leaving the graph at 60 minutes is a valid choice but should be a conscious one, documented so users understand why a long AV shows a truncated window.
 
-### 8. Chat Spam and Notification Throttling
+### 10. Chat Spam and Notification Throttling
 
 Honor and HK updates are noisier than level dings. Milestone announcements and match recaps need explicit throttle rules:
 
@@ -139,19 +202,35 @@ Honor and HK updates are noisier than level dings. Milestone announcements and m
 - **Match recap trigger:** Does the recap fire on `ZONE_CHANGED` (leaving instance) or on `UPDATE_BATTLEFIELD_SCORE` with end-of-match detection? What if the player disconnects mid-match?
 - **Default state:** Are chat announcements on or off by default? PvP players in premade groups may not want addon spam visible to the raid.
 
-### 9. Acceptance Criteria and Test Matrix
+### 11. SavedVariables Growth and Retention Budget
 
-Before marking this feature complete, the following scenarios must each produce correct, trustworthy output. These should be codified as test cases in `tests/test_honor*.lua`:
+Storing BG metadata, per-match honor logs, and persistent goal progress will grow `DingTimerDB` faster than XP history alone. Without a retention policy, long-term PvP players can quietly accumulate bloated SavedVariables that slow addon load and increase corruption risk on unexpected logout.
 
-| Scenario | Expected Behavior |
-|----------|-----------------|
-| Reload mid-match | Session honor and HK counts survive; TTG recalculates correctly |
-| Logout and re-login | Persistent goal progress is restored from SavedVariables |
-| Leave BG instance | Match recap fires; session continues if still in PvP mode |
-| BG end-of-match bonus arrives late | Attributed to correct time window; no double-count |
-| Auto-switch disabled, manual `/ding pvp` | PvP mode activates; XP tracking pauses |
-| Honor already capped on login | TTG shows "Capped"; no division-by-zero or negative display |
-| Custom goal reached mid-session | Progress bar clamps at 100%; TTG switches to "Goal Reached" |
-| Honor spent mid-session | TTG recalculates; Honor/hr unaffected |
-| No goal configured | TTG field hidden or shows placeholder; no error |
-| Manual reset (`/ding reset`) | Session metrics clear; persistent goal progress preserved |
+**Decisions required:**
+- **Max stored match rows:** What is the cap on PvP history entries per character? (Suggested starting point: 200 matches, same order of magnitude as XP session history.)
+- **Per-event honor log persistence:** Is the raw event list (individual honor increments with timestamps) persisted to SavedVariables, or is it session-only memory that is summarised into a single match row on exit? Persisting raw events is expensive; summarising on exit is sufficient for all currently proposed UI features.
+- **Trim policy:** When the match-row cap is exceeded, drop the oldest entries (FIFO), or keep the N highest Honor/hr rows plus the N most recent? FIFO is simpler; ranked retention preserves "best sessions" more reliably.
+- **Arena data (if Phase 4 ships):** Arena currency rows use a different schema from Honor rows. The budget should account for both row types if they coexist.
+- **Storage estimate:** At ~200 bytes per match row × 200 rows = ~40 KB per character. That is acceptable. Raw per-event logs could be 10–100× larger and should not be persisted.
+
+### 12. Acceptance Criteria and Test Matrix
+
+Before marking each phase complete, the following scenarios must produce correct output. These should be codified as test cases in `tests/test_honor*.lua`:
+
+| Phase | Scenario | Expected Behavior |
+|-------|----------|-----------------|
+| 1 | Reload mid-match | Session honor and HK counts survive; TTG recalculates correctly |
+| 1 | `/ding pvp on` while leveling | HUD swaps to PvP view; XP chat output suppressed |
+| 1 | `/ding pvp off` in PvP mode | HUD restores XP view; XP tracking resumes |
+| 1 | Honor already capped on login | TTG shows "Capped"; no division-by-zero or negative display |
+| 1 | Honor spent mid-session | TTG recalculates from new baseline; Honor/hr rate unaffected |
+| 1 | No goal configured | TTG field hidden or shows placeholder; no error |
+| 1 | `/ding pvp reset` | Session metrics clear; persistent goal progress preserved |
+| 2 | Leave BG instance cleanly | Match recap fires with correct Honor, HKs, duration; session continues |
+| 2 | Disconnect mid-match, reconnect outside | Gap excluded from Honor/hr denominator; partial recap written |
+| 2 | Early leave / deserter exit | Match marked incomplete in history; Honor/hr not inflated |
+| 2 | BG end-of-match bonus arrives late | Attributed to correct match row; no double-count in session total |
+| 3 | Logout and re-login | Persistent goal progress restored from SavedVariables; TTG correct |
+| 3 | Custom goal reached mid-session | Progress bar clamps at 100%; TTG switches to "Goal Reached" |
+| 3 | Auto-switch: BG zone-in while leveling | Mode switches to PvP; XP mode resumes on zone-out |
+| 3 | PvP history exceeds retention cap | Oldest rows trimmed; no error; existing rows intact |
