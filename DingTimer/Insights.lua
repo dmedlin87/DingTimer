@@ -238,6 +238,63 @@ function NS.RecordSession(reason)
   return record
 end
 
+--- Computes the trend percentage comparing the newest half of the window to the previous half.
+--- @param chartWindow number The size of the recent sessions window.
+--- @param count number Total number of sessions.
+--- @param sessions table The list of sessions.
+--- @return number The trend percentage.
+local function calculateTrendPct(chartWindow, count, sessions)
+  local trendPct = 0
+  if chartWindow >= 4 then
+    local pairCount = math.floor(chartWindow / 2)
+    local windowStart = count - (pairCount * 2) + 1
+    local prevTotal = 0
+    local newTotal = 0
+
+    for i = windowStart, windowStart + pairCount - 1 do
+      local val = tonumber(sessions[i].avgXph) or 0
+      if NS.IsInvalidNumber(val) then val = 0 end
+      prevTotal = prevTotal + val
+    end
+    for i = windowStart + pairCount, windowStart + (pairCount * 2) - 1 do
+      local val = tonumber(sessions[i].avgXph) or 0
+      if NS.IsInvalidNumber(val) then val = 0 end
+      newTotal = newTotal + val
+    end
+
+    local prevAvg = prevTotal / pairCount
+    local newAvg = newTotal / pairCount
+    if prevAvg > 0 then
+      trendPct = ((newAvg - prevAvg) / prevAvg) * 100
+    end
+  end
+  return trendPct
+end
+
+--- Processes zone statistics to find the top 3 zones by average XP per hour.
+--- @param zoneStats table The map of zone statistics.
+--- @return table The sorted list of top 3 zone leaders.
+local function calculateZoneLeaders(zoneStats)
+  local zoneLeaders = {}
+  for _, stat in pairs(zoneStats) do
+    zoneLeaders[#zoneLeaders + 1] = {
+      zone = stat.zone,
+      avgXph = (stat.sessions > 0) and (stat.totalXph / stat.sessions) or 0,
+      sessions = stat.sessions,
+    }
+  end
+  table.sort(zoneLeaders, function(a, b)
+    if a.avgXph == b.avgXph then
+      return a.zone < b.zone
+    end
+    return a.avgXph > b.avgXph
+  end)
+  while #zoneLeaders > 3 do
+    table.remove(zoneLeaders)
+  end
+  return zoneLeaders
+end
+
 --- Aggregates statistics across recent historical sessions for the Insights UI.
 --- Computes trends, medians, and extracts a window of recent charts points.
 --- @param limit number|nil The maximum number of recent session rows to return.
@@ -312,48 +369,8 @@ function NS.GetInsightsSummary(limit)
     end
   end
 
-  local trendPct = 0
-  if chartWindow >= 4 then
-    local pairCount = math.floor(chartWindow / 2)
-    local windowStart = count - (pairCount * 2) + 1
-    local prevTotal = 0
-    local newTotal = 0
-
-    for i = windowStart, windowStart + pairCount - 1 do
-      local val = tonumber(sessions[i].avgXph) or 0
-      if NS.IsInvalidNumber(val) then val = 0 end
-      prevTotal = prevTotal + val
-    end
-    for i = windowStart + pairCount, windowStart + (pairCount * 2) - 1 do
-      local val = tonumber(sessions[i].avgXph) or 0
-      if NS.IsInvalidNumber(val) then val = 0 end
-      newTotal = newTotal + val
-    end
-
-    local prevAvg = prevTotal / pairCount
-    local newAvg = newTotal / pairCount
-    if prevAvg > 0 then
-      trendPct = ((newAvg - prevAvg) / prevAvg) * 100
-    end
-  end
-
-  local zoneLeaders = {}
-  for _, stat in pairs(zoneStats) do
-    zoneLeaders[#zoneLeaders + 1] = {
-      zone = stat.zone,
-      avgXph = (stat.sessions > 0) and (stat.totalXph / stat.sessions) or 0,
-      sessions = stat.sessions,
-    }
-  end
-  table.sort(zoneLeaders, function(a, b)
-    if a.avgXph == b.avgXph then
-      return a.zone < b.zone
-    end
-    return a.avgXph > b.avgXph
-  end)
-  while #zoneLeaders > 3 do
-    table.remove(zoneLeaders)
-  end
+  local trendPct = calculateTrendPct(chartWindow, count, sessions)
+  local zoneLeaders = calculateZoneLeaders(zoneStats)
 
   return {
     totalSessions = count,
