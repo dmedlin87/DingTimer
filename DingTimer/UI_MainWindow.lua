@@ -164,7 +164,8 @@ function NS.SelectTab(id)
   ensurePanel(id)
   
   -- Update button states
-  for i, tab in ipairs(tabs) do
+  for i = 1, #tabs do
+    local tab = tabs[i]
     if i == id then
       tab:LockHighlight()
     else
