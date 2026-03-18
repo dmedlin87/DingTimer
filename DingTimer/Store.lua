@@ -30,42 +30,33 @@ if not NS.GetCoachDefaults then
   end
 end
 
+-- Single authoritative validation for coach config fields.
+-- Both the fallback EnsureCoachConfig (below) and SessionCoach.lua's override
+-- call this so clamp ranges and goal whitelist are defined exactly once.
+function NS.ValidateCoachConfig(coach)
+  for key, value in pairs(COACH_DEFAULTS) do
+    if coach[key] == nil then
+      coach[key] = value
+    end
+  end
+
+  if coach.goal ~= "off" and coach.goal ~= "ding" and coach.goal ~= "30m" and coach.goal ~= "60m" then
+    coach.goal = COACH_DEFAULTS.goal
+  end
+
+  coach.idleSeconds = math.max(30, math.floor(tonumber(coach.idleSeconds) or COACH_DEFAULTS.idleSeconds))
+  coach.paceDropPct = math.max(5, math.min(50, math.floor(tonumber(coach.paceDropPct) or COACH_DEFAULTS.paceDropPct)))
+  coach.alertCooldownSeconds = math.max(30, math.floor(tonumber(coach.alertCooldownSeconds) or COACH_DEFAULTS.alertCooldownSeconds))
+  coach.alertHistoryLimit = math.max(1, math.min(8, math.floor(tonumber(coach.alertHistoryLimit) or COACH_DEFAULTS.alertHistoryLimit)))
+
+  return coach
+end
+
 if not NS.EnsureCoachConfig then
   function NS.EnsureCoachConfig(db)
     db = db or DingTimerDB or {}
     db.coach = db.coach or {}
-
-    for key, value in pairs(COACH_DEFAULTS) do
-      if db.coach[key] == nil then
-        db.coach[key] = value
-      end
-    end
-
-    if db.coach.goal ~= "off" and db.coach.goal ~= "ding" and db.coach.goal ~= "30m" and db.coach.goal ~= "60m" then
-      db.coach.goal = COACH_DEFAULTS.goal
-    end
-
-    local idleSeconds = math.floor(tonumber(db.coach.idleSeconds) or COACH_DEFAULTS.idleSeconds)
-    if idleSeconds < 30 then idleSeconds = 30 end
-    db.coach.idleSeconds = idleSeconds
-
-    local paceDropPct = math.floor(tonumber(db.coach.paceDropPct) or COACH_DEFAULTS.paceDropPct)
-    if paceDropPct < 5 then paceDropPct = 5 end
-    if paceDropPct > 50 then paceDropPct = 50 end
-    db.coach.paceDropPct = paceDropPct
-
-    local alertCooldownSeconds = math.floor(tonumber(db.coach.alertCooldownSeconds) or COACH_DEFAULTS.alertCooldownSeconds)
-    if alertCooldownSeconds < 30 then alertCooldownSeconds = 30 end
-    db.coach.alertCooldownSeconds = alertCooldownSeconds
-
-    local alertHistoryLimit = math.floor(tonumber(db.coach.alertHistoryLimit) or COACH_DEFAULTS.alertHistoryLimit)
-    if alertHistoryLimit < 1 then alertHistoryLimit = 1 end
-    if alertHistoryLimit > 8 then alertHistoryLimit = 8 end
-    db.coach.alertHistoryLimit = alertHistoryLimit
-
-    if db.coach.alertsEnabled == nil then db.coach.alertsEnabled = COACH_DEFAULTS.alertsEnabled end
-    if db.coach.chatAlerts == nil then db.coach.chatAlerts = COACH_DEFAULTS.chatAlerts end
-
+    NS.ValidateCoachConfig(db.coach)
     return db.coach
   end
 end

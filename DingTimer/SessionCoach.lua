@@ -190,16 +190,7 @@ function NS.EnsureCoachConfig(db)
 
   db = db or DingTimerDB or {}
   db.coach = db.coach or {}
-  for key, value in pairs(DEFAULTS) do
-    if db.coach[key] == nil then
-      db.coach[key] = value
-    end
-  end
-  db.coach.goal = normalizeGoal(db.coach.goal)
-  db.coach.idleSeconds = math_max(30, math_floor(safeNumber(db.coach.idleSeconds, DEFAULTS.idleSeconds)))
-  db.coach.paceDropPct = math_max(5, math_min(50, math_floor(safeNumber(db.coach.paceDropPct, DEFAULTS.paceDropPct))))
-  db.coach.alertCooldownSeconds = math_max(30, math_floor(safeNumber(db.coach.alertCooldownSeconds, DEFAULTS.alertCooldownSeconds)))
-  db.coach.alertHistoryLimit = math_max(1, math_min(8, math_floor(safeNumber(db.coach.alertHistoryLimit, DEFAULTS.alertHistoryLimit))))
+  NS.ValidateCoachConfig(db.coach)
 
   if not db or db == DingTimerDB then
     cachedCoachConfig = db.coach
