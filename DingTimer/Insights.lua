@@ -189,7 +189,8 @@ function NS.RecordSession(reason)
     zone = safeString(GetZoneText(), "Unknown")
   end
   local primaryZoneXP = 0
-  for _, seg in ipairs(segments) do
+  for i = 1, #segments do
+    local seg = segments[i]
     if (seg.xpGained or 0) > primaryZoneXP and isValidZone(seg.zone) then
       primaryZoneXP = seg.xpGained
       zone = seg.zone
