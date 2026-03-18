@@ -149,7 +149,15 @@ end)
 -- NS.BuildAverageSeries
 
 it("BuildAverageSeries: empty events returns all zeros", function()
-  local avgs = NS.BuildAverageSeries({}, 0, 300, 0, 0, 15, 20, 5)
+  local avgs = NS.BuildAverageSeries({}, {
+    baselineSessionXP = 0,
+    now = 300,
+    sessionStart = 0,
+    anchor = 0,
+    segSeconds = 15,
+    currentSegIdx = 20,
+    segmentCount = 5
+  })
   for i = 1, 5 do
     assert_equal(0, avgs[i], "empty event list should produce zero averages")
   end
@@ -162,7 +170,15 @@ it("BuildAverageSeries: sessionXP accumulates correctly with pruned baseline", f
       { t = 130, xp = 100, sessionXP = 1000 },
       { t = 190, xp = 50, sessionXP = 1050 },
     },
-    900, 190, 0, 0, 60, 3, 3
+    {
+      baselineSessionXP = 900,
+      now = 190,
+      sessionStart = 0,
+      anchor = 0,
+      segSeconds = 60,
+      currentSegIdx = 3,
+      segmentCount = 3
+    }
   )
   assert_near(avgs[1], 27000, 0.001, "first bar: 900 pruned XP / 60s * 3600 = 54000... wait, see note")
   assert_near(avgs[3], (1050 / 190) * 3600, 0.001, "last bar: uses all XP / elapsed")
