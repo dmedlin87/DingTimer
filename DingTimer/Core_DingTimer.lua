@@ -32,8 +32,7 @@ local coachTicker = nil
 -- and shared across all callers (HUD, stats panel, graph, coach) for the same `now`.
 local tickCache = { now = 0, snapshot = nil, coachStatus = nil }
 
-function NS.resetXPState()
-  local now = GetTime()
+local function clearInternalState(now)
   NS.state.sessionStartTime = now
   NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
   NS.state.lastXP = UnitXP("player") or 0
@@ -47,6 +46,9 @@ function NS.resetXPState()
   NS.state.moneyEvents = {}
   NS.state.windowXP = 0
   NS.state.windowMoney = 0
+end
+
+local function notifySubsystems(now)
   NS.InvalidateTickCache()
   if NS.InitCoachState then
     NS.InitCoachState(now)
@@ -54,6 +56,12 @@ function NS.resetXPState()
   if NS.RefreshStatsWindow then NS.RefreshStatsWindow() end
   if NS.RefreshInsightsWindow then NS.RefreshInsightsWindow() end
   if NS.GraphReset then NS.GraphReset() end
+end
+
+function NS.resetXPState()
+  local now = GetTime()
+  clearInternalState(now)
+  notifySubsystems(now)
 end
 
 local function pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
