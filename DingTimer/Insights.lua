@@ -18,6 +18,14 @@ end
 
 local safeString = function(value, fallback) return NS.safeString(value, fallback) end
 
+--- Validates if a zone name is usable for attribution.
+--- @param zone string|nil The zone name to check.
+--- @return boolean True if the zone is valid, false otherwise.
+local function isValidZone(zone)
+  local z = safeString(zone, "")
+  return z ~= "" and z ~= "Unknown"
+end
+
 --- Computes the arithmetic mean of an array of numbers.
 --- @param values number[] The array of numbers.
 --- @return number The average, or 0 if the array is empty.
@@ -182,7 +190,7 @@ function NS.RecordSession(reason)
   end
   local primaryZoneXP = 0
   for _, seg in ipairs(segments) do
-    if (seg.xpGained or 0) > primaryZoneXP and safeString(seg.zone, "") ~= "" and seg.zone ~= "Unknown" then
+    if (seg.xpGained or 0) > primaryZoneXP and isValidZone(seg.zone) then
       primaryZoneXP = seg.xpGained
       zone = seg.zone
     end
