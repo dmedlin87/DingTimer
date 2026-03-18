@@ -36,7 +36,45 @@ function NS.GetSegmentIndex(timestamp, anchor, segSeconds)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
--- Segment aggregation (pure — takes event list as a parameter)
+-- Segment aggregation (shared single-pass core)
+
+local function aggregateGraphBuckets(events, now, segSeconds, segmentCount, anchor, currentSegIdx, maxRetentionSeconds)
+  events = events or {}
+
+  local currentIndex = currentSegIdx or NS.GetSegmentIndex(now, anchor, segSeconds)
+  local firstVisibleIdx = currentIndex - segmentCount + 1
+  local firstRetainedIdx = maxRetentionSeconds and NS.GetSegmentIndex(now - maxRetentionSeconds, anchor, segSeconds) or firstVisibleIdx
+  local visibleSegments = {}
+  local historySegmentXP = maxRetentionSeconds and {} or nil
+
+  for i = #events, 1, -1 do
+    local ev = events[i]
+    local segIdx = NS.GetSegmentIndex(ev.t, anchor, segSeconds)
+    if segIdx < firstRetainedIdx then
+      break
+    end
+    if segIdx <= currentIndex then
+      if segIdx >= firstVisibleIdx then
+        visibleSegments[segIdx] = (visibleSegments[segIdx] or 0) + ev.xp
+      end
+      if historySegmentXP then
+        historySegmentXP[segIdx] = (historySegmentXP[segIdx] or 0) + ev.xp
+      end
+    end
+  end
+
+  local historyPeak = 0
+  if historySegmentXP then
+    for _, xp in pairs(historySegmentXP) do
+      local xph = (xp / segSeconds) * 3600
+      if xph > historyPeak then
+        historyPeak = xph
+      end
+    end
+  end
+
+  return visibleSegments, currentIndex, historyPeak
+end
 
 --- Aggregates historical XP events into buckets for the visible graph segments.
 --- @param events table The list of XP events: each has fields {t, xp}.
@@ -46,21 +84,7 @@ end
 --- @param anchor number The origin timestamp grid.
 --- @return table, number A sparse array of XP per segment and the index of the current segment.
 function NS.AggregateVisibleSegments(events, now, segSeconds, segmentCount, anchor)
-  local currentSegIdx = NS.GetSegmentIndex(now, anchor, segSeconds)
-  local firstVisibleIdx = currentSegIdx - segmentCount + 1
-  local segments = {}
-
-  for i = #events, 1, -1 do
-    local ev = events[i]
-    local segIdx = NS.GetSegmentIndex(ev.t, anchor, segSeconds)
-    if segIdx < firstVisibleIdx then
-      break
-    end
-    if segIdx <= currentSegIdx then
-      segments[segIdx] = (segments[segIdx] or 0) + ev.xp
-    end
-  end
-
+  local segments, currentSegIdx = aggregateGraphBuckets(events, now, segSeconds, segmentCount, anchor)
   return segments, currentSegIdx
 end
 
@@ -73,33 +97,11 @@ end
 --- @param maxRetentionSeconds number How far back to look (e.g. 3600 for 60 min).
 --- @return number The highest per-segment XP/hr observed in the retention window.
 function NS.ComputeHistoryPeakXPH(events, now, anchor, segSeconds, currentSegIdx, maxRetentionSeconds)
-  local firstRetainedIdx = NS.GetSegmentIndex(now - maxRetentionSeconds, anchor, segSeconds)
-  local segmentXP = {}
-  local peak = 0
-
-  for i = #events, 1, -1 do
-    local ev = events[i]
-    local segIdx = NS.GetSegmentIndex(ev.t, anchor, segSeconds)
-    if segIdx < firstRetainedIdx then
-      break
-    end
-    if segIdx <= currentSegIdx then
-      segmentXP[segIdx] = (segmentXP[segIdx] or 0) + ev.xp
-    end
-  end
-
-  for _, xp in pairs(segmentXP) do
-    local xph = (xp / segSeconds) * 3600
-    if xph > peak then
-      peak = xph
-    end
-  end
-
+  local _, _, peak = aggregateGraphBuckets(events, now, segSeconds, 1, anchor, currentSegIdx, maxRetentionSeconds)
   return peak
 end
 
---- ⚡ Merged single-pass version that computes both visible segments and history peak
---- in one traversal of the events list, avoiding the redundant second iteration.
+--- Computes both visible segments and history peak in one traversal of the event list.
 --- @param events table The list of XP events: each has fields {t, xp}.
 --- @param now number The current time.
 --- @param segSeconds number The size of a single segment bucket.
@@ -110,37 +112,7 @@ end
 --- @return number currentSegIdx The index of the current active segment.
 --- @return number historyPeak The highest per-segment XP/hr in the retention window.
 function NS.AggregateAndComputePeak(events, now, segSeconds, segmentCount, anchor, maxRetentionSeconds)
-  local currentSegIdx = NS.GetSegmentIndex(now, anchor, segSeconds)
-  local firstVisibleIdx = currentSegIdx - segmentCount + 1
-  local firstRetainedIdx = NS.GetSegmentIndex(now - maxRetentionSeconds, anchor, segSeconds)
-  local visibleSegments = {}
-  local historySegmentXP = {}
-
-  for i = #events, 1, -1 do
-    local ev = events[i]
-    local segIdx = NS.GetSegmentIndex(ev.t, anchor, segSeconds)
-    if segIdx < firstRetainedIdx then
-      break
-    end
-    if segIdx <= currentSegIdx then
-      -- Accumulate for history peak
-      historySegmentXP[segIdx] = (historySegmentXP[segIdx] or 0) + ev.xp
-      -- Also accumulate for visible segments if in range
-      if segIdx >= firstVisibleIdx then
-        visibleSegments[segIdx] = (visibleSegments[segIdx] or 0) + ev.xp
-      end
-    end
-  end
-
-  local peak = 0
-  for _, xp in pairs(historySegmentXP) do
-    local xph = (xp / segSeconds) * 3600
-    if xph > peak then
-      peak = xph
-    end
-  end
-
-  return visibleSegments, currentSegIdx, peak
+  return aggregateGraphBuckets(events, now, segSeconds, segmentCount, anchor, nil, maxRetentionSeconds)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────

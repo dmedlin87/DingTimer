@@ -175,33 +175,6 @@ local function buildCurrentSegment(now)
   }
 end
 
-function NS.GetCoachDefaults()
-  return copyTable(DEFAULTS)
-end
-
--- ⚡ Cache validated coach config; invalidated by NS.InvalidateCoachConfig()
-local cachedCoachConfig = nil
-
-function NS.EnsureCoachConfig(db)
-  -- Fast path: return cached config if already validated and using the default DB
-  if cachedCoachConfig and not db then
-    return cachedCoachConfig
-  end
-
-  db = db or DingTimerDB or {}
-  db.coach = db.coach or {}
-  NS.ValidateCoachConfig(db.coach)
-
-  if not db or db == DingTimerDB then
-    cachedCoachConfig = db.coach
-  end
-  return db.coach
-end
-
-function NS.InvalidateCoachConfig()
-  cachedCoachConfig = nil
-end
-
 function NS.InitCoachState(now)
   local at = now or GetTime()
   local coach = getCoachRuntime(at)

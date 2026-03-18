@@ -9,11 +9,10 @@
 # 1. Util.lua       -- must be first; every module calls NS.chat, NS.C, NS.fmtTime, etc.
 # 2. Insights.lua   -- must precede Store.lua; Store calls NS.GetProfileKey and
 #                      NS.TrimSessions, both defined here.
-# 3. Store.lua      -- must precede SessionCoach.lua; Store provides fallback stubs
-#                      for GetCoachDefaults and EnsureCoachConfig (used when
-#                      SessionCoach.lua is absent). SessionCoach.lua overrides these
-#                      with its full implementations and defines InitCoachState,
-#                      NoteCoachXP, NoteCoachMoney, etc.
+# 3. Store.lua      -- must precede SessionCoach.lua; Store owns the coach default
+#                      table plus ValidateCoachConfig / EnsureCoachConfig. SessionCoach
+#                      reads those helpers and defines InitCoachState, NoteCoachXP,
+#                      NoteCoachMoney, etc.
 # 4. Core_DingTimer -- must follow SessionCoach.lua; onXPUpdate calls NoteCoachXP /
 #                      NoteCoachMoney which SessionCoach defines.
 # 5. Actions.lua    -- shared user actions used by commands and settings panels.

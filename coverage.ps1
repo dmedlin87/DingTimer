@@ -1,6 +1,6 @@
 param(
-    [string]$LuaExe = "$env:LOCALAPPDATA\Programs\Lua\bin\lua.exe",
-    [string]$LuaRocksExe = "$env:LOCALAPPDATA\Programs\Lua\bin\luarocks.exe",
+    [string]$LuaExe = "",
+    [string]$LuaRocksExe = "",
     [string]$TestsPattern = "tests/test_*.lua",
     [switch]$Clean
 )
@@ -28,6 +28,19 @@ function Resolve-ToolPath {
     return $null
 }
 
+function Resolve-CommandPath {
+    param([string[]]$names)
+
+    foreach ($name in $names) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd) {
+            return $cmd.Source
+        }
+    }
+
+    return $null
+}
+
 function Apply-LuaRocksPath {
     param([string]$LuaRocksPath)
 
@@ -46,6 +59,7 @@ function Apply-LuaRocksPath {
 }
 
 $lua = Resolve-ToolPath $LuaExe @(
+    (Resolve-CommandPath @("lua", "lua5.4", "lua54", "lua5.3", "lua5.1")),
     "$env:LOCALAPPDATA\Programs\Lua\bin\lua.exe",
     "$env:LOCALAPPDATA\Programs\LuaJIT\bin\luajit.exe"
 )
@@ -55,6 +69,7 @@ if (-not $lua) {
 }
 
 $luaRocks = Resolve-ToolPath $LuaRocksExe @(
+    (Resolve-CommandPath @("luarocks", "luarocks5.4", "luarocks5.1")),
     "$env:LOCALAPPDATA\Programs\Lua\bin\luarocks.exe",
     "$env:LOCALAPPDATA\Programs\LuaJIT\bin\luarocks.exe"
 )

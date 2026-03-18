@@ -6,10 +6,6 @@ local MAIN_HEIGHT = 540
 local mainWindow = nil
 local tabs = {}
 local panels = {}
-local panelFactories = {}
-
--- This allows us to hook into the creation of the panels later
-NS.UIPanels = {}
 
 local function getActiveTabId(tabId)
   if tabId then
@@ -105,19 +101,6 @@ function NS.InitMainWindow()
   tabs[2] = createTabButton(contentArea, 2, "Analysis", 112, 2)
   tabs[3] = createTabButton(contentArea, 3, "History", 224, 2)
   tabs[4] = createTabButton(contentArea, 4, "Settings", 336, 2)
-
-  panelFactories[1] = function()
-    return NS.InitStatsPanel and NS.InitStatsPanel(contentArea) or nil
-  end
-  panelFactories[2] = function()
-    return NS.InitGraphPanel and NS.InitGraphPanel(contentArea) or nil
-  end
-  panelFactories[3] = function()
-    return NS.InitInsightsPanel and NS.InitInsightsPanel(contentArea) or nil
-  end
-  panelFactories[4] = function()
-    return NS.InitSettingsPanel and NS.InitSettingsPanel(contentArea) or nil
-  end
   mainWindow.tabs = tabs
   mainWindow.panels = panels
 
@@ -141,12 +124,23 @@ local function ensurePanel(id)
     return panels[id]
   end
 
-  local factory = panelFactories[id]
-  if not factory then
+  local init
+  if id == 1 then
+    init = NS.InitStatsPanel
+  elseif id == 2 then
+    init = NS.InitGraphPanel
+  elseif id == 3 then
+    init = NS.InitInsightsPanel
+  elseif id == 4 then
+    init = NS.InitSettingsPanel
+  end
+
+  local contentArea = mainWindow and mainWindow.contentArea
+  if not init or not contentArea then
     return nil
   end
 
-  local ok, panel = pcall(factory)
+  local ok, panel = pcall(init, contentArea)
   if not ok then
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " panel failed to load: " .. tostring(panel))
     return nil

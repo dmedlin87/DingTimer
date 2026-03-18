@@ -2,8 +2,8 @@ local ADDON, NS = ...
 
 -- CANONICAL SOURCE of coach default values.
 -- Store.lua loads before SessionCoach.lua, so this table and the stubs below are
--- the authoritative definitions. SessionCoach.lua overrides the stubs with its full
--- implementations but reads defaults via NS.GetCoachDefaults() (defined below).
+-- the authoritative definitions. SessionCoach.lua reads them and defines the
+-- runtime coach state/segment logic.
 -- Do NOT duplicate these values in SessionCoach.lua.
 local COACH_DEFAULTS = {
   goal = "ding",
@@ -31,8 +31,8 @@ if not NS.GetCoachDefaults then
 end
 
 -- Single authoritative validation for coach config fields.
--- Both the fallback EnsureCoachConfig (below) and SessionCoach.lua's override
--- call this so clamp ranges and goal whitelist are defined exactly once.
+-- Both the fallback EnsureCoachConfig (below) and the SessionCoach runtime path
+-- rely on this so clamp ranges and goal whitelist are defined exactly once.
 function NS.ValidateCoachConfig(coach)
   for key, value in pairs(COACH_DEFAULTS) do
     if coach[key] == nil then
@@ -58,6 +58,12 @@ if not NS.EnsureCoachConfig then
     db.coach = db.coach or {}
     NS.ValidateCoachConfig(db.coach)
     return db.coach
+  end
+end
+
+if not NS.InvalidateCoachConfig then
+  function NS.InvalidateCoachConfig()
+    -- Config is validated directly on demand; no cache remains to invalidate.
   end
 end
 

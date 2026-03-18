@@ -29,7 +29,7 @@ tests/
 ```powershell
 .\coverage.ps1
 ```
-Requires Lua + LuaRocks installed at `%LOCALAPPDATA%\Programs\Lua\`. Runs all `tests/test_*.lua` with luacov coverage.
+Prefers the `lua` / `luarocks` pair on `PATH`, then falls back to `%LOCALAPPDATA%\Programs\Lua\`. Runs all `tests/test_*.lua` with luacov coverage.
 
 **Linux / CI:**
 ```bash
@@ -54,7 +54,7 @@ git tag v0.7.0 && git push origin v0.7.0
 
 **WoW target:** Private WotLK server (Bronzebeard). `## Interface: 30300` is the addon target, and the installer supports the Ascension Launcher client path plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
 
-**Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store provides fallback stubs for `GetCoachDefaults` and `EnsureCoachConfig` (used only when SessionCoach is absent). SessionCoach overrides these and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
+**Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store owns the coach default table plus `GetCoachDefaults`, `ValidateCoachConfig`, and `EnsureCoachConfig`. SessionCoach reads those helpers and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 
 **Shared namespace:** All modules share a single `NS` table passed as the second vararg (`local ADDON, NS = ...`). Runtime state lives in `NS.state`; persistent state in `DingTimerDB` (SavedVariables).
 
@@ -67,6 +67,6 @@ git tag v0.7.0 && git push origin v0.7.0
 ## Architecture Notes
 
 - `GraphMath.lua` is pure/stateless — all inputs are explicit parameters, making it the easiest module to test
-- UI panels are lazily initialized (created on first tab access) via factory callbacks registered on `NS`
+- UI panels are lazily initialized (created on first tab access) through explicit tab initializers in `UI_MainWindow.lua`
 - The coach heartbeat runs every 1 second via `C_Timer.NewTicker` started at login
 - Schema migrations in `Store.lua` run sequentially (v3 → v8); add new migrations at the end

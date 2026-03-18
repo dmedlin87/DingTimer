@@ -93,4 +93,30 @@ SetTime(1000)
 local mph = NS.computeMoneyPerHour(1000, 600)
 assert_near(mph, 1000 * 3600 / 100, 0.1, "Money/hr should be 36000")
 
+-- Test 7: Money lifecycle across income, spending, and rolling-window expiry
+SetTime(2000)
+SetMoney(0)
+NS.resetXPState()
+SetMoney(1500)
+NS.onMoneyUpdate()
+assert_eq(NS.state.sessionMoney, 1500, "sessionMoney should track earned money")
+assert_eq(NS.state.windowMoney, 1500, "windowMoney should track earned money inside the rolling window")
+assert_eq(#NS.state.moneyEvents, 1, "earned money should create one rolling event")
+
+SetTime(2060)
+SetMoney(900)
+NS.onMoneyUpdate()
+assert_eq(NS.state.sessionMoney, 900, "sessionMoney should reflect net gold after spending")
+assert_eq(NS.state.windowMoney, 1500, "spending should not change the rolling income total")
+assert_eq(#NS.state.moneyEvents, 1, "spending should not create a rolling income event")
+
+local moneySnapshot = NS.GetSessionSnapshot(2060)
+assert_eq(900, moneySnapshot.sessionMoney, "snapshot should expose net session money")
+assert_near(moneySnapshot.moneyPerHour, 1500 * 3600 / 60, 0.1, "snapshot should keep the rolling income rate based on earned money")
+
+local expiredMoneyRate = NS.computeMoneyPerHour(2601, 600)
+assert_near(expiredMoneyRate, 0, 0.1, "expired money gains should fall out of the rolling window")
+assert_eq(NS.state.windowMoney, 0, "windowMoney should decay to zero after the gain expires")
+assert_eq(#NS.state.moneyEvents, 0, "expired money events should be pruned")
+
 print("Core_DingTimer tests passed!")

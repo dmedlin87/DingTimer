@@ -335,7 +335,7 @@ Run Lua coverage from repo root:
 .\coverage.ps1
 ```
 
-This generates `luacov.report.out` and `luacov.stats.out` in the project root.
+The script prefers the `lua` / `luarocks` pair on `PATH` and falls back to the LocalAppData Lua install if needed. It generates `luacov.report.out` and `luacov.stats.out` in the project root.
 
 ---
 
