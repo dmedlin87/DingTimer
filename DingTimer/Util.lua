@@ -97,13 +97,14 @@ function NS.UI.CreateValueLabel(parent, x, y)
   return fs
 end
 
-function NS.UI.CreateListRows(parent, startX, startY, width, rowCount, spacing, fontObject)
+function NS.UI.CreateListRows(parent, options)
   local rows = {}
-  for i = 1, rowCount do
-    local fs = parent:CreateFontString(nil, "OVERLAY", fontObject or "GameFontHighlightSmall")
-    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", startX, startY - ((i - 1) * spacing))
+  local fontObj = options.fontObject or "GameFontHighlightSmall"
+  for i = 1, options.rowCount do
+    local fs = parent:CreateFontString(nil, "OVERLAY", fontObj)
+    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", options.startX, options.startY - ((i - 1) * options.spacing))
     fs:SetJustifyH("LEFT")
-    fs:SetWidth(width)
+    fs:SetWidth(options.width)
     fs:SetText("")
     rows[i] = fs
   end

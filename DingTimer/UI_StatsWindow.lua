@@ -209,10 +209,14 @@ function NS.InitStatsPanel(parent)
   statsFrame.segmentStatus:SetText("")
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
-  statsFrame.alertRows = NS.UI.CreateListRows(scrollChild, 16, -360, 680, 4, 16, "GameFontHighlightSmall")
+  statsFrame.alertRows = NS.UI.CreateListRows(scrollChild, {
+    startX = 16, startY = -360, width = 680, rowCount = 4, spacing = 16, fontObject = "GameFontHighlightSmall"
+  })
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
-  statsFrame.recapRows = NS.UI.CreateListRows(scrollChild, 16, -466, 680, 3, 16, "GameFontDisableSmall")
+  statsFrame.recapRows = NS.UI.CreateListRows(scrollChild, {
+    startX = 16, startY = -466, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontDisableSmall"
+  })
 
   statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 88, "Show HUD", function()
     DingTimerDB.float = not DingTimerDB.float
