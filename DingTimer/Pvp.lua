@@ -11,6 +11,74 @@ local DEFAULT_RESUME_MAX_AGE = 900
 local MATCH_GRACE_SECONDS = 15
 local RECENT_LIMIT = 4
 
+---@class DingTimerPvpMatch
+---@field startedAt number
+---@field zone string
+---@field honorGained number
+---@field hkGained number
+---@field exitedAt number|nil
+---@field graceEndsAt number|nil
+
+---@class DingTimerPvpMatchSummary
+---@field zone string
+---@field startedAt number
+---@field endedAt number
+---@field durationSec number
+---@field honorGained number
+---@field hkGained number
+---@field reason string
+---@field avgHonorPerHour number
+---@field avgHKPerHour number
+
+---@class DingTimerPvpRuntime
+---@field sessionStartTime number
+---@field sessionHonor number
+---@field sessionHKs number
+---@field honorEvents table[]
+---@field hkEvents table[]
+---@field windowHonor number
+---@field windowHK number
+---@field baselineHonor number
+---@field baselineHK number
+---@field currentHonor number
+---@field currentHK number
+---@field lastHonor number|nil
+---@field lastHK number|nil
+---@field honorCap number
+---@field apiAvailable boolean
+---@field apiMessage string|nil
+---@field enteredByAuto boolean
+---@field activeMatch DingTimerPvpMatch|nil
+---@field recentMatches DingTimerPvpMatchSummary[]
+---@field noticeLog table[]
+---@field queuedMessages string[]
+---@field lastMilestone number|nil
+
+---@class DingTimerPvpResume
+---@field savedAt number|nil
+---@field sessionStartTime number|nil
+---@field sessionHonor number|nil
+---@field sessionHKs number|nil
+---@field honorEvents table[]|nil
+---@field hkEvents table[]|nil
+---@field windowHonor number|nil
+---@field windowHK number|nil
+---@field baselineHonor number|nil
+---@field baselineHK number|nil
+---@field currentHonor number|nil
+---@field currentHK number|nil
+---@field lastHonor number|nil
+---@field lastHK number|nil
+---@field honorCap number|nil
+---@field apiAvailable boolean|nil
+---@field apiMessage string|nil
+---@field enteredByAuto boolean|nil
+---@field activeMatch DingTimerPvpMatch|nil
+---@field recentMatches DingTimerPvpMatchSummary[]|nil
+---@field noticeLog table[]|nil
+---@field queuedMessages string[]|nil
+---@field lastMilestone number|nil
+
 local REASON_LABELS = {
   AUTO_BG_ENTER = "Battleground entered",
   AUTO_BG_EXIT = "Battleground exit",
@@ -146,6 +214,7 @@ local function refreshPvpViews()
   end
 end
 
+---@return DingTimerPvpRuntime
 local function getRuntime(now)
   NS.state = NS.state or {}
   NS.state.pvp = NS.state.pvp or {
@@ -175,6 +244,7 @@ local function getRuntime(now)
   return NS.state.pvp
 end
 
+---@return DingTimerPvpRuntime
 local function clearRuntime(now)
   local state = getRuntime(now)
   state.sessionStartTime = now or GetTime()
@@ -339,21 +409,22 @@ local function updateMatchState(now)
   local state = getRuntime(now)
   local inBattleground = isBattlegroundInstance()
   local zone = getZone()
+  local activeMatch = state.activeMatch
 
   if inBattleground then
-    if not state.activeMatch then
+    if not activeMatch then
       beginMatch(now, zone)
     else
-      state.activeMatch.zone = zone
-      state.activeMatch.exitedAt = nil
-      state.activeMatch.graceEndsAt = nil
+      activeMatch.zone = zone
+      activeMatch.exitedAt = nil
+      activeMatch.graceEndsAt = nil
     end
     return
   end
 
-  if state.activeMatch and not state.activeMatch.exitedAt then
-    state.activeMatch.exitedAt = now
-    state.activeMatch.graceEndsAt = now + MATCH_GRACE_SECONDS
+  if activeMatch and not activeMatch.exitedAt then
+    activeMatch.exitedAt = now
+    activeMatch.graceEndsAt = now + MATCH_GRACE_SECONDS
   end
 end
 
@@ -767,8 +838,9 @@ function NS.RefreshPvpSnapshot(now, source)
     state.sessionHonor = (state.sessionHonor or 0) + honorDelta
     state.honorEvents[#state.honorEvents + 1] = { t = at, honor = honorDelta }
     state.windowHonor = (state.windowHonor or 0) + honorDelta
-    if state.activeMatch then
-      state.activeMatch.honorGained = (state.activeMatch.honorGained or 0) + honorDelta
+    local activeMatch = state.activeMatch
+    if activeMatch then
+      activeMatch.honorGained = (activeMatch.honorGained or 0) + honorDelta
     end
     if NS.GraphFeedXP then
       NS.GraphFeedXP(honorDelta, at)
@@ -780,8 +852,9 @@ function NS.RefreshPvpSnapshot(now, source)
     state.sessionHKs = (state.sessionHKs or 0) + hkDelta
     state.hkEvents[#state.hkEvents + 1] = { t = at, hk = hkDelta }
     state.windowHK = (state.windowHK or 0) + hkDelta
-    if state.activeMatch then
-      state.activeMatch.hkGained = (state.activeMatch.hkGained or 0) + hkDelta
+    local activeMatch = state.activeMatch
+    if activeMatch then
+      activeMatch.hkGained = (activeMatch.hkGained or 0) + hkDelta
     end
   end
 
@@ -866,15 +939,17 @@ function NS.PersistPvpResume(now)
 end
 
 function NS.RestorePvpResumeIfAvailable(now)
-  if not DingTimerDB or not DingTimerDB.pvp or not DingTimerDB.pvp.resume then
+  local pvpStore = DingTimerDB and DingTimerDB.pvp
+  local resume = pvpStore and pvpStore.resume
+  if not pvpStore or not resume then
     setActiveMode("xp")
     return false
   end
 
   local at = now or GetTime()
-  local resume = DingTimerDB.pvp.resume
+  ---@cast resume DingTimerPvpResume
   if not resume.savedAt or (at - resume.savedAt) > DEFAULT_RESUME_MAX_AGE then
-    DingTimerDB.pvp.resume = nil
+    pvpStore.resume = nil
     setActiveMode("xp")
     return false
   end
@@ -897,13 +972,17 @@ function NS.RestorePvpResumeIfAvailable(now)
   state.apiAvailable = resume.apiAvailable == true
   state.apiMessage = resume.apiMessage
   state.enteredByAuto = resume.enteredByAuto == true
-  state.activeMatch = copyTable(resume.activeMatch)
-  state.recentMatches = copyTable(resume.recentMatches or {})
+  ---@type DingTimerPvpMatch|nil
+  local restoredMatch = copyTable(resume.activeMatch)
+  state.activeMatch = restoredMatch
+  ---@type DingTimerPvpMatchSummary[]
+  local recentMatches = copyTable(resume.recentMatches or {})
+  state.recentMatches = recentMatches
   state.noticeLog = copyTable(resume.noticeLog or {})
   state.queuedMessages = copyTable(resume.queuedMessages or {})
   state.lastMilestone = tonumber(resume.lastMilestone)
   setActiveMode("pvp")
-  DingTimerDB.pvp.resume = nil
+  pvpStore.resume = nil
   NS.RefreshPvpSnapshot(at, "RESTORE")
   refreshPvpViews()
   return true
