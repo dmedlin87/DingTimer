@@ -72,7 +72,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically
 
-> The minimap button will appear on login. Left-click it to toggle the Live tab.
+> The minimap button will appear on login. Left-click it to open the Live tab.
 
 ---
 
@@ -81,7 +81,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | You want to...        | Do this                                            |
 | --------------------- | -------------------------------------------------- |
 | Open Live             | Left-click the minimap button or `/ding live`      |
-| Change settings       | Middle-click the minimap button or `/ding settings` |
+| Open Settings         | Middle-click the minimap button or `/ding settings` |
 | Open Analysis         | Right-click the minimap button or `/ding graph`     |
 | Open History          | `/ding history` or `/ding insights`                |
 | Toggle PvP mode       | `/ding pvp`                                        |
@@ -101,12 +101,12 @@ All commands work with either `/ding` or `/dt`.
 | ----------------------- | --------------------------------------------- |
 | `/ding`                 | Show the help menu                            |
 | `/ding help`            | Show the help menu                            |
-| `/ding ui`              | Toggle the Live tab                           |
+| `/ding ui`              | Open the Live tab                             |
 | `/ding live`            | Same as above                                 |
 | `/ding stats`           | Same as above                                 |
-| `/ding settings`        | Open the Settings tab                         |
-| `/ding history`         | Toggle the History tab                        |
-| `/ding insights`        | Alias for History                             |
+| `/ding settings`        | Open the Settings tab                        |
+| `/ding history`         | Open the History tab                         |
+| `/ding insights`        | Open the History tab                         |
 | `/ding reset`           | Reset current session data                    |
 | `/ding goal <preset>`   | Set the coach goal: `off`, `ding`, `30m`, `60m` |
 | `/ding split`           | Record a manual checkpoint                    |
@@ -158,9 +158,9 @@ All commands work with either `/ding` or `/dt`.
 
 | Command                       | What it does                                            |
 | ----------------------------- | ------------------------------------------------------- |
-| `/ding graph`                 | Toggle the graph window                                 |
-| `/ding graph on`              | Open the Graph tab                                      |
-| `/ding graph off`             | Close the main window if the Graph tab is active        |
+| `/ding graph`                 | Open the Analysis tab                                   |
+| `/ding graph on`              | Open the Analysis tab                                   |
+| `/ding graph off`             | Close the main window if the Analysis tab is active     |
 | `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
 | `/ding graph scale <mode>`    | Set the Y-axis mode: `visible`, `session`, or `fixed`   |
 | `/ding graph fit`             | Snap the graph back to visible-data scaling              |
@@ -181,9 +181,9 @@ All commands work with either `/ding` or `/dt`.
 
 The minimap button lives on the edge of your minimap and is your primary launcher.
 
-- **Left-click** — Toggle the Live tab
-- **Right-click** — Toggle the Analysis tab
-- **Middle-click** — Toggle the Settings tab
+- **Left-click** — Open the Live tab
+- **Right-click** — Open the Analysis tab
+- **Middle-click** — Open the Settings tab
 - **Drag** — Slide it anywhere around the minimap rim
 
 You can hide it entirely from the Settings tab if you prefer slash commands.
@@ -271,9 +271,9 @@ The History tab also has a PvP view for session-level Honor/HK analysis and reca
 A larger control hub for all major options:
 
 - Quick-open buttons for History, keep-retention presets, graph scaling, and session maintenance
-- Visibility toggles for chat output, floating HUD, graph, and minimap button
+- Visibility toggles for chat output, floating HUD, and minimap button
 - Output controls for chat mode and rolling-window presets
-- Graph controls for scale mode, fixed max, zoom presets, and remembered size
+- Graph controls for scale mode, fixed max, and zoom presets
 - PvP controls for mode toggling, Honor goals, battleground auto-switching, and local recap/milestone notices
 - Session reset with confirmation
 

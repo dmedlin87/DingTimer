@@ -20,13 +20,16 @@ LoadAddonFile("DingTimer/DingTimer.lua", NS)
 DingTimerDB = nil
 NS.InitStore()
 
-local toggles = 0
-NS.ToggleMainWindow = function()
-  toggles = toggles + 1
+local openedTabs = {}
+NS.ShowMainWindow = function(tabId)
+  openedTabs[#openedTabs + 1] = tabId
 end
 
 SlashCmdList.DINGTIMER("insights")
-assert_eq(toggles, 1, "insights command should toggle insights window")
+assert_eq(openedTabs[#openedTabs], 3, "insights command should open the history tab")
+
+SlashCmdList.DINGTIMER("history")
+assert_eq(openedTabs[#openedTabs], 3, "history command should open the history tab")
 
 local profile = NS.GetProfileStore(true)
 profile.sessions = {}

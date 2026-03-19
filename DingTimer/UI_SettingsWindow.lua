@@ -62,6 +62,40 @@ local function createButton(parent, x, y, width, label, callback)
   return btn
 end
 
+local function createEditBox(parent, x, y, width, callback, tooltipText)
+  local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+  box:SetSize(width, 24)
+  box:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+  if box.SetAutoFocus then
+    box:SetAutoFocus(false)
+  end
+  if box.SetNumeric then
+    box:SetNumeric(true)
+  end
+  if box.SetMaxLetters then
+    box:SetMaxLetters(8)
+  end
+  box:SetScript("OnEnterPressed", function(self)
+    if callback then
+      callback(self:GetText())
+    end
+    if parent.Refresh then
+      parent:Refresh()
+    end
+  end)
+  if tooltipText then
+    box:SetScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:SetText(tooltipText, 1, 1, 1, 1, true)
+      GameTooltip:Show()
+    end)
+    box:SetScript("OnLeave", function()
+      GameTooltip:Hide()
+    end)
+  end
+  return box
+end
+
 local function cycleValue(current, ordered)
   local currentIndex = 1
   for i = 1, #ordered do
@@ -216,25 +250,36 @@ function NS.InitSettingsPanel(parent)
       NS.SetPvpGoal("off")
     end
   end)
-  settingsFrame.controls.pvpAutoSwitch = createCheckbox(scrollChild, 360, -394, "Auto-switch in battlegrounds", function(checked)
+  settingsFrame.controls.pvpGoalLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  settingsFrame.controls.pvpGoalLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -392)
+  settingsFrame.controls.pvpGoalLabel:SetText("Custom Honor goal")
+  settingsFrame.controls.pvpGoal = createEditBox(scrollChild, 360, -414, 120, function(text)
+    if NS.SetPvpGoal then
+      local ok, result = NS.SetPvpGoal(text)
+      if not ok and NS.chat then
+        NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " " .. tostring(result))
+      end
+    end
+  end, "Enter a custom absolute Honor target and press Enter. Use /ding pvp goal <honor> for the same action.")
+  settingsFrame.controls.pvpAutoSwitch = createCheckbox(scrollChild, 360, -448, "Auto-switch in battlegrounds", function(checked)
     if NS.SetPvpAutoSwitch then
       NS.SetPvpAutoSwitch(checked)
     end
   end, "When enabled, entering a battleground automatically enables PvP mode and leaving after the recap grace window returns to leveling mode.")
-  settingsFrame.controls.pvpMilestones = createCheckbox(scrollChild, 360, -422, "Honor milestone notices", function(checked)
+  settingsFrame.controls.pvpMilestones = createCheckbox(scrollChild, 360, -476, "Honor milestone notices", function(checked)
     local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
     if settings then
       settings.milestoneAnnouncements = checked
     end
   end, "Print local milestone notices when your total Honor crosses the configured threshold.")
-  settingsFrame.controls.pvpRecap = createCheckbox(scrollChild, 360, -450, "Battleground recap notices", function(checked)
+  settingsFrame.controls.pvpRecap = createCheckbox(scrollChild, 360, -504, "Battleground recap notices", function(checked)
     local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
     if settings then
       settings.matchRecap = checked
     end
   end, "Print a local recap after battleground exit once the grace window closes.")
   settingsFrame.controls.pvpInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -482)
+  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -536)
   settingsFrame.controls.pvpInfo:SetWidth(260)
   settingsFrame.controls.pvpInfo:SetJustifyH("LEFT")
   settingsFrame.controls.pvpInfo:SetText("")
@@ -295,6 +340,11 @@ function NS.InitSettingsPanel(parent)
     self.controls.pvpAutoSwitch:SetChecked(pvp.autoSwitchBattlegrounds == true)
     self.controls.pvpMilestones:SetChecked(pvp.milestoneAnnouncements == true)
     self.controls.pvpRecap:SetChecked(pvp.matchRecap == true)
+    local customGoalText = ""
+    if pvp.goalMode == "custom" and pvp.customGoalHonor ~= nil then
+      customGoalText = tostring(pvp.customGoalHonor)
+    end
+    self.controls.pvpGoal:SetText(customGoalText)
 
     local modeText = (DingTimerDB.mode == "ttl") and "TTL only" or "Full output"
     self.controls.modeValue:SetText("Mode: " .. modeText)

@@ -19,7 +19,7 @@ end
 
 local function showHelp()
   NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
-  NS.chat("  " .. NS.C.val .. "/ding live|ui" .. NS.C.r .. " - Toggle the Live tab")
+  NS.chat("  " .. NS.C.val .. "/ding live|ui" .. NS.C.r .. " - Open the Live tab")
   NS.chat("  " .. NS.C.val .. "/ding analysis|graph" .. NS.C.r .. " - Open the Analysis tab")
   NS.chat("  " .. NS.C.val .. "/ding history|insights" .. NS.C.r .. " - Open the History tab")
   NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the Settings tab")
@@ -29,17 +29,13 @@ local function showHelp()
   NS.chat("  " .. NS.C.val .. "/ding window <seconds>" .. NS.C.r .. " - Set the rolling window")
   NS.chat("  " .. NS.C.val .. "/ding mode full|ttl" .. NS.C.r .. " - Change chat output")
   NS.chat("  " .. NS.C.val .. "/ding float on|off|lock|unlock" .. NS.C.r .. " - Manage the HUD")
-  NS.chat("  " .. NS.C.val .. "/ding graph zoom|scale|fit|max" .. NS.C.r .. " - Graph controls")
+  NS.chat("  " .. NS.C.val .. "/ding graph zoom|scale|fit|max" .. NS.C.r .. " - Open/close Analysis and adjust graph controls")
   NS.chat("  " .. NS.C.val .. "/ding pvp [on|off|goal|auto|recap]" .. NS.C.r .. " - Manage PvP mode")
   NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session")
 end
 
-local function withWindow(tabId, toggle)
-  if toggle then
-    if NS.ToggleMainWindow then
-      NS.ToggleMainWindow(tabId)
-    end
-  elseif NS.ShowMainWindow then
+local function withWindow(tabId)
+  if NS.ShowMainWindow then
     NS.ShowMainWindow(tabId)
   end
 end
@@ -51,14 +47,14 @@ end
 ROOT_COMMANDS.help = showHelp
 
 ROOT_COMMANDS.ui = function()
-  withWindow(1, true)
+  withWindow(1)
 end
 
 ROOT_COMMANDS.live = ROOT_COMMANDS.ui
 ROOT_COMMANDS.stats = ROOT_COMMANDS.ui
 
 ROOT_COMMANDS.settings = function()
-  withWindow(4, true)
+  withWindow(4)
 end
 
 ROOT_COMMANDS.on = function()
@@ -163,13 +159,13 @@ ROOT_COMMANDS.float = function(arg)
 end
 
 ROOT_COMMANDS.history = function()
-  withWindow(3, true)
+  withWindow(3)
 end
 
 ROOT_COMMANDS.insights = function(arg)
   local sub, rest = parseSubCommand(arg)
   if sub == "" then
-    withWindow(3, true)
+    withWindow(3)
     return
   end
   if sub == "clear" then
@@ -205,11 +201,11 @@ end
 ROOT_COMMANDS.graph = function(arg)
   local sub, rest = parseSubCommand(arg)
   if sub == "" then
-    withWindow(2, true)
+    withWindow(2)
     return
   end
   if sub == "on" then
-    withWindow(2, false)
+    withWindow(2)
     chat("analysis shown.")
     return
   end
