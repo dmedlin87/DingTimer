@@ -140,9 +140,16 @@ function GetChatLog()
 end
 
 local function newFontString()
-  local fs = { _text = "", _shown = true }
-  fs.SetPoint = function() end
-  fs.ClearAllPoints = function() end
+  local fs = { _text = "", _shown = true, _point = { "CENTER", nil, "CENTER", 0, 0 } }
+  fs.SetPoint = function(self, point, relativeTo, relativePoint, xOfs, yOfs)
+    self._point = { point, relativeTo, relativePoint, xOfs or 0, yOfs or 0 }
+  end
+  fs.GetPoint = function(self)
+    return self._point[1], self._point[2], self._point[3], self._point[4], self._point[5]
+  end
+  fs.ClearAllPoints = function(self)
+    self._point = { "CENTER", nil, "CENTER", 0, 0 }
+  end
   fs.SetJustifyH = function() end
   fs.SetJustifyV = function() end
   fs.SetTextColor = function() end
