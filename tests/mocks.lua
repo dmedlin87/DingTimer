@@ -9,6 +9,11 @@ local playerRealm = "TestRealm"
 local playerClassLocalized = "Mage"
 local playerClassToken = "MAGE"
 local currentZone = "Unknown"
+local currentHonor = 0
+local maxHonor = 75000
+local lifetimeHKs = 0
+local inInstance = false
+local instanceType = nil
 
 function GetTime()
   return currentTime
@@ -69,6 +74,42 @@ end
 
 function SetZone(zone)
   currentZone = zone
+end
+
+function GetHonorCurrency()
+  return currentHonor
+end
+
+function GetMaxHonorCurrency()
+  return maxHonor
+end
+
+function SetHonor(honor, cap)
+  currentHonor = honor
+  if cap then
+    maxHonor = cap
+  end
+end
+
+function GetPVPLifetimeStats()
+  return lifetimeHKs, 0, 0
+end
+
+function GetLifetimeHonorableKills()
+  return lifetimeHKs
+end
+
+function SetLifetimeHKs(count)
+  lifetimeHKs = count
+end
+
+function IsInInstance()
+  return inInstance, instanceType
+end
+
+function SetInstanceState(isInside, kind)
+  inInstance = isInside and true or false
+  instanceType = kind
 end
 
 function SetProfileIdentity(name, realm, classToken, level, classLocalized)

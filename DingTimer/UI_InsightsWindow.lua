@@ -11,6 +11,10 @@ local function formatRate(value)
   return NS.FormatNumber(NS.Round(value or 0)) .. " / hr"
 end
 
+local function isPvpHistoryView()
+  return NS.GetPvpHistoryView and NS.GetPvpHistoryView() == "pvp"
+end
+
 local function formatTrend(trendPct, totalSessions)
   if totalSessions < 4 then
     return NS.C.mid .. "--" .. NS.C.r
@@ -37,6 +41,19 @@ local function formatSessionRow(i, session)
     NS.fmtMoney(session.moneyNetCopper or 0),
     session.zone or "Unknown",
     session.reason or "UNKNOWN"
+  )
+end
+
+local function formatPvpSessionRow(i, session)
+  return string.format(
+    "%02d) %s  %s Honor/hr  %s HK/hr  %s Honor  %s HKs  [%s]",
+    i,
+    NS.fmtTime(session.durationSec or 0),
+    NS.FormatNumber(NS.Round(session.avgHonorPerHour or 0)),
+    NS.FormatNumber(NS.Round(session.avgHKPerHour or 0)),
+    NS.FormatNumber(session.honorGained or 0),
+    NS.FormatNumber(session.hkGained or 0),
+    session.zone or "Unknown"
   )
 end
 
@@ -85,6 +102,40 @@ local function updateComparison(summary)
     return
   end
 
+  if isPvpHistoryView() then
+    local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(GetTime()) or nil
+    local lastSession = summary.lastSession
+    if not snapshot or not lastSession then
+      frame.compareLine1:SetText("No prior PvP session to compare against.")
+      frame.compareLine2:SetText("Start tracking Honor to build PvP history context.")
+      return
+    end
+
+    local delta = (snapshot.sessionHonorPerHour or 0) - (lastSession.avgHonorPerHour or 0)
+    local deltaColor = NS.C.mid
+    if delta > 0 then
+      deltaColor = NS.C.xp
+    elseif delta < 0 then
+      deltaColor = NS.C.bad
+    end
+
+    frame.compareLine1:SetText(string.format(
+      "Current PvP session: %s Honor/hr over %s in %s",
+      NS.FormatNumber(NS.Round(snapshot.sessionHonorPerHour or 0)),
+      NS.fmtTime(snapshot.sessionElapsed or 0),
+      snapshot.zone or "Unknown"
+    ))
+    frame.compareLine2:SetText(string.format(
+      "Last PvP session: %s Honor/hr over %s  |  Delta %s%s%s",
+      NS.FormatNumber(NS.Round(lastSession.avgHonorPerHour or 0)),
+      NS.fmtTime(lastSession.durationSec or 0),
+      deltaColor,
+      NS.FormatNumber(NS.Round(delta)),
+      NS.C.r
+    ))
+    return
+  end
+
   local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(GetTime()) or nil
   local lastSession = summary.lastSession
   if not snapshot or not lastSession then
@@ -128,10 +179,11 @@ local function updateZoneLeaders(summary)
     local zone = summary.zoneLeaders[i]
     if zone then
       values[i] = string.format(
-        "%d. %s  |  %s XP/hr avg across %d run%s",
+        "%d. %s  |  %s %s avg across %d run%s",
         i,
         zone.zone or "Unknown",
         NS.FormatNumber(NS.Round(zone.avgXph or 0)),
+        isPvpHistoryView() and "Honor/hr" or "XP/hr",
         zone.sessions or 0,
         ((zone.sessions or 0) == 1) and "" or "s"
       )
@@ -149,42 +201,85 @@ local function refreshInsights()
     return
   end
 
-  local summary = NS.GetInsightsSummary(MAX_ROWS)
-  insightsFrame.valueMedianXPH:SetText(formatRate(summary.medianXph))
-  insightsFrame.valueBestXPH:SetText(formatRate(summary.bestXph))
-  insightsFrame.valueAvgLevel:SetText(NS.fmtTime(summary.avgLevelTime))
-  insightsFrame.valueTrend:SetText(formatTrend(summary.trendPct, summary.totalSessions))
-  insightsFrame.valueCount:SetText(tostring(summary.totalSessions))
-  insightsFrame.bestSessionValue:SetText(
-    summary.bestSession and string.format(
-      "%s in %s",
-      summary.bestSession.zone or "Unknown",
-      formatRate(summary.bestSession.avgXph or 0)
-    ) or "--"
-  )
+  local pvpView = isPvpHistoryView()
+  if insightsFrame.xpToggle and insightsFrame.pvpToggle then
+    if pvpView then
+      insightsFrame.pvpToggle:LockHighlight()
+      insightsFrame.xpToggle:UnlockHighlight()
+    else
+      insightsFrame.xpToggle:LockHighlight()
+      insightsFrame.pvpToggle:UnlockHighlight()
+    end
+  end
+  local summary = pvpView and (NS.GetPvpInsightsSummary and NS.GetPvpInsightsSummary(MAX_ROWS) or { totalSessions = 0, rows = {}, chartValues = {}, zoneLeaders = {} })
+    or NS.GetInsightsSummary(MAX_ROWS)
+
+  if pvpView then
+    insightsFrame.labels.median:SetText("Median Honor/hr")
+    insightsFrame.labels.best:SetText("Best Honor/hr")
+    insightsFrame.labels.avg:SetText("Median HK/hr")
+    insightsFrame.labels.bestSession:SetText("Best PvP Session")
+    insightsFrame.labels.compare:SetText("Current vs Last PvP Session")
+    insightsFrame.labels.spark:SetText("Recent Honor/hr Trend")
+    insightsFrame.labels.rows:SetText("Recent PvP Sessions (newest first)")
+    insightsFrame.valueMedianXPH:SetText(formatRate(summary.medianHonorPerHour))
+    insightsFrame.valueBestXPH:SetText(formatRate(summary.bestHonorPerHour))
+    insightsFrame.valueAvgLevel:SetText(formatRate(summary.medianHKPerHour))
+    insightsFrame.valueTrend:SetText(formatTrend(summary.trendPct, summary.totalSessions))
+    insightsFrame.valueCount:SetText(tostring(summary.totalSessions))
+    insightsFrame.bestSessionValue:SetText(
+      summary.bestSession and string.format(
+        "%s in %s",
+        summary.bestSession.zone or "Unknown",
+        formatRate(summary.bestSession.avgHonorPerHour or 0)
+      ) or "--"
+    )
+  else
+    insightsFrame.labels.median:SetText("Median XP/hr")
+    insightsFrame.labels.best:SetText("Best XP/hr")
+    insightsFrame.labels.avg:SetText("Avg Time in Level")
+    insightsFrame.labels.bestSession:SetText("Best Session")
+    insightsFrame.labels.compare:SetText("Current vs Last Run")
+    insightsFrame.labels.spark:SetText("Recent XP/hr Trend")
+    insightsFrame.labels.rows:SetText("Recent Sessions (newest first)")
+    insightsFrame.valueMedianXPH:SetText(formatRate(summary.medianXph))
+    insightsFrame.valueBestXPH:SetText(formatRate(summary.bestXph))
+    insightsFrame.valueAvgLevel:SetText(NS.fmtTime(summary.avgLevelTime))
+    insightsFrame.valueTrend:SetText(formatTrend(summary.trendPct, summary.totalSessions))
+    insightsFrame.valueCount:SetText(tostring(summary.totalSessions))
+    insightsFrame.bestSessionValue:SetText(
+      summary.bestSession and string.format(
+        "%s in %s",
+        summary.bestSession.zone or "Unknown",
+        formatRate(summary.bestSession.avgXph or 0)
+      ) or "--"
+    )
+  end
 
   if summary.totalSessions == 0 then
-    rowTexts[1]:SetText(NS.C.mid .. "No session history yet. Start leveling to build history." .. NS.C.r)
+    rowTexts[1]:SetText(NS.C.mid .. (pvpView and "No PvP history yet. Start earning Honor to build history." or "No session history yet. Start leveling to build history.") .. NS.C.r)
     for i = 2, MAX_ROWS do
       rowTexts[i]:SetText("")
     end
     updateComparison(summary)
     updateZoneLeaders(summary)
     drawSparkline({})
-    insightsFrame.recapValue:SetText("No recap stored yet.")
+    insightsFrame.recapValue:SetText(pvpView and "No PvP recap stored yet." or "No recap stored yet.")
     return
   end
 
   for i = 1, MAX_ROWS do
     local row = summary.rows[i]
-    rowTexts[i]:SetText(row and formatSessionRow(i, row) or "")
+    rowTexts[i]:SetText(row and ((pvpView and formatPvpSessionRow(i, row)) or formatSessionRow(i, row)) or "")
   end
 
-  local recap = (summary.lastSession and summary.lastSession.coachSummary) or (DingTimerDB.coach and DingTimerDB.coach.lastRecap) or nil
+  local recap = pvpView
+    and (summary.lastRecap or (summary.lastSession and summary.lastSession.summary) or nil)
+    or ((summary.lastSession and summary.lastSession.coachSummary) or (DingTimerDB.coach and DingTimerDB.coach.lastRecap) or nil)
   if recap then
     insightsFrame.recapValue:SetText((recap.headline or "") .. "  " .. (recap.segmentLine or ""))
   else
-    insightsFrame.recapValue:SetText("No recap stored yet.")
+    insightsFrame.recapValue:SetText(pvpView and "No PvP recap stored yet." or "No recap stored yet.")
   end
 
   updateComparison(summary)
@@ -208,13 +303,14 @@ function NS.InitInsightsPanel(parent)
     local valueFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     valueFS:SetPoint("TOPLEFT", labelFS, "BOTTOMLEFT", 0, -2)
     valueFS:SetText("--")
-    return valueFS
+    return labelFS, valueFS
   end
 
-  insightsFrame.valueMedianXPH = createSummaryBlock(16, "Median XP/hr")
-  insightsFrame.valueBestXPH = createSummaryBlock(150, "Best XP/hr")
-  insightsFrame.valueAvgLevel = createSummaryBlock(284, "Avg Time in Level")
-  insightsFrame.valueTrend = createSummaryBlock(438, "Trend")
+  insightsFrame.labels = {}
+  insightsFrame.labels.median, insightsFrame.valueMedianXPH = createSummaryBlock(16, "Median XP/hr")
+  insightsFrame.labels.best, insightsFrame.valueBestXPH = createSummaryBlock(150, "Best XP/hr")
+  insightsFrame.labels.avg, insightsFrame.valueAvgLevel = createSummaryBlock(284, "Avg Time in Level")
+  insightsFrame.valueTrend = select(2, createSummaryBlock(438, "Trend"))
 
   local countLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   countLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 572, -16)
@@ -227,6 +323,7 @@ function NS.InitInsightsPanel(parent)
   local bestSessionLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   bestSessionLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -68)
   bestSessionLabel:SetText("Best Session")
+  insightsFrame.labels.bestSession = bestSessionLabel
 
   insightsFrame.bestSessionValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   insightsFrame.bestSessionValue:SetPoint("TOPLEFT", bestSessionLabel, "BOTTOMLEFT", 0, -4)
@@ -237,6 +334,7 @@ function NS.InitInsightsPanel(parent)
   local compareLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   compareLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -108)
   compareLabel:SetText("Current vs Last Run")
+  insightsFrame.labels.compare = compareLabel
 
   insightsFrame.compareLine1 = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   insightsFrame.compareLine1:SetPoint("TOPLEFT", compareLabel, "BOTTOMLEFT", 0, -4)
@@ -253,6 +351,7 @@ function NS.InitInsightsPanel(parent)
   local sparkLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   sparkLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -162)
   sparkLabel:SetText("Recent XP/hr Trend")
+  insightsFrame.labels.spark = sparkLabel
 
   local sparkArea = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
   sparkArea:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -182)
@@ -291,6 +390,29 @@ function NS.InitInsightsPanel(parent)
   local rowsHeader = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   rowsHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -438)
   rowsHeader:SetText("Recent Sessions (newest first)")
+  insightsFrame.labels.rows = rowsHeader
+
+  insightsFrame.xpToggle = CreateFrame("Button", nil, insightsFrame, "UIPanelButtonTemplate")
+  insightsFrame.xpToggle:SetSize(72, 22)
+  insightsFrame.xpToggle:SetPoint("BOTTOMLEFT", insightsFrame, "BOTTOMLEFT", 146, 10)
+  insightsFrame.xpToggle:SetText("Leveling")
+  insightsFrame.xpToggle:SetScript("OnClick", function()
+    if NS.SetPvpHistoryView then
+      NS.SetPvpHistoryView("xp")
+    end
+    refreshInsights()
+  end)
+
+  insightsFrame.pvpToggle = CreateFrame("Button", nil, insightsFrame, "UIPanelButtonTemplate")
+  insightsFrame.pvpToggle:SetSize(56, 22)
+  insightsFrame.pvpToggle:SetPoint("LEFT", insightsFrame.xpToggle, "RIGHT", 6, 0)
+  insightsFrame.pvpToggle:SetText("PvP")
+  insightsFrame.pvpToggle:SetScript("OnClick", function()
+    if NS.SetPvpHistoryView then
+      NS.SetPvpHistoryView("pvp")
+    end
+    refreshInsights()
+  end)
 
   rowTexts = NS.UI.CreateListRows(scrollChild, {
     startX = 16, startY = -458, width = 680, rowCount = MAX_ROWS, spacing = 14, fontObject = "GameFontHighlightSmall"

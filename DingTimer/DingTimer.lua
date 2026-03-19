@@ -3,11 +3,15 @@ local ADDON, NS = ...
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_XP_UPDATE")
 frame:RegisterEvent("PLAYER_LEVEL_UP")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("PLAYER_MONEY")
 frame:RegisterEvent("PLAYER_LOGOUT")
+frame:RegisterEvent("PLAYER_PVP_KILLS_CHANGED")
+frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
+frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
 frame:RegisterEvent("ZONE_CHANGED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -23,6 +27,9 @@ end
 local function onPlayerLogin()
   NS.resetXPState()
   NS.StartCoachTicker()
+  if NS.RestorePvpResumeIfAvailable then
+    NS.RestorePvpResumeIfAvailable(GetTime())
+  end
 
   if not InCombatLockdown() then
     NS.setFloatVisible(DingTimerDB.float)
@@ -43,6 +50,10 @@ local function onPlayerLogin()
 end
 
 local function onLevelUp(level)
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    return
+  end
+
   local now = GetTime()
   local timeTaken = now - (NS.state.sessionStartTime or now)
   local moneyNet = NS.state.sessionMoney or 0
@@ -97,6 +108,13 @@ frame:SetScript("OnEvent", function(self, event, ...)
       return
     end
 
+    if event == "PLAYER_ENTERING_WORLD" then
+      if NS.HandlePvpWorldStateChange then
+        NS.HandlePvpWorldStateChange(GetTime())
+      end
+      return
+    end
+
     if event == "PLAYER_XP_UPDATE" then
       if arg1 == "player" then
         NS.onXPUpdate()
@@ -115,7 +133,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
     end
 
     if event == "PLAYER_LOGOUT" then
-      if NS.RecordSession then
+      if NS.IsPvpMode and NS.IsPvpMode() then
+        if NS.PersistPvpResume then
+          NS.PersistPvpResume(GetTime())
+        end
+      elseif NS.RecordSession then
         NS.RecordSession("LOGOUT")
       end
       return
@@ -123,18 +145,33 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
     if event == "PLAYER_REGEN_ENABLED" then
       NS.setFloatVisible(DingTimerDB.float)
+      if NS.FlushPvpNotifications then
+        NS.FlushPvpNotifications(GetTime())
+      end
       return
     end
 
     if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
-      if NS.HandleZoneChange then
+      if (not (NS.IsPvpMode and NS.IsPvpMode())) and NS.HandleZoneChange then
         NS.HandleZoneChange(GetZoneText and GetZoneText() or "Unknown", GetTime())
+      end
+      if NS.HandlePvpWorldStateChange then
+        NS.HandlePvpWorldStateChange(GetTime())
       end
       if NS.RefreshStatsWindow then
         NS.RefreshStatsWindow()
       end
       if NS.RefreshInsightsWindow then
         NS.RefreshInsightsWindow()
+      end
+      return
+    end
+
+    if event == "PLAYER_PVP_KILLS_CHANGED"
+      or event == "UPDATE_BATTLEFIELD_SCORE"
+      or event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
+      if NS.HandlePvpEvent then
+        NS.HandlePvpEvent(event, GetTime())
       end
     end
   end)

@@ -50,6 +50,21 @@ local function createTabButton(parent, id, text, x, y)
   return btn
 end
 
+local function refreshSubtitle()
+  if not mainWindow or not mainWindow.subtitle then
+    return
+  end
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    local goal = NS.GetPvpGoalLabel and NS.GetPvpGoalLabel() or "Cap"
+    mainWindow.subtitle:SetText("PvP Mode  |  Goal: " .. tostring(goal))
+    return
+  end
+  local coachGoal = DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal or "ding"
+  mainWindow.subtitle:SetText("Session Coach  |  Goal: " .. tostring(coachGoal))
+end
+
+NS.RefreshMainWindowSubtitle = refreshSubtitle
+
 function NS.InitMainWindow()
   if mainWindow then return end
 
@@ -106,10 +121,7 @@ function NS.InitMainWindow()
 
   mainWindow:SetScript("OnShow", function()
     DingTimerDB.mainWindowVisible = true
-    if mainWindow.subtitle then
-      local coachGoal = DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal or "ding"
-      mainWindow.subtitle:SetText("Session Coach  |  Goal: " .. tostring(coachGoal))
-    end
+    refreshSubtitle()
   end)
   mainWindow:SetScript("OnHide", function()
     DingTimerDB.mainWindowVisible = false
@@ -156,6 +168,7 @@ end
 function NS.SelectTab(id)
   if not mainWindow then NS.InitMainWindow() end
   ensurePanel(id)
+  refreshSubtitle()
   
   -- Update button states
   for i = 1, #tabs do

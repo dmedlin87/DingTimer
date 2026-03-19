@@ -36,7 +36,7 @@ DingTimer is a **leveling efficiency addon** that answers the eternal question e
 
 No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your XP gains in real time, calculates your XP/hr using a rolling time window, and tells you exactly how long that last level is going to take — all from inside the game.
 
-**It also tracks your gold.** Because gold per hour is just as important as XP per hour.
+**It also tracks your gold, Honor, and HKs.** Gold per hour matters while leveling, and Honor/HKs matter when you flip into PvP mode.
 
 ---
 
@@ -45,12 +45,13 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 - **XP Per Hour** — Rolling-window calculation that adapts to your current pace, not your average from an hour ago
 - **Time To Level (TTL)** — Live countdown to your next ding, updated every second
 - **Money Per Hour** — Track your gold income alongside your XP gains
+- **Honor + HK Tracking** — Dedicated PvP mode for Honor/hr, HK/hr, session Honor, session HKs, and time-to-cap or custom Honor goals
 - **Session Coach** — Goal presets, pace-drop alerts, idle nudges, best-segment callouts, and end-of-run recap
 - **Analysis Graph** — Dedicated graph view with visible/session/fixed scale modes, summary cards, goal comparisons, and recent segment rows
-- **History View** — Per-character history with best/median rates, trend tracking, zone leaders, recap storage, and recent-session breakdowns
-- **Floating HUD** — A cleaner two-line HUD showing TTL, current pace, session pace, and timed-goal pace when relevant
-- **Live Panel** — A refreshed home view for progress, coach status, recent alerts, and quick actions
-- **Settings Hub** — Grouped controls for output, HUD, coach, graph, and data maintenance
+- **History View** — Per-character leveling and PvP history with best/median rates, trend tracking, recap storage, and recent-session breakdowns
+- **Floating HUD** — A cleaner two-line HUD that swaps between leveling TTL and PvP TTG based on the active mode
+- **Live Panel** — A refreshed home view for progress, status, notices, and quick actions in both leveling and PvP modes
+- **Settings Hub** — Grouped controls for output, HUD, coach, graph, PvP, and data maintenance
 - **Minimap Button** — Left-click for Live, right-click for Analysis, middle-click for Settings, drag to reposition
 - **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
 - **Persistent Sessions** — Settings, main window/HUD placement, and per-character session history saved between sessions
@@ -83,6 +84,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | Change settings       | Middle-click the minimap button or `/ding settings` |
 | Open Analysis         | Right-click the minimap button or `/ding graph`     |
 | Open History          | `/ding history` or `/ding insights`                |
+| Toggle PvP mode       | `/ding pvp`                                        |
 | Set a coach goal      | `/ding goal ding` or `/ding goal 30m`              |
 | Record a checkpoint   | `/ding split`                                      |
 | Show the latest recap | `/ding recap`                                      |
@@ -111,6 +113,20 @@ All commands work with either `/ding` or `/dt`.
 | `/ding recap`           | Print the latest session recap                |
 | `/ding on`              | Enable chat output                            |
 | `/ding off`             | Disable chat output                           |
+
+### PvP
+
+| Command                       | What it does                                          |
+| ----------------------------- | ----------------------------------------------------- |
+| `/ding pvp`                   | Toggle PvP mode                                       |
+| `/ding pvp on`                | Enable PvP mode                                       |
+| `/ding pvp off`               | Return to leveling mode                               |
+| `/ding pvp goal cap`          | Track time to the Honor cap                           |
+| `/ding pvp goal off`          | Disable PvP goal tracking                             |
+| `/ding pvp goal <honorTotal>` | Set a custom absolute Honor goal                      |
+| `/ding pvp auto on`           | Auto-switch into PvP mode inside battlegrounds        |
+| `/ding pvp auto off`          | Disable battleground auto-switching                   |
+| `/ding pvp recap`             | Print the latest PvP recap                            |
 
 ### Output Mode
 
@@ -182,6 +198,8 @@ A denser live dashboard showing your entire session at a glance.
 - Eight live metric cards: session time, session XP, current XP/hr, session average, TTL, pace delta, session money, and money/hr
 - Quick-action buttons for Graph, Insights, Settings, and Reset
 
+When PvP mode is active, the same panel swaps to Honor progress, Honor/hr, session Honor, session HKs, HK/hr, goal state, and active battleground status.
+
 All values update every second. The window is draggable and remembers its position.
 
 ---
@@ -196,6 +214,8 @@ A minimal HUD that sits above your character showing:
 ```
 
 Designed to stay out of your way. Hides in combat. Drag it anywhere when unlocked.
+
+When PvP mode is active, the HUD swaps to your current Honor goal or cap ETA plus Honor/hr and session Honor.
 
 ---
 
@@ -236,6 +256,8 @@ A dedicated graph tab inside the main window, updated every second while visible
 
 A dedicated analysis window for long-term improvement over multiple leveling sessions.
 
+The History tab also has a PvP view for session-level Honor/HK analysis and recap review.
+
 - Tracks history per character profile (`realm:name:class`)
 - Shows median XP/hr, best XP/hr, average time in level, and trend percent
 - Includes a mini trend chart built from your most recent sessions
@@ -252,6 +274,7 @@ A larger control hub for all major options:
 - Visibility toggles for chat output, floating HUD, graph, and minimap button
 - Output controls for chat mode and rolling-window presets
 - Graph controls for scale mode, fixed max, zoom presets, and remembered size
+- PvP controls for mode toggling, Honor goals, battleground auto-switching, and local recap/milestone notices
 - Session reset with confirmation
 
 ---

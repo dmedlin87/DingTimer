@@ -30,6 +30,7 @@ local function showHelp()
   NS.chat("  " .. NS.C.val .. "/ding mode full|ttl" .. NS.C.r .. " - Change chat output")
   NS.chat("  " .. NS.C.val .. "/ding float on|off|lock|unlock" .. NS.C.r .. " - Manage the HUD")
   NS.chat("  " .. NS.C.val .. "/ding graph zoom|scale|fit|max" .. NS.C.r .. " - Graph controls")
+  NS.chat("  " .. NS.C.val .. "/ding pvp [on|off|goal|auto|recap]" .. NS.C.r .. " - Manage PvP mode")
   NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session")
 end
 
@@ -109,7 +110,13 @@ ROOT_COMMANDS.split = function()
 end
 
 ROOT_COMMANDS.recap = function()
-  if NS.ShowCoachRecap then
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    if NS.ShowPvpRecap then
+      NS.ShowPvpRecap()
+    else
+      chat("No PvP recap is available yet.")
+    end
+  elseif NS.ShowCoachRecap then
     NS.ShowCoachRecap()
   else
     chat("No recap is available yet.")
@@ -270,6 +277,79 @@ ROOT_COMMANDS.graph = function(arg)
     return
   end
   chat("Unknown graph command. Use: on, off, zoom, scale, fit, max")
+end
+
+ROOT_COMMANDS.pvp = function(arg)
+  local sub, rest = parseSubCommand(arg)
+  if sub == "" then
+    if NS.TogglePvpMode then
+      NS.TogglePvpMode(GetTime and GetTime() or nil)
+      chat("pvp mode = " .. ((NS.IsPvpMode and NS.IsPvpMode()) and "on" or "off"))
+    else
+      chat("pvp mode is unavailable.")
+    end
+    return
+  end
+
+  if sub == "on" then
+    if NS.EnterPvpMode then
+      NS.EnterPvpMode("MODE_SWITCH_TO_PVP", false, GetTime and GetTime() or nil)
+      chat("pvp mode = on")
+    end
+    return
+  end
+
+  if sub == "off" then
+    if NS.ExitPvpMode then
+      NS.ExitPvpMode("MODE_SWITCH_TO_XP", GetTime and GetTime() or nil)
+      chat("pvp mode = off")
+    end
+    return
+  end
+
+  if sub == "goal" then
+    if rest == "" then
+      chat("pvp goal = " .. ((NS.GetPvpGoalLabel and NS.GetPvpGoalLabel()) or "Unavailable"))
+      return
+    end
+    if NS.SetPvpGoal then
+      local ok, result = NS.SetPvpGoal(rest)
+      if not ok then
+        chat(result)
+        return
+      end
+      chat("pvp goal = " .. ((result == "custom") and rest or result))
+    end
+    return
+  end
+
+  if sub == "auto" then
+    if rest == "" then
+      local enabled = DingTimerDB and DingTimerDB.pvp and DingTimerDB.pvp.settings and DingTimerDB.pvp.settings.autoSwitchBattlegrounds
+      chat("pvp auto = " .. (enabled and "on" or "off"))
+      return
+    end
+    if rest == "on" or rest == "off" then
+      if NS.SetPvpAutoSwitch then
+        NS.SetPvpAutoSwitch(rest == "on")
+      end
+      chat("pvp auto = " .. rest)
+      return
+    end
+    chat("Use '/ding pvp auto on' or '/ding pvp auto off'.")
+    return
+  end
+
+  if sub == "recap" then
+    if NS.ShowPvpRecap then
+      NS.ShowPvpRecap()
+    else
+      chat("No PvP recap is available yet.")
+    end
+    return
+  end
+
+  chat("Unknown pvp command. Use: on, off, goal, auto, recap")
 end
 
 function NS.ExecuteSlashCommand(msg)

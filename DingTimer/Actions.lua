@@ -57,11 +57,17 @@ function NS.ClearCurrentProfileHistory()
 end
 
 function NS.ResetSession(reason)
-  if NS.RecordSession then
-    NS.RecordSession(reason or "MANUAL_RESET")
-  end
-  if NS.resetXPState then
-    NS.resetXPState()
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    if NS.ResetPvpSession then
+      NS.ResetPvpSession(reason or "MANUAL_RESET")
+    end
+  else
+    if NS.RecordSession then
+      NS.RecordSession(reason or "MANUAL_RESET")
+    end
+    if NS.resetXPState then
+      NS.resetXPState()
+    end
   end
   refreshCoachViews()
   return true

@@ -86,7 +86,7 @@ function NS.InitSettingsPanel(parent)
   settingsFrame:SetAllPoints(parent)
   settingsFrame.controls = {}
 
-  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 480)
+  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 560)
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -18, "Output", "Chat behavior and rolling window controls.")
   settingsFrame.controls.enabled = createCheckbox(scrollChild, 16, -48, "Enable chat output", function(checked)
@@ -194,6 +194,45 @@ function NS.InitSettingsPanel(parent)
   createButton(scrollChild, 498, -286, 40, "30m", function() NS.SetGraphZoom("30m") end)
   createButton(scrollChild, 544, -286, 40, "60m", function() NS.SetGraphZoom("60m") end)
 
+  NS.UI.CreateSectionTitle(scrollChild, 360, -330, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
+  createButton(scrollChild, 360, -360, 116, "Toggle Mode", function()
+    if NS.TogglePvpMode then
+      NS.TogglePvpMode(GetTime and GetTime() or nil)
+    end
+  end)
+  createButton(scrollChild, 484, -360, 70, "Goal Cap", function()
+    if NS.SetPvpGoal then
+      NS.SetPvpGoal("cap")
+    end
+  end)
+  createButton(scrollChild, 562, -360, 62, "Goal Off", function()
+    if NS.SetPvpGoal then
+      NS.SetPvpGoal("off")
+    end
+  end)
+  settingsFrame.controls.pvpAutoSwitch = createCheckbox(scrollChild, 360, -394, "Auto-switch in battlegrounds", function(checked)
+    if NS.SetPvpAutoSwitch then
+      NS.SetPvpAutoSwitch(checked)
+    end
+  end, "When enabled, entering a battleground automatically enables PvP mode and leaving after the recap grace window returns to leveling mode.")
+  settingsFrame.controls.pvpMilestones = createCheckbox(scrollChild, 360, -422, "Honor milestone notices", function(checked)
+    local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
+    if settings then
+      settings.milestoneAnnouncements = checked
+    end
+  end, "Print local milestone notices when your total Honor crosses the configured threshold.")
+  settingsFrame.controls.pvpRecap = createCheckbox(scrollChild, 360, -450, "Battleground recap notices", function(checked)
+    local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
+    if settings then
+      settings.matchRecap = checked
+    end
+  end, "Print a local recap after battleground exit once the grace window closes.")
+  settingsFrame.controls.pvpInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -482)
+  settingsFrame.controls.pvpInfo:SetWidth(260)
+  settingsFrame.controls.pvpInfo:SetJustifyH("LEFT")
+  settingsFrame.controls.pvpInfo:SetText("")
+
   NS.UI.CreateSectionTitle(scrollChild, 16, -360, "Data", "Run maintenance, history retention, and recovery actions.")
   createButton(scrollChild, 16, -390, 120, "Open History", function()
     if NS.ShowMainWindow then
@@ -246,6 +285,10 @@ function NS.InitSettingsPanel(parent)
     self.controls.alertsEnabled:SetChecked(coach.alertsEnabled)
     self.controls.chatAlerts:SetChecked(coach.chatAlerts)
     self.controls.stabilizeEarlyPace:SetChecked(coach.stabilizeEarlyPace ~= false)
+    local pvp = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or {}
+    self.controls.pvpAutoSwitch:SetChecked(pvp.autoSwitchBattlegrounds == true)
+    self.controls.pvpMilestones:SetChecked(pvp.milestoneAnnouncements == true)
+    self.controls.pvpRecap:SetChecked(pvp.matchRecap == true)
 
     local modeText = (DingTimerDB.mode == "ttl") and "TTL only" or "Full output"
     self.controls.modeValue:SetText("Mode: " .. modeText)
@@ -263,6 +306,12 @@ function NS.InitSettingsPanel(parent)
     self.controls.graphScaleValue:SetText("Scale: " .. NS.GetGraphScaleModeLabel(scaleMode, true))
     self.controls.graphMaxValue:SetText("Fixed max: " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
     self.controls.graphZoomValue:SetText("Zoom: " .. tostring(math.floor((DingTimerDB.graphWindowSeconds or 300) / 60)) .. "m")
+    self.controls.pvpInfo:SetText(string.format(
+      "Mode: %s  |  Goal: %s  |  History: %d PvP sessions\nUse '/ding pvp goal <honor>' to set a custom absolute Honor goal.",
+      (NS.IsPvpMode and NS.IsPvpMode()) and "PvP" or "Leveling",
+      (NS.GetPvpGoalLabel and NS.GetPvpGoalLabel()) or "Cap",
+      tonumber(pvp.keepSessions) or 30
+    ))
     self.controls.keepValue:SetText("History retention: " .. tostring((DingTimerDB.xp and DingTimerDB.xp.keepSessions) or 30) .. " runs")
   end
 

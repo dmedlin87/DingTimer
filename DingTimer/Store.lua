@@ -16,6 +16,18 @@ local COACH_DEFAULTS = {
   stabilizeEarlyPace = true,
 }
 
+local PVP_DEFAULTS = {
+  autoSwitchBattlegrounds = false,
+  goalMode = "cap",
+  customGoalHonor = nil,
+  honorCap = 75000,
+  milestoneAnnouncements = false,
+  milestoneStep = 5000,
+  matchRecap = false,
+  keepSessions = 30,
+  historyView = "xp",
+}
+
 local function copyCoachDefaults()
   local out = {}
   for key, value in pairs(COACH_DEFAULTS) do
@@ -24,9 +36,23 @@ local function copyCoachDefaults()
   return out
 end
 
+local function copyPvpDefaults()
+  local out = {}
+  for key, value in pairs(PVP_DEFAULTS) do
+    out[key] = value
+  end
+  return out
+end
+
 if not NS.GetCoachDefaults then
   function NS.GetCoachDefaults()
     return copyCoachDefaults()
+  end
+end
+
+if not NS.GetPvpDefaults then
+  function NS.GetPvpDefaults()
+    return copyPvpDefaults()
   end
 end
 
@@ -52,12 +78,64 @@ function NS.ValidateCoachConfig(coach)
   return coach
 end
 
+function NS.ValidatePvpConfig(settings)
+  settings = settings or {}
+  for key, value in pairs(PVP_DEFAULTS) do
+    if settings[key] == nil then
+      settings[key] = value
+    end
+  end
+
+  if settings.goalMode ~= "off" and settings.goalMode ~= "cap" and settings.goalMode ~= "custom" then
+    settings.goalMode = PVP_DEFAULTS.goalMode
+  end
+
+  local customGoalHonor = tonumber(settings.customGoalHonor)
+  if customGoalHonor and not NS.IsInvalidNumber(customGoalHonor) then
+    settings.customGoalHonor = math.max(0, math.floor(customGoalHonor))
+  else
+    settings.customGoalHonor = nil
+  end
+
+  settings.honorCap = math.max(1, math.floor(tonumber(settings.honorCap) or PVP_DEFAULTS.honorCap))
+  settings.milestoneStep = math.max(100, math.floor(tonumber(settings.milestoneStep) or PVP_DEFAULTS.milestoneStep))
+  do
+    local keep = math.floor(tonumber(settings.keepSessions) or PVP_DEFAULTS.keepSessions)
+    if keep < 5 then
+      keep = 5
+    elseif keep > 100 then
+      keep = 100
+    end
+    settings.keepSessions = keep
+  end
+  settings.autoSwitchBattlegrounds = settings.autoSwitchBattlegrounds == true
+  settings.milestoneAnnouncements = settings.milestoneAnnouncements == true
+  settings.matchRecap = settings.matchRecap == true
+  settings.historyView = (settings.historyView == "pvp") and "pvp" or "xp"
+
+  if settings.goalMode ~= "custom" then
+    settings.customGoalHonor = nil
+  end
+
+  return settings
+end
+
 if not NS.EnsureCoachConfig then
   function NS.EnsureCoachConfig(db)
     db = db or DingTimerDB or {}
     db.coach = db.coach or {}
     NS.ValidateCoachConfig(db.coach)
     return db.coach
+  end
+end
+
+if not NS.EnsurePvpConfig then
+  function NS.EnsurePvpConfig(db)
+    db = db or DingTimerDB or {}
+    db.pvp = db.pvp or {}
+    db.pvp.settings = db.pvp.settings or {}
+    NS.ValidatePvpConfig(db.pvp.settings)
+    return db.pvp.settings
   end
 end
 
@@ -126,9 +204,28 @@ local function ensureProfileTables()
   return key, profile
 end
 
+local function ensurePvpTables()
+  DingTimerDB.pvp = DingTimerDB.pvp or {}
+  DingTimerDB.pvp.settings = DingTimerDB.pvp.settings or copyPvpDefaults()
+  NS.ValidatePvpConfig(DingTimerDB.pvp.settings)
+  DingTimerDB.pvp.profiles = DingTimerDB.pvp.profiles or {}
+  DingTimerDB.pvp.lastRecap = DingTimerDB.pvp.lastRecap or nil
+
+  local key = currentProfileKey()
+  local profile = DingTimerDB.pvp.profiles[key]
+  if not profile then
+    profile = { sessions = {} }
+    DingTimerDB.pvp.profiles[key] = profile
+  end
+  profile.sessions = profile.sessions or {}
+
+  return key, profile
+end
+
 function NS.InitStore()
   local defaults = {
     enabled = true,
+    activeMode = "xp",
     windowSeconds = 600,
     minXPDeltaToPrint = 1,
     mode = "full",
@@ -143,13 +240,19 @@ function NS.InitStore()
     mainWindowVisible = false,
     mainWindowPosition = nil,
     lastOpenTab = 1,
-    schemaVersion = 8,
+    schemaVersion = 9,
     meta = {
       addonVersion = "0.6.0",
       createdAt = GetTime(),
       lastSeenAt = GetTime(),
     },
     coach = copyCoachDefaults(),
+    pvp = {
+      settings = copyPvpDefaults(),
+      profiles = {},
+      resume = nil,
+      lastRecap = nil,
+    },
     xp = {
       keepSessions = 30,
       profiles = {},
@@ -181,8 +284,10 @@ function NS.InitStore()
       DingTimerDB.schemaVersion = 3
       DingTimerDB.meta = defaults.meta
       DingTimerDB.xp = defaults.xp
+      DingTimerDB.pvp = defaults.pvp
       -- Preserve existing settings if they exist
       DingTimerDB.enabled = (DingTimerDB.enabled ~= nil) and DingTimerDB.enabled or defaults.enabled
+      DingTimerDB.activeMode = DingTimerDB.activeMode or defaults.activeMode
       DingTimerDB.windowSeconds = DingTimerDB.windowSeconds or defaults.windowSeconds
       DingTimerDB.minXPDeltaToPrint = DingTimerDB.minXPDeltaToPrint or defaults.minXPDeltaToPrint
       DingTimerDB.mode = DingTimerDB.mode or defaults.mode
@@ -235,8 +340,19 @@ function NS.InitStore()
       DingTimerDB.schemaVersion = 8
       DingTimerDB.coach = DingTimerDB.coach or {}
     end
+
+    if DingTimerDB.schemaVersion < 9 then
+      DingTimerDB.schemaVersion = 9
+      DingTimerDB.activeMode = (DingTimerDB.activeMode == "pvp") and "pvp" or "xp"
+      DingTimerDB.pvp = DingTimerDB.pvp or {}
+      DingTimerDB.pvp.settings = DingTimerDB.pvp.settings or copyPvpDefaults()
+      DingTimerDB.pvp.profiles = DingTimerDB.pvp.profiles or {}
+      DingTimerDB.pvp.resume = DingTimerDB.pvp.resume or nil
+      DingTimerDB.pvp.lastRecap = DingTimerDB.pvp.lastRecap or nil
+    end
   end
 
+  if DingTimerDB.activeMode == nil then DingTimerDB.activeMode = defaults.activeMode end
   if DingTimerDB.graphWindowSeconds == nil then DingTimerDB.graphWindowSeconds = defaults.graphWindowSeconds end
   if DingTimerDB.graphScaleMode == nil     then DingTimerDB.graphScaleMode     = defaults.graphScaleMode     end
   if DingTimerDB.graphFixedMaxXPH == nil   then DingTimerDB.graphFixedMaxXPH   = defaults.graphFixedMaxXPH   end
@@ -247,6 +363,7 @@ function NS.InitStore()
   if DingTimerDB.lastOpenTab == nil then DingTimerDB.lastOpenTab = defaults.lastOpenTab end
   if DingTimerDB.floatShowInCombat == nil then DingTimerDB.floatShowInCombat = defaults.floatShowInCombat end
   if DingTimerDB.coach == nil then DingTimerDB.coach = copyCoachDefaults() end
+  if DingTimerDB.pvp == nil then DingTimerDB.pvp = defaults.pvp end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
   cleanupObsoleteWindowState()
   DingTimerDB.graphScaleMode = normalizeScaleMode(DingTimerDB.graphScaleMode, DingTimerDB.graphFixedMaxXPH)
@@ -255,9 +372,13 @@ function NS.InitStore()
   ensureCoachConfig()
 
   local _, profile = ensureProfileTables()
+  local _, pvpProfile = ensurePvpTables()
   DingTimerDB.xp.sessions = nil
   if NS.TrimSessions then
     NS.TrimSessions(profile, DingTimerDB.xp.keepSessions)
+  end
+  if NS.TrimPvpSessions then
+    NS.TrimPvpSessions(pvpProfile, DingTimerDB.pvp.settings.keepSessions)
   end
   for _, existingProfile in pairs(DingTimerDB.xp.profiles or {}) do
     local sessions = existingProfile.sessions or {}

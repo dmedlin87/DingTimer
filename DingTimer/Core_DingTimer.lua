@@ -64,12 +64,12 @@ function NS.resetXPState()
   notifySubsystems(now)
 end
 
-local function pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
+local function pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
   local i = 1
   while evList[i] and (now - evList[i].t) > windowSeconds do
     -- ⚡ Bolt: Maintain a running total to prevent O(N) calculations downstream
-    if sumKey and valueKey and NS.state[sumKey] then
-      NS.state[sumKey] = NS.state[sumKey] - evList[i][valueKey]
+    if sumOwner and sumKey and valueKey and sumOwner[sumKey] then
+      sumOwner[sumKey] = sumOwner[sumKey] - evList[i][valueKey]
     end
     i = i + 1
   end
@@ -85,18 +85,20 @@ local function pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
   end
 end
 
-local function computeRatePerHour(evList, now, windowSeconds, valueKey, sumKey)
-  pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
+function NS.PruneRollingEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
+  pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
+end
 
+function NS.ComputeRollingRatePerHour(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey)
+  pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
   local sum = 0
-  if sumKey and NS.state[sumKey] then
-    sum = tonumber(NS.state[sumKey]) or 0
+  if sumOwner and sumKey and sumOwner[sumKey] then
+    sum = tonumber(sumOwner[sumKey]) or 0
   else
     for i = 1, #evList do sum = sum + evList[i][valueKey] end
   end
 
-  local sessionStart = NS.state.sessionStartTime or now
-  local sessionElapsed = now - sessionStart
+  local sessionElapsed = now - (sessionStart or now)
 
   -- Use the full window size, or session elapsed if we haven't played that long yet
   local elapsed = math_min(sessionElapsed, windowSeconds)
@@ -105,20 +107,18 @@ local function computeRatePerHour(evList, now, windowSeconds, valueKey, sumKey)
   return (sum / elapsed) * 3600
 end
 
-local function computeRateDetails(evList, now, windowSeconds, valueKey, sumKey)
-  pruneEvents(evList, now, windowSeconds, sumKey, valueKey)
-
+function NS.ComputeRollingRateDetails(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey)
+  pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
   local sum = 0
-  if sumKey and NS.state[sumKey] then
-    sum = tonumber(NS.state[sumKey]) or 0
+  if sumOwner and sumKey and sumOwner[sumKey] then
+    sum = tonumber(sumOwner[sumKey]) or 0
   else
     for i = 1, #evList do
       sum = sum + evList[i][valueKey]
     end
   end
 
-  local sessionStart = NS.state.sessionStartTime or now
-  local sessionElapsed = now - sessionStart
+  local sessionElapsed = now - (sessionStart or now)
   local rawElapsed = math_min(sessionElapsed, windowSeconds)
   if rawElapsed <= 0 then rawElapsed = 1 end
 
@@ -134,11 +134,11 @@ local function computeRateDetails(evList, now, windowSeconds, valueKey, sumKey)
 end
 
 function NS.computeXPPerHour(now, windowSeconds)
-  return computeRatePerHour(NS.state.events, now, windowSeconds, "xp", "windowXP")
+  return NS.ComputeRollingRatePerHour(NS.state.events, now, NS.state.sessionStartTime, windowSeconds, "xp", NS.state, "windowXP")
 end
 
 function NS.computeMoneyPerHour(now, windowSeconds)
-  return computeRatePerHour(NS.state.moneyEvents, now, windowSeconds, "money", "windowMoney")
+  return NS.ComputeRollingRatePerHour(NS.state.moneyEvents, now, NS.state.sessionStartTime, windowSeconds, "money", NS.state, "windowMoney")
 end
 
 function NS.SetRollingWindowSeconds(seconds)
@@ -173,8 +173,8 @@ function NS.GetSessionSnapshot(now)
   local sessionXP = NS.state.sessionXP or 0
   local sessionMoney = NS.state.sessionMoney or 0
   local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
-  local xpRate = computeRateDetails(NS.state.events, now, window, "xp", "windowXP")
-  local moneyRate = computeRateDetails(NS.state.moneyEvents, now, window, "money", "windowMoney")
+  local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
+  local moneyRate = NS.ComputeRollingRateDetails(NS.state.moneyEvents, now, sessionStart, window, "money", NS.state, "windowMoney")
   local coachConfig = (NS.EnsureCoachConfig and NS.EnsureCoachConfig()) or ((DingTimerDB and DingTimerDB.coach) or {})
   local stabilizeEarlyPace = coachConfig.stabilizeEarlyPace ~= false
   local rawCurrentXph = xpRate.rawXph
@@ -236,8 +236,11 @@ end
 
 function NS.RunCoachHeartbeat(now)
   now = now or GetTime()
-  if NS.MaybeRunCoach then
+  if (not (NS.IsPvpMode and NS.IsPvpMode())) and NS.MaybeRunCoach then
     NS.MaybeRunCoach(now)
+  end
+  if NS.RunPvpHeartbeat then
+    NS.RunPvpHeartbeat(now)
   end
   if NS.RefreshFloatingHUD then
     NS.RefreshFloatingHUD(now)
@@ -347,6 +350,29 @@ function NS.RefreshFloatingHUD(now)
   NS.ensureFloat()
 
   now = now or GetTime()
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(now) or nil
+    if not snapshot then
+      return
+    end
+
+    local headerLabel = snapshot.goalHeadline or "to goal"
+    local headerValue = snapshot.ttgText or "Unavailable"
+    local paceParts = {}
+
+    if snapshot.currentHonorPerHour and snapshot.currentHonorPerHour > 0 then
+      paceParts[#paceParts + 1] = NS.FormatNumber(NS.Round(snapshot.currentHonorPerHour)) .. " Honor/hr"
+    else
+      paceParts[#paceParts + 1] = "No Honor in " .. NS.fmtTime(snapshot.rollingWindow or 0)
+    end
+
+    paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionHonor or 0))
+
+    floatFrame.titleText:SetText(NS.C.base .. headerValue .. NS.C.r .. " " .. headerLabel)
+    floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
+    return
+  end
+
   local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(now) or nil
   local coach = NS.GetCoachStatus and NS.GetCoachStatus(now) or nil
   if not snapshot then
@@ -401,9 +427,14 @@ function NS.onXPUpdate()
   NS.state.lastXP = xp
   NS.state.lastMax = maxXP
 
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    NS.InvalidateTickCache()
+    return
+  end
+
   -- 🛡️ Sentinel: Prune unbounded XP events to prevent memory exhaustion DoS when UI is hidden
   local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
-  pruneEvents(NS.state.events, now, windowSeconds, "windowXP", "xp")
+  pruneEvents(NS.state.events, now, windowSeconds, NS.state, "windowXP", "xp")
 
   if delta > 0 then
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
@@ -454,6 +485,11 @@ function NS.onMoneyUpdate()
   local currentMoney = GetMoney() or 0
   local delta = currentMoney - (NS.state.lastMoney or 0)
   NS.state.lastMoney = currentMoney
+
+  if NS.IsPvpMode and NS.IsPvpMode() then
+    NS.InvalidateTickCache()
+    return
+  end
   
   if delta ~= 0 then
     NS.state.sessionMoney = (NS.state.sessionMoney or 0) + delta
@@ -464,7 +500,7 @@ function NS.onMoneyUpdate()
   
   -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden
   local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
-  pruneEvents(NS.state.moneyEvents, now, windowSeconds, "windowMoney", "money")
+  pruneEvents(NS.state.moneyEvents, now, windowSeconds, NS.state, "windowMoney", "money")
 
   if delta > 0 then
     -- ⚡ Bolt: Direct indexing is ~1.25x faster than table.insert

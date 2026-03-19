@@ -86,6 +86,10 @@ local function formatRateShort(value)
   return NS.FormatNumber(NS.Round(value or 0))
 end
 
+local function isPvpMode()
+  return NS.IsPvpMode and NS.IsPvpMode()
+end
+
 local function formatAxisTime(seconds)
   if seconds <= 0 then
     return "Now"
@@ -230,10 +234,6 @@ end
 local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
   if not graphFrame then return end
   local mode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
-  local coach = NS.GetCoachStatus and NS.GetCoachStatus(snapshot.now) or nil
-  local goal = coach and coach.goal or nil
-  local bestSegment = coach and coach.bestSegment or nil
-  local currentSegment = coach and coach.currentSegment or nil
   graphFrame.scaleModeButton:SetText(NS.GetGraphScaleModeLabel(mode, true))
   graphFrame.fitButton:SetText(mode == "visible" and "Fitted" or "Fit")
   graphFrame.fixedMaxLabel:SetText("Fixed " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
@@ -247,6 +247,63 @@ local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
     graphFrame.decreaseFixedButton:Hide()
     graphFrame.increaseFixedButton:Hide()
   end
+
+  if isPvpMode() then
+    local recentMatches = NS.GetRecentPvpMatches and NS.GetRecentPvpMatches(4) or {}
+    applySummaryCard(
+      graphFrame.summaryCards[1],
+      "Honor / hr",
+      formatRateShort(snapshot.currentHonorPerHour),
+      "Window " .. zoomLabelForSeconds(snapshot.rollingWindow)
+    )
+
+    applySummaryCard(
+      graphFrame.summaryCards[2],
+      "Session Avg",
+      formatRateShort(snapshot.sessionHonorPerHour),
+      NS.fmtTime(snapshot.sessionElapsed) .. " elapsed"
+    )
+
+    applySummaryCard(
+      graphFrame.summaryCards[3],
+      "Goal",
+      snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "--",
+      snapshot.goalLabel or "No goal"
+    )
+
+    applySummaryCard(
+      graphFrame.summaryCards[4],
+      "HK / hr",
+      formatRateShort(snapshot.currentHKPerHour),
+      "Session " .. NS.FormatNumber(snapshot.sessionHKs or 0)
+    )
+
+    graphFrame.segmentSummaryLabel:SetText(snapshot.matchStatus or "No active battleground match.")
+
+    local matchValues = {}
+    for i = 1, math.min(#recentMatches, #segmentRows) do
+      local match = recentMatches[i]
+      matchValues[i] = string.format(
+        "%d  %s  |  %s Honor  |  %s HKs  |  %s Honor/hr",
+        i,
+        tostring(match.zone or "Unknown"),
+        NS.FormatNumber(match.honorGained or 0),
+        NS.FormatNumber(match.hkGained or 0),
+        NS.FormatNumber(NS.Round(match.avgHonorPerHour or 0))
+      )
+    end
+    NS.UI.SetRows(
+      segmentRows,
+      matchValues,
+      NS.C.mid .. "No recent battleground recaps yet. Match rows appear after battleground exit." .. NS.C.r
+    )
+    return
+  end
+
+  local coach = NS.GetCoachStatus and NS.GetCoachStatus(snapshot.now) or nil
+  local goal = coach and coach.goal or nil
+  local bestSegment = coach and coach.bestSegment or nil
+  local currentSegment = coach and coach.currentSegment or nil
 
   applySummaryCard(
     graphFrame.summaryCards[1],
@@ -346,7 +403,8 @@ local function redrawGraph()
   local graphArea = graphFrame.graphArea
   local areaWidth = math.max(graphArea:GetWidth(), 1)
   local areaHeight = math.max(graphArea:GetHeight(), 1)
-  local snapshot = NS.GetSessionSnapshot(now)
+  local snapshot = isPvpMode() and (NS.GetPvpSnapshot and NS.GetPvpSnapshot(now) or nil)
+    or NS.GetSessionSnapshot(now)
   local currentSegIdx = NS.GetSegmentIndex(now, anchor, segSeconds)
   if (not wasDirty)
     and graphState.lastSegmentIndex == currentSegIdx
@@ -354,8 +412,11 @@ local function redrawGraph()
     and graphState.lastAreaHeight == areaHeight then
     updateAxis(graphState.cachedScaleMax or 1, now, windowSeconds)
     refreshControlState(graphState.cachedScaleMax or 1, graphState.cachedVisiblePeak or 0, graphState.cachedHistoryPeak or 0, snapshot)
-    graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
-    if (graphState.cachedVisiblePeak or 0) <= 0 and snapshot.sessionXP <= 0 then
+    graphFrame.legendLabel:SetText(isPvpMode()
+      and "|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Match rows show recent recaps"
+      or "|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
+    local sessionMetric = isPvpMode() and (snapshot.sessionHonor or 0) or (snapshot.sessionXP or 0)
+    if (graphState.cachedVisiblePeak or 0) <= 0 and sessionMetric <= 0 then
       graphFrame.emptyState:Show()
     else
       graphFrame.emptyState:Hide()
@@ -371,7 +432,8 @@ local function redrawGraph()
   local gap = 2
   local barWidth = math.max(3, (areaWidth - ((segmentCount - 1) * gap)) / segmentCount)
 
-  local sessionStart = NS.state.sessionStartTime or now
+  local sessionStart = isPvpMode() and ((NS.state and NS.state.pvp and NS.state.pvp.sessionStartTime) or now)
+    or (NS.state.sessionStartTime or now)
   local avgSeries = NS.BuildAverageSeries(
     graphState.events,
     {
@@ -422,8 +484,11 @@ local function redrawGraph()
   refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
 
   -- Removed subtitle
-  graphFrame.legendLabel:SetText("|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
-  if visiblePeak <= 0 and snapshot.sessionXP <= 0 then
+  graphFrame.legendLabel:SetText(isPvpMode()
+    and "|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Match rows show recent recaps"
+    or "|cff6fd090Green|r up  |  |cffe86a6aRed|r down  |  |cffffd130Gold|r session average  |  Segment rows show goal delta")
+  local sessionMetric = isPvpMode() and (snapshot.sessionHonor or 0) or (snapshot.sessionXP or 0)
+  if visiblePeak <= 0 and sessionMetric <= 0 then
     graphFrame.emptyState:Show()
   else
     graphFrame.emptyState:Hide()
@@ -476,6 +541,7 @@ local function redrawGraph()
         xphText = NS.FormatNumber(NS.Round(d.xph)),
         avgXphText = NS.FormatNumber(NS.Round(d.avgXph)),
         isCurrent = (i == segmentCount),
+        metricName = isPvpMode() and "Honor" or "XP",
       }
       hit:Show()
 
@@ -579,7 +645,7 @@ function NS.InitGraphPanel(parent)
 
   local emptyState = graphArea:CreateFontString(nil, "OVERLAY", "GameFontDisable")
   emptyState:SetPoint("CENTER", graphArea, "CENTER", 0, 0)
-  emptyState:SetText("Kill something. The graph fills after your first XP event.")
+  emptyState:SetText("Earn something. The graph fills after your first tracked event.")
   graphFrame.emptyState = emptyState
 
   local legendLabel = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -674,8 +740,8 @@ function NS.InitGraphPanel(parent)
       GameTooltip:SetOwner(self, "ANCHOR_TOP")
       GameTooltip:ClearLines()
       GameTooltip:AddLine((d.isCurrent and "|cff3fc7eb" or "|cffffffff") .. d.timeRange .. (d.isCurrent and " (current)" or "") .. "|r")
-      GameTooltip:AddDoubleLine("XP Gained:", d.xpText, 0.7, 0.7, 0.7, 1, 1, 1)
-      GameTooltip:AddDoubleLine("XP / Hour:", d.xphText, 0.7, 0.7, 0.7, 1, 1, 0)
+      GameTooltip:AddDoubleLine((d.metricName or "XP") .. " Gained:", d.xpText, 0.7, 0.7, 0.7, 1, 1, 1)
+      GameTooltip:AddDoubleLine((d.metricName or "XP") .. " / Hour:", d.xphText, 0.7, 0.7, 0.7, 1, 1, 0)
       GameTooltip:AddDoubleLine("Session Avg:", d.avgXphText, 0.7, 0.7, 0.7, 1, 0.82, 0)
       GameTooltip:Show()
     end)

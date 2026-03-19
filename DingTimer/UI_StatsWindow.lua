@@ -41,6 +41,27 @@ local function setProgress(snapshot)
   statsFrame.progressFill:SetWidth(width)
 end
 
+local function setPvpProgress(snapshot)
+  if not statsFrame then return end
+  local progressPct = math.max(0, math.min((snapshot.progress or 0) * 100, 100))
+  local width = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
+  local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
+  statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
+  statsFrame.progressTitle:SetText(string.format(
+    "Honor %s / %s  (%.1f%%)",
+    NS.FormatNumber(snapshot.currentHonor or 0),
+    goalValue,
+    progressPct
+  ))
+  statsFrame.progressSub:SetText(string.format(
+    "%s  |  %s rolling window  |  %s session time",
+    snapshot.goalStatus or "PvP goal unavailable.",
+    NS.fmtTime(snapshot.rollingWindow or 0),
+    NS.fmtTime(snapshot.sessionElapsed or 0)
+  ))
+  statsFrame.progressFill:SetWidth(width)
+end
+
 local function buildAlertRows(coach)
   local rows = {}
   local alerts = coach and coach.alerts or {}
@@ -50,6 +71,20 @@ local function buildAlertRows(coach)
       "%s ago  |  %s",
       NS.fmtTime(math.max(1, now - (alerts[i].at or now))),
       alerts[i].text or ""
+    )
+  end
+  return rows
+end
+
+local function buildPvpNoticeRows()
+  local rows = {}
+  local notices = NS.GetPvpRecentNotices and NS.GetPvpRecentNotices(4) or {}
+  local now = GetTime()
+  for i = 1, #notices do
+    rows[i] = string.format(
+      "%s ago  |  %s",
+      NS.fmtTime(math.max(1, now - (notices[i].at or now))),
+      notices[i].text or ""
     )
   end
   return rows
@@ -69,6 +104,63 @@ local function buildRecapLines(coach)
   }
 end
 
+local function buildPvpRecapLines()
+  local summary = DingTimerDB and DingTimerDB.pvp and DingTimerDB.pvp.lastRecap or nil
+  if not summary then
+    return {
+      "No PvP recap yet. Finish a battleground or type /ding pvp recap during a session.",
+    }
+  end
+  return {
+    summary.headline or "",
+    summary.detail or "",
+    summary.segmentLine or "",
+  }
+end
+
+local function applyModeLabels()
+  if not statsFrame then
+    return
+  end
+
+  local isPvp = NS.IsPvpMode and NS.IsPvpMode()
+  if isPvp then
+    statsFrame.cards.currentXph.label:SetText("Honor / hr")
+    statsFrame.cards.sessionAvg.label:SetText("Session Avg")
+    statsFrame.cards.ttl.label:SetText("Time To Goal")
+    statsFrame.cards.goal.label:SetText("Goal")
+    statsFrame.cards.sessionXP.label:SetText("Session Honor")
+    statsFrame.cards.sessionMoney.label:SetText("Session HKs")
+    statsFrame.cards.moneyPerHour.label:SetText("HK / hr")
+    statsFrame.cards.bestSegment.label:SetText("Match Honor")
+    statsFrame.sectionTitles.alertTitle:SetText("Recent PvP Notices")
+    statsFrame.sectionTitles.alertSub:SetText("Match recaps, milestones, and queued PvP notices.")
+    statsFrame.sectionTitles.recapTitle:SetText("Latest PvP Recap")
+    statsFrame.sectionTitles.recapSub:SetText("The latest PvP recap is kept here for quick review.")
+    statsFrame.goalStatus:SetText("")
+    if statsFrame.secondaryButton then
+      statsFrame.secondaryButton:SetText("Recap")
+    end
+    return
+  end
+
+  statsFrame.cards.currentXph.label:SetText("Current Pace")
+  statsFrame.cards.sessionAvg.label:SetText("Session Avg")
+  statsFrame.cards.ttl.label:SetText("Time To Level")
+  statsFrame.cards.goal.label:SetText("Goal Pace")
+  statsFrame.cards.sessionXP.label:SetText("Session XP")
+  statsFrame.cards.sessionMoney.label:SetText("Session Money")
+  statsFrame.cards.moneyPerHour.label:SetText("Money / hr")
+  statsFrame.cards.bestSegment.label:SetText("Best Segment")
+  statsFrame.sectionTitles.alertTitle:SetText("Recent Alerts")
+  statsFrame.sectionTitles.alertSub:SetText("Coach warnings and milestones from this run.")
+  statsFrame.sectionTitles.recapTitle:SetText("Latest Recap")
+  statsFrame.sectionTitles.recapSub:SetText("The most recent recap is kept here for quick review.")
+  if statsFrame.secondaryButton then
+    statsFrame.secondaryButton:SetText("Split")
+  end
+end
+
 local function updateButtons()
   if not statsFrame then return end
   statsFrame.hudButton:SetText(DingTimerDB.float and "Hide HUD" or "Show HUD")
@@ -80,6 +172,56 @@ local function updateValues()
   end
 
   local now = GetTime()
+  local isPvp = NS.IsPvpMode and NS.IsPvpMode()
+  applyModeLabels()
+  updateButtons()
+
+  if isPvp then
+    local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(now) or nil
+    local recentMatches = NS.GetRecentPvpMatches and NS.GetRecentPvpMatches(1) or {}
+    if not snapshot then
+      return
+    end
+
+    setPvpProgress(snapshot)
+
+    local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
+    local matchValue = "--"
+    local matchSub = "No active battleground match"
+    if snapshot.hasActiveMatch and NS.state and NS.state.pvp and NS.state.pvp.activeMatch then
+      local match = NS.state.pvp.activeMatch
+      matchValue = NS.FormatNumber(match.honorGained or 0)
+      matchSub = string.format("%s  |  %s HKs", match.zone or "Unknown", NS.FormatNumber(match.hkGained or 0))
+    elseif recentMatches and recentMatches[1] then
+      matchValue = NS.FormatNumber(recentMatches[1].honorGained or 0)
+      matchSub = string.format("Last: %s", recentMatches[1].zone or "Unknown")
+    end
+
+    NS.UI.SetMetricCard(statsFrame.cards.currentXph, NS.FormatNumber(NS.Round(snapshot.currentHonorPerHour or 0)), "Rolling pace")
+    NS.UI.SetMetricCard(statsFrame.cards.sessionAvg, NS.FormatNumber(NS.Round(snapshot.sessionHonorPerHour or 0)), "Whole-session pace")
+    NS.UI.SetMetricCard(statsFrame.cards.ttl, snapshot.ttgText or "--", snapshot.goalHeadline or "Goal")
+    NS.UI.SetMetricCard(statsFrame.cards.goal, goalValue, snapshot.goalLabel or "Goal")
+    NS.UI.SetMetricCard(statsFrame.cards.sessionXP, NS.FormatNumber(snapshot.sessionHonor or 0), "Earned this PvP session")
+    NS.UI.SetMetricCard(statsFrame.cards.sessionMoney, NS.FormatNumber(snapshot.sessionHKs or 0), "Session honorable kills")
+    NS.UI.SetMetricCard(statsFrame.cards.moneyPerHour, NS.FormatNumber(NS.Round(snapshot.currentHKPerHour or 0)), "Rolling HK pace")
+    NS.UI.SetMetricCard(statsFrame.cards.bestSegment, matchValue, matchSub)
+
+    statsFrame.goalStatus:SetText(snapshot.goalStatus or "PvP goal unavailable.")
+    statsFrame.segmentStatus:SetText(snapshot.matchStatus or "No active battleground match.")
+
+    NS.UI.SetRows(
+      statsFrame.alertRows,
+      buildPvpNoticeRows(),
+      NS.C.mid .. "No PvP notices yet. Enable match recap or milestone announcements to populate this area." .. NS.C.r
+    )
+    NS.UI.SetRows(
+      statsFrame.recapRows,
+      buildPvpRecapLines(),
+      NS.C.mid .. "No PvP recap yet." .. NS.C.r
+    )
+    return
+  end
+
   local snapshot = NS.GetSessionSnapshot(now)
   local coach = NS.GetCoachStatus and NS.GetCoachStatus(now) or nil
   local goalValue, goalSub = formatGoalCard(coach and coach.goal)
@@ -87,7 +229,6 @@ local function updateValues()
   local currentSegment = coach and coach.currentSegment or nil
 
   setProgress(snapshot)
-  updateButtons()
 
   local currentPaceSub = "Rolling pace"
   if snapshot.showSettledOverlay then
@@ -128,7 +269,7 @@ local function updateValues()
     NS.C.mid .. "No recent coach alerts. Keep moving to build guidance." .. NS.C.r
   )
   NS.UI.SetRows(
-    statsFrame.recapRows,
+  statsFrame.recapRows,
     buildRecapLines(coach),
     NS.C.mid .. "No recap yet." .. NS.C.r
   )
@@ -208,22 +349,34 @@ function NS.InitStatsPanel(parent)
   statsFrame.segmentStatus:SetJustifyH("LEFT")
   statsFrame.segmentStatus:SetText("")
 
-  NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
+  local alertTitle, alertSub = NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
   statsFrame.alertRows = NS.UI.CreateListRows(scrollChild, {
     startX = 16, startY = -360, width = 680, rowCount = 4, spacing = 16, fontObject = "GameFontHighlightSmall"
   })
 
-  NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
+  local recapTitle, recapSub = NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
   statsFrame.recapRows = NS.UI.CreateListRows(scrollChild, {
     startX = 16, startY = -466, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontDisableSmall"
   })
+  statsFrame.sectionTitles = {
+    alertTitle = alertTitle,
+    alertSub = alertSub,
+    recapTitle = recapTitle,
+    recapSub = recapSub,
+  }
 
   statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 88, "Show HUD", function()
     DingTimerDB.float = not DingTimerDB.float
     NS.setFloatVisible(DingTimerDB.float)
     updateButtons()
   end)
-  NS.UI.CreateActionButton(statsFrame, 112, 12, 88, "Split", function()
+  statsFrame.secondaryButton = NS.UI.CreateActionButton(statsFrame, 112, 12, 88, "Split", function()
+    if NS.IsPvpMode and NS.IsPvpMode() then
+      if NS.ShowPvpRecap then
+        NS.ShowPvpRecap()
+      end
+      return
+    end
     if NS.SplitSession then
       NS.SplitSession("MANUAL_SPLIT")
       NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " manual split recorded.")
