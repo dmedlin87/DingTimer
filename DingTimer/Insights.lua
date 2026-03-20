@@ -1,5 +1,9 @@
 local ADDON, NS = ...
 
+-- Treat any session under 30 minutes as taking 30 minutes when calculating historical rates
+-- to prevent rapid quest turn-ins from skewing "XP/hr" and "Money/hr" records.
+local MIN_SESSION_DURATION = 1800
+
 --- Ensures the number of kept sessions is within safe bounds (5 to 100).
 --- @param n number|string|nil The requested number of sessions to keep.
 --- @return number The clamped integer value.
@@ -174,8 +178,14 @@ function NS.RecordSession(reason)
   local levelStart = NS.state.levelStart or ((UnitLevel and UnitLevel("player")) or 0)
   local levelEnd = (UnitLevel and UnitLevel("player")) or levelStart
   local sampleCount = (type(NS.state.events) == "table") and #NS.state.events or 0
-  local avgXph = (xpGained / durationSec) * 3600
-  local avgMoneyPh = (moneyNetCopper / durationSec) * 3600
+
+  -- Smooth out historical rates by treating any session under MIN_SESSION_DURATION
+  -- as taking MIN_SESSION_DURATION. This prevents 2-minute turn-in sessions from
+  -- artificially inflating the "Average XP/hr" and "Average Money/hr".
+  local rateDivisor = math.max(MIN_SESSION_DURATION, durationSec)
+  local avgXph = (xpGained / rateDivisor) * 3600
+  local avgMoneyPh = (moneyNetCopper / rateDivisor) * 3600
+
   local endedStamp = math.floor(now + 0.5)
   local segments = {}
   if NS.FinalizeSessionSegments then
