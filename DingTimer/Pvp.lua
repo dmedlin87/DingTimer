@@ -1,5 +1,9 @@
 local ADDON, NS = ...
 
+-- Treat any session under 30 minutes as taking 30 minutes when calculating historical rates
+-- to prevent rapid PvP mark turn-ins from skewing "Honor/hr" and "HK/hr" records.
+local MIN_SESSION_DURATION = 1800
+
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
@@ -375,6 +379,7 @@ local function finalizeMatch(now, forcedReason)
 
   local endedAt = match.exitedAt or now or GetTime()
   local durationSec = math_max(1, endedAt - (match.startedAt or endedAt))
+  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
   local summary = {
     zone = safeString(match.zone, "Unknown"),
     startedAt = match.startedAt,
@@ -383,8 +388,8 @@ local function finalizeMatch(now, forcedReason)
     honorGained = match.honorGained or 0,
     hkGained = match.hkGained or 0,
     reason = forcedReason or "MATCH_COMPLETE",
-    avgHonorPerHour = ((match.honorGained or 0) / durationSec) * 3600,
-    avgHKPerHour = ((match.hkGained or 0) / durationSec) * 3600,
+    avgHonorPerHour = ((match.honorGained or 0) / rateDivisor) * 3600,
+    avgHKPerHour = ((match.hkGained or 0) / rateDivisor) * 3600,
   }
 
   state.activeMatch = nil
@@ -699,6 +704,7 @@ function NS.RecordPvpSession(reason, now)
     return nil
   end
 
+  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
   local record = {
     id = string_format("%d-%d", math_floor(at + 0.5), #profile.sessions + 1),
     startedAt = state.sessionStartTime or at,
@@ -706,8 +712,8 @@ function NS.RecordPvpSession(reason, now)
     durationSec = durationSec,
     honorGained = state.sessionHonor or 0,
     hkGained = state.sessionHKs or 0,
-    avgHonorPerHour = ((state.sessionHonor or 0) / durationSec) * 3600,
-    avgHKPerHour = ((state.sessionHKs or 0) / durationSec) * 3600,
+    avgHonorPerHour = ((state.sessionHonor or 0) / rateDivisor) * 3600,
+    avgHKPerHour = ((state.sessionHKs or 0) / rateDivisor) * 3600,
     zone = snapshot and snapshot.zone or getZone(),
     reason = reason or "MANUAL_RESET",
     startHonor = snapshot and snapshot.startHonor or state.baselineHonor or 0,

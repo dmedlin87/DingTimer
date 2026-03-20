@@ -76,7 +76,7 @@ it("queues recap notifications during combat and flushes them later", function()
 
   local recent = NS.GetPvpRecentNotices(1)
   assert_eq(1, #recent, "flushed recap should be recorded in the notice log")
-  assert_eq("Warsong Gulch recap: 200 Honor, 3 HKs, 36,000 Honor/hr over 20s.", recent[1].text,
+  assert_eq("Warsong Gulch recap: 200 Honor, 3 HKs, 400 Honor/hr over 20s.", recent[1].text,
     "recap text should reflect the closed battleground match")
 
   InCombatLockdown = previousCombatLockdown
