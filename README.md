@@ -11,7 +11,7 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.1.1-blue?style=flat-square)
 ![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
@@ -61,6 +61,8 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 ## Installation
 
 1. Download the latest release
+
+   AscensionUp-compatible releases publish exactly two assets: `DingTimer-vX.Y.Z.zip` and `addon-manifest.json`.
 2. Extract the `DingTimer` folder into your addons directory:
 
    ```text
@@ -73,6 +75,23 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 4. Log in — DingTimer activates automatically
 
 > The minimap button will appear on login. Left-click it to open the Live tab.
+
+## Releasing
+
+Push a semantic-version tag with a leading `v` to publish an installer-ready GitHub Release.
+
+```bash
+git tag v1.1.1
+git push origin v1.1.1
+```
+
+The release workflow will:
+
+- run the Lua test matrix
+- build `DingTimer-vX.Y.Z.zip` from the `DingTimer/` folder with `DingTimer/` at the zip root
+- compute the zip SHA-256
+- generate `addon-manifest.json` with version `X.Y.Z`
+- attach both assets to the GitHub Release
 
 ---
 

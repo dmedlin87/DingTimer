@@ -36,24 +36,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Package addon zip
+      - name: Derive release version
+        id: version
+        shell: bash
         run: |
-          zip -r DingTimer.zip DingTimer/
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "zip_name=DingTimer-v$version.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build installer-ready release assets
+        shell: pwsh
+        run: |
+          ./scripts/Build-AscensionRelease.ps1 -Version "${{ steps.version.outputs.version }}" -OutputDir "release-assets"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: DingTimer.zip
+          files: |
+            release-assets/${{ steps.version.outputs.zip_name }}
+            release-assets/addon-manifest.json
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Trigger BronzeForge manifest publish
-        env:
-          GH_TOKEN: ${{ secrets.BRONZEFORGE_DISPATCH_TOKEN }}
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            https://api.github.com/repos/dmedlin87/MedlinForge/dispatches \
-            -d '{"event_type":"publish-update-manifests","client_payload":{"sourceRepo":"${{ github.repository }}","tag":"${{ github.ref_name }}"}}'

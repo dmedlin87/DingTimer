@@ -4,6 +4,10 @@
 
 - Nothing yet.
 
+## 1.1.1
+
+- Added installer-ready GitHub Release packaging with `DingTimer-vX.Y.Z.zip` and `addon-manifest.json` assets for AscensionUp.
+
 ## 1.1.0
 
 - Added PvP mode with Honor and HK tracking across commands, UI panels, persistence, and session resume behavior.
