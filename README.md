@@ -11,7 +11,7 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-0.6.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.1.0-blue?style=flat-square)
 ![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)

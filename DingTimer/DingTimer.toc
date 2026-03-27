@@ -2,7 +2,7 @@
 ## Title: DingTimer
 ## Notes: Chat XP/hr + Time-to-Level
 ## Author: dmedlin87
-## Version: 0.6.0
+## Version: 1.1.0
 ## SavedVariables: DingTimerDB
 
 # --- Load-order constraints (do NOT reorder without reading these) ---

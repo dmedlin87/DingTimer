@@ -47,7 +47,7 @@ done
 Tag a commit with `v*` to trigger CI. The `test` job runs first; `release` only fires if tests pass. The zip packages `DingTimer/` only (not the repo root).
 
 ```bash
-git tag v0.7.0 && git push origin v0.7.0
+git tag v1.1.0 && git push origin v1.1.0
 ```
 
 ## Key Gotchas

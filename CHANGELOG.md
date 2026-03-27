@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-- Documentation cleanup and governance files added.
+- Nothing yet.
+
+## 1.1.0
+
+- Added PvP mode with Honor and HK tracking across commands, UI panels, persistence, and session resume behavior.
+- Normalized historical XP and Honor rates for rapid turn-ins and multi-return Honor API results.
+- Improved settings layout, tab navigation behavior, and release/test automation coverage.
 
 ## 0.6.0
 

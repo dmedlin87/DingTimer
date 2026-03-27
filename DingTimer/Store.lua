@@ -242,7 +242,7 @@ function NS.InitStore()
     lastOpenTab = 1,
     schemaVersion = 9,
     meta = {
-      addonVersion = "0.6.0",
+      addonVersion = "1.1.0",
       createdAt = GetTime(),
       lastSeenAt = GetTime(),
     },
