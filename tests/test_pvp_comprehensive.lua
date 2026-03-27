@@ -36,6 +36,33 @@ local function newPvpHarness()
   return NS
 end
 
+it("accepts multi-return honor APIs without crashing", function()
+  local NS = newPvpHarness()
+  local previousGetHonorCurrency = GetHonorCurrency
+  local previousGetMaxHonorCurrency = GetMaxHonorCurrency
+
+  GetHonorCurrency = function()
+    return "33913", 75000
+  end
+
+  GetMaxHonorCurrency = function()
+    return 75000
+  end
+
+  local ok, err = pcall(function()
+    NS.EnterPvpMode("MODE_SWITCH_TO_PVP", false, 100)
+  end)
+
+  GetHonorCurrency = previousGetHonorCurrency
+  GetMaxHonorCurrency = previousGetMaxHonorCurrency
+
+  assert_true(ok, "multi-return honor APIs should not crash PvP mode: " .. tostring(err))
+
+  local snapshot = NS.GetPvpSnapshot(100)
+  assert_eq(33913, snapshot.currentHonor, "the PvP snapshot should use the first honor API return value")
+  assert_eq(75000, snapshot.targetHonor, "the PvP snapshot should still keep the honor cap goal")
+end)
+
 it("queues recap notifications during combat and flushes them later", function()
   local NS = newPvpHarness()
   local settings = NS.EnsurePvpConfig(DingTimerDB)

@@ -132,21 +132,26 @@ local function getReasonLabel(reason)
   return REASON_LABELS[reason] or safeString(reason, "PvP session")
 end
 
+local function readWholeNumber(value)
+  local numeric = tonumber(value)
+  if numeric and not NS.IsInvalidNumber(numeric) then
+    return math_floor(numeric + 0.5)
+  end
+  return nil
+end
+
 local function readCurrentHonor()
   if type(GetHonorCurrency) == "function" then
-    local value = tonumber(GetHonorCurrency())
-    if value and not NS.IsInvalidNumber(value) then
-      return math_floor(value + 0.5)
-    end
+    return readWholeNumber(GetHonorCurrency())
   end
   return nil
 end
 
 local function readHonorCap()
   if type(GetMaxHonorCurrency) == "function" then
-    local value = tonumber(GetMaxHonorCurrency())
-    if value and not NS.IsInvalidNumber(value) and value > 0 then
-      return math_floor(value + 0.5)
+    local value = readWholeNumber(GetMaxHonorCurrency())
+    if value and value > 0 then
+      return value
     end
   end
   local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
@@ -155,15 +160,15 @@ end
 
 local function readLifetimeHKs()
   if type(GetPVPLifetimeStats) == "function" then
-    local honorableKills = tonumber((GetPVPLifetimeStats()))
-    if honorableKills and not NS.IsInvalidNumber(honorableKills) then
-      return math_floor(honorableKills + 0.5)
+    local honorableKills = readWholeNumber(GetPVPLifetimeStats())
+    if honorableKills then
+      return honorableKills
     end
   end
   if type(GetLifetimeHonorableKills) == "function" then
-    local honorableKills = tonumber(GetLifetimeHonorableKills())
-    if honorableKills and not NS.IsInvalidNumber(honorableKills) then
-      return math_floor(honorableKills + 0.5)
+    local honorableKills = readWholeNumber(GetLifetimeHonorableKills())
+    if honorableKills then
+      return honorableKills
     end
   end
   return nil

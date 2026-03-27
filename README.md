@@ -81,8 +81,8 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 | You want to...        | Do this                                            |
 | --------------------- | -------------------------------------------------- |
 | Open Live             | Left-click the minimap button or `/ding live`      |
-| Open Settings         | Middle-click the minimap button or `/ding settings` |
-| Open Analysis         | Right-click the minimap button or `/ding graph`     |
+| Open Settings         | Middle-click the minimap button or `/ding settings`|
+| Open Analysis         | Right-click the minimap button or `/ding graph`    |
 | Open History          | `/ding history` or `/ding insights`                |
 | Toggle PvP mode       | `/ding pvp`                                        |
 | Set a coach goal      | `/ding goal ding` or `/ding goal 30m`              |
@@ -97,22 +97,22 @@ All commands work with either `/ding` or `/dt`.
 
 ### Core
 
-| Command                 | What it does                                  |
-| ----------------------- | --------------------------------------------- |
-| `/ding`                 | Show the help menu                            |
-| `/ding help`            | Show the help menu                            |
-| `/ding ui`              | Open the Live tab                             |
-| `/ding live`            | Same as above                                 |
-| `/ding stats`           | Same as above                                 |
-| `/ding settings`        | Open the Settings tab                        |
-| `/ding history`         | Open the History tab                         |
-| `/ding insights`        | Open the History tab                         |
-| `/ding reset`           | Reset current session data                    |
+| Command                 | What it does                                    |
+| ----------------------- | ----------------------------------------------- |
+| `/ding`                 | Show the help menu                              |
+| `/ding help`            | Show the help menu                              |
+| `/ding ui`              | Open the Live tab                               |
+| `/ding live`            | Same as above                                   |
+| `/ding stats`           | Same as above                                   |
+| `/ding settings`        | Open the Settings tab                           |
+| `/ding history`         | Open the History tab                            |
+| `/ding insights`        | Open the History tab                            |
+| `/ding reset`           | Reset current session data                      |
 | `/ding goal <preset>`   | Set the coach goal: `off`, `ding`, `30m`, `60m` |
-| `/ding split`           | Record a manual checkpoint                    |
-| `/ding recap`           | Print the latest session recap                |
-| `/ding on`              | Enable chat output                            |
-| `/ding off`             | Disable chat output                           |
+| `/ding split`           | Record a manual checkpoint                      |
+| `/ding recap`           | Print the latest session recap                  |
+| `/ding on`              | Enable chat output                              |
+| `/ding off`             | Disable chat output                             |
 
 ### PvP
 
@@ -137,8 +137,8 @@ All commands work with either `/ding` or `/dt`.
 
 ### Rolling Window
 
-| Command                   | What it does                                                       |
-| ------------------------- | ------------------------------------------------------------------ |
+| Command                   | What it does                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------|
 | `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation without resetting the session (minimum: 30s)   |
 
 > **Example:** `/ding window 300` uses the last 5 minutes to calculate your XP/hr. Shorter windows react faster to pace changes; longer windows smooth out gaps.
@@ -163,8 +163,9 @@ All commands work with either `/ding` or `/dt`.
 | `/ding graph off`             | Close the main window if the Analysis tab is active     |
 | `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
 | `/ding graph scale <mode>`    | Set the Y-axis mode: `visible`, `session`, or `fixed`   |
-| `/ding graph fit`             | Snap the graph back to visible-data scaling              |
-| `/ding graph max <xp/hr>`     | Set the fixed Y-axis cap and switch to fixed mode        |
+| `/ding graph fit`             | Snap the graph back to visible-data scaling             |
+| `/ding graph max <xp/hr>`     | Set the fixed Y-axis cap and switch to fixed mode       |
+
 ### Insights Commands
 
 | Command                     | What it does                                          |
