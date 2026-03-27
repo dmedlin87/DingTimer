@@ -74,7 +74,8 @@ try {
             continue
         }
 
-        $trimmed = $entry.FullName.TrimStart('./').TrimEnd('/')
+        $normalizedEntry = $entry.FullName.Replace('\', '/')
+        $trimmed = $normalizedEntry.TrimStart('./').TrimEnd('/')
         if ([string]::IsNullOrEmpty($trimmed)) {
             continue
         }
