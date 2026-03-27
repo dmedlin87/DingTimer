@@ -55,7 +55,7 @@ assert_eq(profile.sessions[1].levelStart, 30, "levelStart should come from sessi
 assert_eq(profile.sessions[1].levelEnd, 31, "levelEnd should come from current player level")
 assert_eq(profile.sessions[1].sampleCount, 2, "sampleCount should reflect event count")
 assert_eq(profile.sessions[1].zone, "Nagrand", "zone should be captured")
-assert_near(profile.sessions[1].avgXph, (2500 / 100) * 3600, 0.01, "avgXph should match formula")
+assert_near(profile.sessions[1].avgXph, (2500 / 1800) * 3600, 0.01, "avgXph should match formula (minimum 30 min duration)")
 
 NS.resetXPState()
 SetTime(260)
