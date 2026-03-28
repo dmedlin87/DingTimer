@@ -448,6 +448,9 @@ function NS.onXPUpdate()
   NS.InvalidateTickCache()
 
   local snapshot = NS.GetSessionSnapshot(now)
+  if not snapshot then
+    return
+  end
   local xph = snapshot.currentXph or 0
   -- Only record peak once the rate has a full confidence window; avoids the first-kill
   -- spike (elapsed=1s → inflated XP/hr) from becoming the permanent pace-drop benchmark.
