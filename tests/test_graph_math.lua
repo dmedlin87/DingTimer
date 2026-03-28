@@ -88,7 +88,7 @@ it("AggregateVisibleSegments: event outside window is excluded", function()
   -- first visible = 6 - 3 = 3
   -- event at t=50: segIdx = floor((50-100)/15) = floor(-3.33) = -4, excluded
   -- event at t=185: segIdx = floor((185-100)/15) = floor(5.67) = 5, included
-  local segs, currentSegIdx = NS.AggregateVisibleSegments(events, now, segSeconds, segCount, anchor)
+  local segs = NS.AggregateVisibleSegments(events, now, segSeconds, segCount, anchor)
   assert_equal(nil, segs[-4], "very old event should not appear")
   assert_equal(200, segs[5], "recent event should aggregate into segment 5")
 end)

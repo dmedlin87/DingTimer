@@ -302,7 +302,7 @@ function GetMinimapShape()
 end
 
 C_Timer = {
-  NewTicker = function(_, __)
+  NewTicker = function(_, _interval)
     return {
       Cancel = function() end
     }
@@ -310,7 +310,7 @@ C_Timer = {
   NewTimer = function(_, callback)
     return {
       Cancel = function() end,
-      Fire = function(self)
+      Fire = function(_self)
         if callback then callback() end
       end
     }

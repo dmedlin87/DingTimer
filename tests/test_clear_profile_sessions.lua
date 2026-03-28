@@ -8,7 +8,7 @@ LoadAddonFile("DingTimer/Store.lua", NS)
 it("ClearProfileSessions safely returns when GetProfileStore returns nil", function()
   -- Mock GetProfileStore to return nil
   local originalGetProfileStore = NS.GetProfileStore
-  NS.GetProfileStore = function(createIfMissing)
+  NS.GetProfileStore = function(_createIfMissing)
     return nil
   end
 
@@ -34,7 +34,7 @@ it("ClearProfileSessions clears sessions and calls RefreshInsightsWindow when pr
 
   -- Mock GetProfileStore to return the profileStore
   local originalGetProfileStore = NS.GetProfileStore
-  NS.GetProfileStore = function(createIfMissing)
+  NS.GetProfileStore = function(_createIfMissing)
     return profileStore
   end
 

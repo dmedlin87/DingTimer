@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 local MIN_SEGMENT_SECONDS = 15
 local MIN_BARS = 10
@@ -76,10 +76,6 @@ end
 
 local function zoomLabelForSeconds(seconds)
   return ZOOM_SECONDS_TO_LABEL[seconds] or NS.fmtTime(seconds)
-end
-
-local function formatRate(value)
-  return NS.FormatNumber(NS.Round(value or 0)) .. " / hr"
 end
 
 local function formatRateShort(value)
@@ -177,9 +173,8 @@ end
 
 --- Renders the backing horizontal grid lines and labels.
 --- @param scaleMax number The maximum value of the graph layout.
---- @param now number The current active timestamp.
 --- @param windowSeconds number The graph's total visible duration window.
-local function updateAxis(scaleMax, now, windowSeconds)
+local function updateAxis(scaleMax, _, windowSeconds)
   if not graphFrame then return end
   local graphArea = graphFrame.graphArea
   local areaWidth = math.max(graphArea:GetWidth(), 1)
@@ -231,7 +226,7 @@ local function updateAxis(scaleMax, now, windowSeconds)
   end
 end
 
-local function refreshControlState(scaleMax, visiblePeak, historyPeak, snapshot)
+local function refreshControlState(_, _, _, snapshot)
   if not graphFrame then return end
   local mode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
   graphFrame.scaleModeButton:SetText(NS.GetGraphScaleModeLabel(mode, true))
@@ -426,7 +421,7 @@ local function redrawGraph()
 
   graphState.dirty = false
   -- ⚡ Single-pass aggregation: computes both visible segments and history peak together
-  local segments, segIdx_out, historyPeak = NS.AggregateAndComputePeak(
+  local segments, _, historyPeak = NS.AggregateAndComputePeak(
     graphState.events, now, segSeconds, segmentCount, anchor, MAX_RETENTION_SECONDS
   )
   local gap = 2
@@ -754,7 +749,7 @@ function NS.InitGraphPanel(parent)
     barHitFrames[i] = hit
   end
 
-  graphFrame:SetScript("OnSizeChanged", function(self, newWidth, newHeight)
+  graphFrame:SetScript("OnSizeChanged", function(self)
     layoutGraphFrame()
     graphState.lastAreaWidth = nil
     graphState.lastAreaHeight = nil

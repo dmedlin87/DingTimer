@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 local settingsFrame = nil
 
@@ -120,7 +120,7 @@ function NS.InitSettingsPanel(parent)
   settingsFrame:SetAllPoints(parent)
   settingsFrame.controls = {}
 
-  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 560)
+  local _, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 560)
 
   NS.UI.CreateSectionTitle(scrollChild, 16, -18, "Output", "Chat behavior and rolling window controls.")
   settingsFrame.controls.enabled = createCheckbox(scrollChild, 16, -48, "Enable chat output", function(checked)

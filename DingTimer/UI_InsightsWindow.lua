@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 local MAX_ROWS = 8
 local MAX_SPARK_POINTS = 20
@@ -293,7 +293,7 @@ function NS.InitInsightsPanel(parent)
   insightsFrame = CreateFrame("Frame", "DingTimerInsightsPanel", parent)
   insightsFrame:SetAllPoints(parent)
 
-  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(insightsFrame, 680, 580)
+  local _, scrollChild = NS.UI.CreateScrollFrame(insightsFrame, 680, 580)
 
   local function createSummaryBlock(anchorX, label)
     local labelFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")

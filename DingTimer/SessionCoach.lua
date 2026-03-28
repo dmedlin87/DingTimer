@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 -- ⚡ Localize frequently-used globals
 local math_max = math.max
@@ -36,14 +36,6 @@ local function copyTable(source)
     end
   end
   return out
-end
-
-local function safeNumber(value, fallback)
-  local n = tonumber(value)
-  if not n or NS.IsInvalidNumber(n) then
-    return fallback
-  end
-  return n
 end
 
 local safeString = function(value, fallback) return NS.safeString(value, fallback) end
@@ -567,7 +559,6 @@ function NS.StoreCoachSummary(summary, isPending)
   if not summary then
     return
   end
-  local config = NS.EnsureCoachConfig()
   DingTimerDB.coach.lastRecap = copyTable(summary)
   if isPending then
     DingTimerDB.coach.pendingRecap = copyTable(summary)

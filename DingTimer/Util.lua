@@ -1,10 +1,8 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 -- ⚡ Localize frequently-used globals to avoid repeated table lookups in hot paths
 local math_floor = math.floor
 local math_abs = math.abs
-local math_max = math.max
-local math_min = math.min
 local math_huge = math.huge
 local math_ceil = math.ceil
 local string_format = string.format

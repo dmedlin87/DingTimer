@@ -94,7 +94,7 @@ local function onLevelUp(level)
   NS.resetXPState()
 end
 
-frame:SetScript("OnEvent", function(self, event, ...)
+frame:SetScript("OnEvent", function(_, event, ...)
   local arg1 = ...
   local ok, err = pcall(function()
     if event == "ADDON_LOADED" and arg1 == ADDON then

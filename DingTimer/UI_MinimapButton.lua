@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 local f = CreateFrame("Button", "DingTimerMinimapButton", Minimap)
 f:SetSize(32, 32)
@@ -119,7 +119,7 @@ f:SetScript("OnDragStop", function()
 end)
 
 -- Left: Live tab | Right: Analysis tab | Middle: Settings tab
-f:SetScript("OnClick", function(self, button)
+f:SetScript("OnClick", function(_, button)
   if button == "LeftButton" then
     if NS.ToggleMainWindow then NS.ToggleMainWindow(1) end
   elseif button == "RightButton" then

@@ -233,7 +233,7 @@ it("validates PvP goal modes and reports the off state clearly", function()
   local NS = newPvpHarness()
   local settings = NS.EnsurePvpConfig(DingTimerDB)
 
-  local ok, result = NS.SetPvpGoal("off")
+  local ok = NS.SetPvpGoal("off")
   assert_true(ok, "turning PvP goals off should succeed")
   assert_eq("off", settings.goalMode, "goal mode should switch to off")
   assert_eq("Off", NS.GetPvpGoalLabel(), "the goal label should reflect the off state")
@@ -245,6 +245,7 @@ it("validates PvP goal modes and reports the off state clearly", function()
   assert_eq("Set a goal", snapshot.ttgText, "goal off should suppress the time-to-goal estimate")
   assert_eq("Set a PvP goal.", snapshot.goalStatus, "goal off should prompt the user to set a target")
 
+  local result
   ok, result = NS.SetPvpGoal(-1)
   assert_false(ok, "negative honor goals should be rejected")
   assert_eq("Use '/ding pvp goal off', '/ding pvp goal cap', or a positive honor value.", result,

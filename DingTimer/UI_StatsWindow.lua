@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 local FRAME_WIDTH = 664
 local CARD_WIDTH = 151
@@ -283,7 +283,7 @@ function NS.InitStatsPanel(parent)
   statsFrame = CreateFrame("Frame", "DingTimerStatsPanel", parent)
   statsFrame:SetAllPoints(parent)
 
-  local scrollFrame, scrollChild = NS.UI.CreateScrollFrame(statsFrame, 664, 550)
+  local _, scrollChild = NS.UI.CreateScrollFrame(statsFrame, 664, 550)
 
   local zoneText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoneText:SetPoint("TOPLEFT", 16, -16)

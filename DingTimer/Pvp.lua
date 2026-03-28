@@ -1,4 +1,4 @@
-local ADDON, NS = ...
+local _, NS = ...
 
 -- Treat any session under 30 minutes as taking 30 minutes when calculating historical rates
 -- to prevent rapid PvP mark turn-ins from skewing "Honor/hr" and "HK/hr" records.
@@ -806,7 +806,7 @@ function NS.ResetPvpSession(reason, now)
   return true
 end
 
-function NS.RefreshPvpSnapshot(now, source)
+function NS.RefreshPvpSnapshot(now, _)
   local at = now or GetTime()
   local state = getRuntime(at)
   updateMatchState(at)

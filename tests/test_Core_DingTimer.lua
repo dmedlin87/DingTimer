@@ -16,9 +16,9 @@ NS.GraphReset = function() end
 LoadAddonFile("DingTimer/Core_DingTimer.lua", ADDON, NS)
 
 -- 1. Test empty list edge case
-function test_empty_events_list()
+local function test_empty_events_list()
     NS.state.events = {}
-    local status, err = pcall(function()
+    local status = pcall(function()
         NS.computeXPPerHour(100, 60)
     end)
     assert_true(status, "pruneEvents should not throw an error on empty list")
@@ -26,7 +26,7 @@ function test_empty_events_list()
 end
 
 -- 2. Test list with 1 element that should be kept
-function test_single_element_keep()
+local function test_single_element_keep()
     NS.state.events = { { t = 50, xp = 100 } }
     NS.computeXPPerHour(60, 25) -- Keeps t > 35
     assert_equal(1, #NS.state.events, "Single element should be kept")
@@ -34,14 +34,14 @@ function test_single_element_keep()
 end
 
 -- 3. Test list with 1 element that should be removed
-function test_single_element_remove()
+local function test_single_element_remove()
     NS.state.events = { { t = 20, xp = 100 } }
     NS.computeXPPerHour(60, 25) -- Keeps t > 35
     assert_equal(0, #NS.state.events, "Single element should be removed")
 end
 
 -- 4. Test normal pruning
-function test_normal_pruning()
+local function test_normal_pruning()
     NS.state.events = {
         { t = 10, xp = 100 },
         { t = 20, xp = 200 },
@@ -57,7 +57,7 @@ function test_normal_pruning()
 end
 
 -- 5. Test pruning when all elements are old
-function test_all_elements_removed()
+local function test_all_elements_removed()
     NS.state.events = {
         { t = 10, xp = 100 },
         { t = 20, xp = 200 }
@@ -75,7 +75,7 @@ test_normal_pruning()
 test_all_elements_removed()
 
 -- Tests for SetRollingWindowSeconds
-function test_set_rolling_window_seconds_invalid_inputs()
+local function test_set_rolling_window_seconds_invalid_inputs()
     DingTimerDB = {}
     assert_false(NS.SetRollingWindowSeconds(nil), "Should return false for nil")
     assert_false(NS.SetRollingWindowSeconds("abc"), "Should return false for non-numeric string")
@@ -83,14 +83,14 @@ function test_set_rolling_window_seconds_invalid_inputs()
     assert_equal(nil, DingTimerDB.windowSeconds, "windowSeconds should not be updated for invalid inputs")
 end
 
-function test_set_rolling_window_seconds_out_of_bounds()
+local function test_set_rolling_window_seconds_out_of_bounds()
     DingTimerDB = {}
     assert_false(NS.SetRollingWindowSeconds(29), "Should return false for n < 30")
     assert_false(NS.SetRollingWindowSeconds(86401), "Should return false for n > 86400")
     assert_equal(nil, DingTimerDB.windowSeconds, "windowSeconds should not be updated for out-of-bounds inputs")
 end
 
-function test_set_rolling_window_seconds_valid()
+local function test_set_rolling_window_seconds_valid()
     DingTimerDB = {}
     assert_true(NS.SetRollingWindowSeconds(60), "Should return true for valid integer")
     assert_equal(60, DingTimerDB.windowSeconds, "windowSeconds should be updated to integer value")
