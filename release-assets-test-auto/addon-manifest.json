@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "addonId": "ding-timer",
+  "displayName": "DingTimer",
+  "version": "1.1.1",
+  "targetSupport": [
+    "Bronzebeard"
+  ],
+  "folders": [
+    "DingTimer"
+  ],
+  "assetName": "DingTimer-v1.1.1.zip",
+  "sha256": "68127a90032bbefe3e5352f1ed76692d30ae7e635922dad93b4cbd330f92e876",
+  "minInstallerVersion": "1.0.0",
+  "releaseNotes": ""
+}

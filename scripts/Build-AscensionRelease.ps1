@@ -1,17 +1,125 @@
 param(
-    [Parameter(Mandatory = $false)]
     [string]$OutputDir = "release-assets",
 
-    [Parameter(Mandatory = $false)]
     [string]$ReleaseNotes = "",
 
-    [Parameter(Mandatory = $false)]
-    [string]$ExpectedVersion
+    [string]$ExpectedVersion,
+
+    [switch]$PublishRelease,
+
+    [int]$PublishTimeoutSeconds = 120
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+function Invoke-Tool {
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath,
+
+        [string[]]$Arguments = @(),
+
+        [switch]$IgnoreExitCode
+    )
+
+    $result = & $FilePath @Arguments 2>&1
+    if (-not $IgnoreExitCode -and $LASTEXITCODE -ne 0) {
+        $rendered = if ($result) { ($result | Out-String).Trim() } else { "" }
+        if ($rendered) {
+            throw "$FilePath $($Arguments -join ' ') failed: $rendered"
+        }
+
+        throw "$FilePath $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
+    }
+
+    return $result
+}
+
+function Get-OriginRepository {
+    $remoteUrl = (Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "remote", "get-url", "origin")) |
+        Select-Object -First 1
+    $remoteUrl = [string]$remoteUrl
+
+    if ($remoteUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/.]+?)(?:\.git)?$') {
+        return @{
+            Owner = $Matches.owner
+            Repo  = $Matches.repo
+            Url   = $remoteUrl
+        }
+    }
+
+    throw "Origin remote '$remoteUrl' is not a supported GitHub repository URL."
+}
+
+function Get-LatestRelease {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Owner,
+
+        [Parameter(Mandatory)]
+        [string]$Repo
+    )
+
+    $headers = @{ "User-Agent" = "Codex-Build-AscensionRelease" }
+    try {
+        return Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Owner/$Repo/releases/latest"
+    }
+    catch {
+        $response = $_.Exception.Response
+        if ($response -and [int]$response.StatusCode -eq 404) {
+            return $null
+        }
+
+        throw
+    }
+}
+
+function Test-RemoteTagExists {
+    param(
+        [Parameter(Mandatory)]
+        [string]$TagName
+    )
+
+    $refs = Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "ls-remote", "--tags", "origin", "refs/tags/$TagName")
+    return -not [string]::IsNullOrWhiteSpace((($refs | Out-String).Trim()))
+}
+
+function Wait-ForPublishedRelease {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Owner,
+
+        [Parameter(Mandatory)]
+        [string]$Repo,
+
+        [Parameter(Mandatory)]
+        [string]$TagName,
+
+        [Parameter(Mandatory)]
+        [string]$ExpectedZipName,
+
+        [Parameter(Mandatory)]
+        [int]$TimeoutSeconds
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $release = Get-LatestRelease -Owner $Owner -Repo $Repo
+        if ($release -and $release.tag_name -eq $TagName) {
+            $assetNames = @($release.assets | ForEach-Object { $_.name })
+            if ($assetNames -contains "addon-manifest.json" -and $assetNames -contains $ExpectedZipName) {
+                return $release
+            }
+        }
+
+        Start-Sleep -Seconds 5
+    } while ((Get-Date) -lt $deadline)
+
+    return $null
+}
+
 $releaseConfigPath = Join-Path $repoRoot "addon-release.json"
 $resolvedOutputDir = if ([System.IO.Path]::IsPathRooted($OutputDir)) {
     $OutputDir
@@ -54,6 +162,10 @@ $semverPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d
 
 if ($Version -notmatch $semverPattern) {
     throw "Version '$Version' is not valid semver. Use a tag like v1.1.1 or v1.1.1-beta.1."
+}
+
+if ($PublishTimeoutSeconds -lt 0) {
+    throw "PublishTimeoutSeconds must be zero or greater."
 }
 
 if ($ExpectedVersion -and $ExpectedVersion -ne $Version) {
@@ -187,3 +299,66 @@ if ($writtenManifest.version -ne $Version) {
 Write-Host "Built release assets:" -ForegroundColor Green
 Write-Host "- $zipPath"
 Write-Host "- $manifestPath"
+Write-Host ""
+Write-Host "Installer visibility note:" -ForegroundColor Yellow
+Write-Host "AscensionUp reads the latest published GitHub release for '$addonId', not local files."
+if (-not $PublishRelease) {
+    Write-Host "To expose version $Version in the installer, publish tag v$Version so the release workflow uploads:"
+    Write-Host "- $zipName"
+    Write-Host "- addon-manifest.json"
+}
+
+if (-not $PublishRelease) {
+    return
+}
+
+$tagName = "v$Version"
+$repoInfo = Get-OriginRepository
+$statusOutput = (Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "status", "--porcelain")) | Out-String
+if (-not [string]::IsNullOrWhiteSpace($statusOutput)) {
+    throw "Refusing to publish with uncommitted changes in '$repoRoot'. Commit or stash changes first."
+}
+
+$currentHead = [string](Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "rev-parse", "HEAD") | Select-Object -First 1)
+$localTagCommit = [string](Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "rev-parse", "-q", "--verify", "refs/tags/$tagName^{}") -IgnoreExitCode | Select-Object -First 1)
+if ([string]::IsNullOrWhiteSpace($localTagCommit)) {
+    Write-Host ""
+    Write-Host "Creating local tag $tagName at $currentHead" -ForegroundColor Cyan
+    Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "tag", "-a", $tagName, "-m", "$displayName $tagName")
+}
+elseif ($localTagCommit -ne $currentHead) {
+    throw "Local tag '$tagName' points to $localTagCommit, but HEAD is $currentHead. Move or delete the tag before publishing."
+}
+else {
+    Write-Host ""
+    Write-Host "Local tag $tagName already exists at HEAD." -ForegroundColor Cyan
+}
+
+$remoteTagExists = Test-RemoteTagExists -TagName $tagName
+if (-not $remoteTagExists) {
+    Write-Host "Pushing tag $tagName to origin..." -ForegroundColor Cyan
+    Invoke-Tool -FilePath "git" -Arguments @("-C", $repoRoot, "push", "origin", $tagName)
+}
+else {
+    Write-Host "Remote tag $tagName already exists." -ForegroundColor Cyan
+}
+
+$latestRelease = Get-LatestRelease -Owner $repoInfo.Owner -Repo $repoInfo.Repo
+if ($latestRelease -and $latestRelease.tag_name -eq $tagName) {
+    $assetNames = @($latestRelease.assets | ForEach-Object { $_.name })
+    if ($assetNames -contains "addon-manifest.json" -and $assetNames -contains $zipName) {
+        Write-Host "Release $tagName is already published with installer assets." -ForegroundColor Green
+        return
+    }
+}
+
+Write-Host "Waiting for GitHub Actions to publish release $tagName..." -ForegroundColor Cyan
+$publishedRelease = Wait-ForPublishedRelease -Owner $repoInfo.Owner -Repo $repoInfo.Repo -TagName $tagName -ExpectedZipName $zipName -TimeoutSeconds $PublishTimeoutSeconds
+
+if ($publishedRelease) {
+    Write-Host "Published release is now visible to the installer:" -ForegroundColor Green
+    Write-Host "- $($publishedRelease.html_url)"
+    return
+}
+
+throw "Tag $tagName was pushed, but GitHub did not publish a matching release within $PublishTimeoutSeconds seconds."
