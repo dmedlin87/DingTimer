@@ -1,26 +1,54 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$Version,
-
-    [Parameter(Mandatory = $false)]
-    [string]$AddonRoot = "DingTimer",
-
     [Parameter(Mandatory = $false)]
     [string]$OutputDir = "release-assets",
 
     [Parameter(Mandatory = $false)]
-    [string]$ReleaseNotes = ""
+    [string]$ReleaseNotes = "",
+
+    [Parameter(Mandatory = $false)]
+    [string]$ExpectedVersion
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$addonPath = Join-Path $repoRoot $AddonRoot
+$releaseConfigPath = Join-Path $repoRoot "addon-release.json"
 $resolvedOutputDir = if ([System.IO.Path]::IsPathRooted($OutputDir)) {
     $OutputDir
 } else {
     Join-Path $repoRoot $OutputDir
 }
+
+if (-not (Test-Path -LiteralPath $releaseConfigPath -PathType Leaf)) {
+    throw "Expected release metadata file was not found at '$releaseConfigPath'."
+}
+
+$releaseConfig = Get-Content -LiteralPath $releaseConfigPath -Raw | ConvertFrom-Json
+
+if ($releaseConfig.schemaVersion -ne 1) {
+    throw "Release metadata schemaVersion must be 1."
+}
+
+$addonId = [string]$releaseConfig.addonId
+$displayName = [string]$releaseConfig.displayName
+$Version = [string]$releaseConfig.version
+$targetSupport = @($releaseConfig.targetSupport)
+$folders = @($releaseConfig.folders)
+$minInstallerVersion = [string]$releaseConfig.minInstallerVersion
+
+if ([string]::IsNullOrWhiteSpace($addonId) -or
+    [string]::IsNullOrWhiteSpace($displayName) -or
+    [string]::IsNullOrWhiteSpace($Version) -or
+    [string]::IsNullOrWhiteSpace($minInstallerVersion)) {
+    throw "Release metadata is missing one of: addonId, displayName, version, minInstallerVersion."
+}
+
+if ($folders.Count -ne 1) {
+    throw "Release metadata must define exactly one managed folder."
+}
+
+$addonRoot = [string]$folders[0]
+$addonPath = Join-Path $repoRoot $addonRoot
 
 $semverPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$'
 
@@ -28,11 +56,23 @@ if ($Version -notmatch $semverPattern) {
     throw "Version '$Version' is not valid semver. Use a tag like v1.1.1 or v1.1.1-beta.1."
 }
 
-if (-not (Test-Path -LiteralPath $addonPath -PathType Container)) {
-    throw "Addon folder '$AddonRoot' was not found at '$addonPath'."
+if ($ExpectedVersion -and $ExpectedVersion -ne $Version) {
+    throw "Release metadata version '$Version' does not match expected version '$ExpectedVersion'."
 }
 
-$tocPath = Join-Path $addonPath ("{0}.toc" -f [System.IO.Path]::GetFileName($AddonRoot))
+if ($minInstallerVersion -notmatch $semverPattern) {
+    throw "minInstallerVersion '$minInstallerVersion' is not valid semver."
+}
+
+if ($targetSupport.Count -eq 0) {
+    throw "Release metadata must define at least one supported target."
+}
+
+if (-not (Test-Path -LiteralPath $addonPath -PathType Container)) {
+    throw "Addon folder '$addonRoot' was not found at '$addonPath'."
+}
+
+$tocPath = Join-Path $addonPath ("{0}.toc" -f [System.IO.Path]::GetFileName($addonRoot))
 if (-not (Test-Path -LiteralPath $tocPath -PathType Leaf)) {
     throw "Expected TOC file was not found at '$tocPath'."
 }
@@ -47,7 +87,7 @@ if ($tocVersion -ne $Version) {
     throw "TOC version '$tocVersion' does not match release version '$Version'. Update $tocPath before releasing."
 }
 
-$zipName = "DingTimer-v$Version.zip"
+$zipName = "$addonRoot-v$Version.zip"
 $zipPath = Join-Path $resolvedOutputDir $zipName
 $manifestPath = Join-Path $resolvedOutputDir "addon-manifest.json"
 
@@ -86,9 +126,9 @@ try {
         }
     }
 
-    if ($rootNames.Count -ne 1 -or -not $rootNames.Contains("DingTimer")) {
+    if ($rootNames.Count -ne 1 -or -not $rootNames.Contains($addonRoot)) {
         $foundRoots = ($rootNames | Sort-Object) -join ', '
-        throw "Zip root validation failed. Expected only 'DingTimer' at the archive root, found: $foundRoots"
+        throw "Zip root validation failed. Expected only '$addonRoot' at the archive root, found: $foundRoots"
     }
 }
 finally {
@@ -97,14 +137,14 @@ finally {
 
 $manifest = [ordered]@{
     schemaVersion       = 1
-    addonId             = "ding-timer"
-    displayName         = "DingTimer"
+    addonId             = $addonId
+    displayName         = $displayName
     version             = $Version
-    targetSupport       = @("Bronzebeard")
-    folders             = @("DingTimer")
+    targetSupport       = $targetSupport
+    folders             = $folders
     assetName           = $zipName
     sha256              = $hash
-    minInstallerVersion = "1.0.0"
+    minInstallerVersion = $minInstallerVersion
     releaseNotes        = $ReleaseNotes
 }
 
@@ -112,20 +152,32 @@ $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -En
 
 $writtenManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 
-if ($writtenManifest.addonId -ne "ding-timer") {
-    throw "Manifest validation failed: addonId must be 'ding-timer'."
+if ($writtenManifest.addonId -ne $addonId) {
+    throw "Manifest validation failed: addonId must be '$addonId'."
 }
 
-if (@($writtenManifest.folders).Count -ne 1 -or @($writtenManifest.folders)[0] -ne "DingTimer") {
-    throw "Manifest validation failed: folders must be ['DingTimer']."
+if (@($writtenManifest.folders).Count -ne $folders.Count) {
+    throw "Manifest validation failed: folders do not match release metadata."
 }
 
 if ($writtenManifest.assetName -ne $zipName) {
     throw "Manifest validation failed: assetName does not match the zip asset name."
 }
 
-if (-not (@($writtenManifest.targetSupport) -contains "Bronzebeard")) {
-    throw "Manifest validation failed: targetSupport must include 'Bronzebeard'."
+foreach ($folder in $folders) {
+    if (-not (@($writtenManifest.folders) -contains $folder)) {
+        throw "Manifest validation failed: folders do not match release metadata."
+    }
+}
+
+foreach ($target in $targetSupport) {
+    if (-not (@($writtenManifest.targetSupport) -contains $target)) {
+        throw "Manifest validation failed: targetSupport does not match release metadata."
+    }
+}
+
+if ($writtenManifest.minInstallerVersion -ne $minInstallerVersion) {
+    throw "Manifest validation failed: minInstallerVersion does not match release metadata."
 }
 
 if ($writtenManifest.version -ne $Version) {

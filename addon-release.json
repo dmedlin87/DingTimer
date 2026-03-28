@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "addonId": "ding-timer",
+  "displayName": "DingTimer",
+  "version": "1.1.1",
+  "targetSupport": ["Bronzebeard"],
+  "folders": ["DingTimer"],
+  "minInstallerVersion": "1.0.0"
+}
