@@ -69,7 +69,8 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
    <WoW client>\Interface\AddOns\DingTimer\
    ```
 
-   The bundled PowerShell installer also supports the Ascension Launcher client path plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
+   The bundled PowerShell installer also supports the Ascension Launcher client path, the CoA PTR root, plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
+   Use `-Flavor ptr` to target the CoA PTR root automatically.
 
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically

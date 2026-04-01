@@ -52,7 +52,7 @@ git tag v1.1.0 && git push origin v1.1.0
 
 ## Key Gotchas
 
-**WoW target:** Private WotLK server (Bronzebeard). `## Interface: 30300` is the addon target, and the installer supports the Ascension Launcher client path plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
+**WoW target:** Private WotLK server (Bronzebeard and CoA). `## Interface: 30300` is the addon target, and the installer supports the Ascension Launcher client path, the CoA PTR root, plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
 
 **Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store owns the coach default table plus `GetCoachDefaults`, `ValidateCoachConfig`, and `EnsureCoachConfig`. SessionCoach reads those helpers and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 
