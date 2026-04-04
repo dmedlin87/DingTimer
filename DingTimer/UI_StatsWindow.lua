@@ -5,6 +5,10 @@ local CARD_WIDTH = 151
 local CARD_HEIGHT = 56
 local CARD_GAP = 10
 
+local math_floor = math.floor
+local math_max = math.max
+local math_min = math.min
+
 local statsFrame = nil
 
 local function formatGoalCard(goal)
@@ -22,8 +26,8 @@ end
 
 local function setProgress(snapshot)
   if not statsFrame then return end
-  local progressPct = math.max(0, math.min((snapshot.progress or 0) * 100, 100))
-  local width = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
+  local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
+  local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
     "Level %s  |  %s / %s XP  (%.1f%%)",
@@ -43,8 +47,8 @@ end
 
 local function setPvpProgress(snapshot)
   if not statsFrame then return end
-  local progressPct = math.max(0, math.min((snapshot.progress or 0) * 100, 100))
-  local width = math.max(1, math.floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
+  local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
+  local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
   local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
@@ -69,7 +73,7 @@ local function buildAlertRows(coach)
   for i = 1, #alerts do
     rows[i] = string.format(
       "%s ago  |  %s",
-      NS.fmtTime(math.max(1, now - (alerts[i].at or now))),
+      NS.fmtTime(math_max(1, now - (alerts[i].at or now))),
       alerts[i].text or ""
     )
   end
@@ -83,7 +87,7 @@ local function buildPvpNoticeRows()
   for i = 1, #notices do
     rows[i] = string.format(
       "%s ago  |  %s",
-      NS.fmtTime(math.max(1, now - (notices[i].at or now))),
+      NS.fmtTime(math_max(1, now - (notices[i].at or now))),
       notices[i].text or ""
     )
   end
