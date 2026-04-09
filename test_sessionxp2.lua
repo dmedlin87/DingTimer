@@ -18,9 +18,6 @@ function NS.BuildAverageSeries(events, ctx)
   end
 
   if high > 0 and events[high] then
-    -- Original:
-    -- cumulativeXP = events[high].sessionXP or (cumulativeXP + events[high].xp)
-    -- Optimized:
     cumulativeXP = events[high].sessionXP or (cumulativeXP + events[high].xp)
     print("Initial cumulativeXP:", cumulativeXP)
     eventIndex = high + 1
@@ -33,8 +30,6 @@ function NS.BuildAverageSeries(events, ctx)
 
     while events[eventIndex] and events[eventIndex].t <= pointTime do
       local event = events[eventIndex]
-      -- Original:
-      -- cumulativeXP = event.sessionXP or (cumulativeXP + (event.xp or 0))
       cumulativeXP = event.sessionXP or (cumulativeXP + (event.xp or 0))
       eventIndex = eventIndex + 1
     end
