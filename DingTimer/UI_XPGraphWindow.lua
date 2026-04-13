@@ -54,6 +54,10 @@ local graphState = {
   lastAxisHeight = nil,
 }
 
+local function getGraphWindowSeconds()
+  return tonumber(DingTimerDB and DingTimerDB.graphWindowSeconds) or 300
+end
+
 local function pruneGraphEvents(now)
   local cutoff = now - MAX_RETENTION_SECONDS - 60
   local events = graphState.events
@@ -387,7 +391,7 @@ local function redrawGraph()
   local wasDirty = graphState.dirty
   pruneGraphEvents(now)
 
-  local windowSeconds = DingTimerDB.graphWindowSeconds or 300
+  local windowSeconds = getGraphWindowSeconds()
   local segmentCount = NS.ComputeBarCount(windowSeconds, MIN_SEGMENT_SECONDS, MIN_BARS, MAX_BARS)
   local segSeconds = NS.ComputeSegmentSeconds(windowSeconds, segmentCount)
   local anchor = graphState.anchor
@@ -866,11 +870,18 @@ end
 
 function NS.SetGraphFixedMax(value)
   local n = tonumber(value)
-  if not n then return end
-  DingTimerDB.graph.fixedMax = NS.ClampGraphFixedMax(n)
-  DingTimerDB.graph.scaleMode = "fixed"
+  if not n then
+    return nil
+  end
+  local applied = NS.ClampGraphFixedMax(n)
+  DingTimerDB.graphFixedMaxXPH = applied
+  DingTimerDB.graphScaleMode = "fixed"
+  graphState.dirty = true
   if NS.RefreshSettingsPanel then NS.RefreshSettingsPanel() end
-  NS.GraphSetNeedsUpdate()
+  if graphFrame and graphFrame:IsShown() then
+    redrawGraph()
+  end
+  return applied
 end
 
 function NS.AdjustGraphFixedMax(delta)

@@ -10,8 +10,10 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("PLAYER_MONEY")
 frame:RegisterEvent("PLAYER_LOGOUT")
 frame:RegisterEvent("PLAYER_PVP_KILLS_CHANGED")
+frame:RegisterEvent("HONOR_XP_UPDATE")
 frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
 frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
+frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("ZONE_CHANGED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -167,7 +169,16 @@ frame:SetScript("OnEvent", function(_, event, ...)
       return
     end
 
+    if event == "CURRENCY_DISPLAY_UPDATE" then
+      if NS.HandlePvpEvent
+        and (not NS.IsRelevantPvpCurrencyEvent or NS.IsRelevantPvpCurrencyEvent(arg1)) then
+        NS.HandlePvpEvent(event, GetTime())
+      end
+      return
+    end
+
     if event == "PLAYER_PVP_KILLS_CHANGED"
+      or event == "HONOR_XP_UPDATE"
       or event == "UPDATE_BATTLEFIELD_SCORE"
       or event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
       if NS.HandlePvpEvent then

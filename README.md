@@ -11,8 +11,8 @@
 
 Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue?style=flat-square)
-![WoW](https://img.shields.io/badge/WoW-Interface%2030300-orange?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.1.2-blue?style=flat-square)
+![WoW](https://img.shields.io/badge/WoW-Interface%20120001-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
 
@@ -62,15 +62,14 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 
 1. Download the latest release
 
-   AscensionUp-compatible releases publish exactly two assets: `DingTimer-vX.Y.Z.zip` and `addon-manifest.json`.
+   Releases publish exactly two assets: `DingTimer-vX.Y.Z.zip` and `addon-manifest.json`.
 2. Extract the `DingTimer` folder into your addons directory:
 
    ```text
    <WoW client>\Interface\AddOns\DingTimer\
    ```
 
-   The bundled PowerShell installer also supports the Ascension Launcher client path, the CoA PTR root, plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
-   Use `-Flavor ptr` to target the CoA PTR root automatically.
+   The bundled PowerShell installer defaults to the Retail client path and also understands `_retail_`, `_classic_`, and `_classic_era_` folder layouts when you pass an explicit `-WowPath`.
 
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically
@@ -82,8 +81,8 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
 Push a semantic-version tag with a leading `v` to publish an installer-ready GitHub Release.
 
 ```bash
-git tag v1.1.1
-git push origin v1.1.1
+git tag v1.1.2
+git push origin v1.1.2
 ```
 
 The release workflow will:
@@ -352,7 +351,7 @@ Deleting `DingTimerDB` from your SavedVariables folder resets everything to defa
 
 | Package target           | Status                    |
 | ------------------------ | ------------------------- |
-| `## Interface: 30300`    | Supported by this package |
+| `## Interface: 120001`   | Supported by this package |
 | Other clients            | Unverified                |
 
 ---

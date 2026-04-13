@@ -361,7 +361,7 @@ function NS.InitSettingsPanel(parent)
     local scaleMode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
     self.controls.graphScaleValue:SetText("Scale: " .. NS.GetGraphScaleModeLabel(scaleMode, true))
     self.controls.graphMaxValue:SetText("Fixed max: " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
-    self.controls.graphZoomValue:SetText("Zoom: " .. tostring(math.floor((DingTimerDB.graphWindowSeconds or 300) / 60)) .. "m")
+    self.controls.graphZoomValue:SetText("Zoom: " .. tostring(math.floor((tonumber(DingTimerDB.graphWindowSeconds) or 300) / 60)) .. "m")
     self.controls.pvpInfo:SetText(string.format(
       "Mode: %s  |  Goal: %s  |  History: %d PvP sessions\nUse '/ding pvp goal <honor>' to set a custom absolute Honor goal.",
       (NS.IsPvpMode and NS.IsPvpMode()) and "PvP" or "Leveling",

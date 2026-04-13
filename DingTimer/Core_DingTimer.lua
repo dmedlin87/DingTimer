@@ -32,6 +32,18 @@ local coachTicker = nil
 -- and shared across all callers (HUD, stats panel, graph, coach) for the same `now`.
 local tickCache = { now = 0, snapshot = nil, coachStatus = nil }
 
+local function getRollingWindowSeconds()
+  return tonumber(DingTimerDB and DingTimerDB.windowSeconds) or 600
+end
+
+local function getMinXPDeltaToPrint()
+  local value = tonumber(DingTimerDB and DingTimerDB.minXPDeltaToPrint)
+  if not value or value < 1 then
+    return 1
+  end
+  return value
+end
+
 local function clearInternalState(now)
   NS.state.sessionStartTime = now
   NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
@@ -172,7 +184,7 @@ function NS.GetSessionSnapshot(now)
   local sessionElapsed = math_max(1, now - sessionStart)
   local sessionXP = NS.state.sessionXP or 0
   local sessionMoney = NS.state.sessionMoney or 0
-  local window = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  local window = getRollingWindowSeconds()
   local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
   local moneyRate = NS.ComputeRollingRateDetails(NS.state.moneyEvents, now, sessionStart, window, "money", NS.state, "windowMoney")
   local coachConfig = (NS.EnsureCoachConfig and NS.EnsureCoachConfig()) or ((DingTimerDB and DingTimerDB.coach) or {})
@@ -433,7 +445,7 @@ function NS.onXPUpdate()
   end
 
   -- 🛡️ Sentinel: Prune unbounded XP events to prevent memory exhaustion DoS when UI is hidden
-  local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  local windowSeconds = getRollingWindowSeconds()
   pruneEvents(NS.state.events, now, windowSeconds, NS.state, "windowXP", "xp")
 
   if delta > 0 then
@@ -463,7 +475,7 @@ function NS.onXPUpdate()
   local tcol = NS.ttlColor(ttl, NS.state.lastTTL)
   local trend = NS.ttlDeltaText(ttl, NS.state.lastTTL)
   
-  if DingTimerDB.enabled and delta >= (DingTimerDB.minXPDeltaToPrint or 1) then
+  if DingTimerDB.enabled and delta >= getMinXPDeltaToPrint() then
     local header = NS.C.base .. "[DING]" .. NS.C.r .. " "
 
     if (DingTimerDB.mode or "full") == "ttl" then
@@ -502,7 +514,7 @@ function NS.onMoneyUpdate()
   end
   
   -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden
-  local windowSeconds = (DingTimerDB and DingTimerDB.windowSeconds) or 600
+  local windowSeconds = getRollingWindowSeconds()
   pruneEvents(NS.state.moneyEvents, now, windowSeconds, NS.state, "windowMoney", "money")
 
   if delta > 0 then

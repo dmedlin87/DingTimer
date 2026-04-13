@@ -47,12 +47,12 @@ done
 Tag a commit with `v*` to trigger CI. The `test` job runs first; `release` only fires if tests pass. The zip packages `DingTimer/` only (not the repo root).
 
 ```bash
-git tag v1.1.0 && git push origin v1.1.0
+git tag v1.1.2 && git push origin v1.1.2
 ```
 
 ## Key Gotchas
 
-**WoW target:** Private WotLK server (Bronzebeard and CoA). `## Interface: 30300` is the addon target, and the installer supports the Ascension Launcher client path, the CoA PTR root, plus `_retail_`, `_classic_`, and `_classic_era_` layouts.
+**WoW target:** Retail WoW. `## Interface: 120001` is the addon target, the default installer path points at `World of Warcraft\\_retail_`, and PvP Honor reads fall back from legacy globals to the retail currency API.
 
 **Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store owns the coach default table plus `GetCoachDefaults`, `ValidateCoachConfig`, and `EnsureCoachConfig`. SessionCoach reads those helpers and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 
@@ -69,4 +69,4 @@ git tag v1.1.0 && git push origin v1.1.0
 - `GraphMath.lua` is pure/stateless — all inputs are explicit parameters, making it the easiest module to test
 - UI panels are lazily initialized (created on first tab access) through explicit tab initializers in `UI_MainWindow.lua`
 - The coach heartbeat runs every 1 second via `C_Timer.NewTicker` started at login
-- Schema migrations in `Store.lua` run sequentially (v3 → v8); add new migrations at the end
+- Schema migrations in `Store.lua` run sequentially (v3 → v9); add new migrations at the end

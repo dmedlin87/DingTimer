@@ -30,12 +30,10 @@ assert_eq(DingTimerDB.graphScaleMode, "session", "graph scale should accept sess
 SlashCmdList.DINGTIMER("graph fit")
 assert_eq(DingTimerDB.graphScaleMode, "visible", "graph fit should switch back to visible mode")
 
-if not DingTimerDB.graph then DingTimerDB.graph = {} end
-NS.GraphSetNeedsUpdate = function() end
 NS.RefreshSettingsPanel = function() end
 
 SlashCmdList.DINGTIMER("graph max 250000")
-assert_eq(DingTimerDB.graph.scaleMode, "fixed", "graph max should move the graph into fixed mode")
-assert_eq(DingTimerDB.graph.fixedMax, 250000, "graph max should update the fixed cap")
+assert_eq("fixed", DingTimerDB.graphScaleMode, "graph max should move the graph into fixed mode")
+assert_eq(250000, DingTimerDB.graphFixedMaxXPH, "graph max should update the fixed cap")
 
 print("Graph slash command tests passed!")

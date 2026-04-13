@@ -265,10 +265,9 @@ ROOT_COMMANDS.graph = function(arg)
     end
     if NS.SetGraphFixedMax then
       local applied = NS.SetGraphFixedMax(maxValue)
-      if NS.SetGraphScale then
-        NS.SetGraphScale("fixed")
+      if applied then
+        chat("graph fixed max = " .. NS.FormatNumber(applied))
       end
-      chat("graph fixed max = " .. NS.FormatNumber(applied))
     end
     return
   end

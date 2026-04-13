@@ -1,5 +1,7 @@
 local _, NS = ...
 
+local ADDON_VERSION = "1.1.2"
+
 -- CANONICAL SOURCE of coach default values.
 -- Store.lua loads before SessionCoach.lua, so this table and the stubs below are
 -- the authoritative definitions. SessionCoach.lua reads them and defines the
@@ -20,7 +22,7 @@ local PVP_DEFAULTS = {
   autoSwitchBattlegrounds = false,
   goalMode = "cap",
   customGoalHonor = nil,
-  honorCap = 75000,
+  honorCap = 15000,
   milestoneAnnouncements = false,
   milestoneStep = 5000,
   matchRecap = false,
@@ -174,6 +176,41 @@ local function normalizeScaleMode(mode, fixedMax)
   return normalized or "visible"
 end
 
+local function readClampedWhole(value, defaultValue, minValue, maxValue)
+  local numeric = tonumber(value)
+  if not numeric or NS.IsInvalidNumber(numeric) then
+    numeric = defaultValue
+  end
+
+  numeric = math.floor(numeric)
+  if minValue ~= nil and numeric < minValue then
+    numeric = minValue
+  end
+  if maxValue ~= nil and numeric > maxValue then
+    numeric = maxValue
+  end
+  return numeric
+end
+
+local function normalizeWindowSeconds(value)
+  return readClampedWhole(value, 600, 30, 86400)
+end
+
+local function normalizeMinXPDeltaToPrint(value)
+  return readClampedWhole(value, 1, 1, nil)
+end
+
+local function normalizeGraphWindowSeconds(value)
+  return readClampedWhole(value, 300, 180, 3600)
+end
+
+local function normalizeOutputMode(mode)
+  if mode == "ttl" then
+    return "ttl"
+  end
+  return "full"
+end
+
 local function ensureCoachConfig()
   -- NS.EnsureCoachConfig handles all default-filling and clamping internally.
   NS.EnsureCoachConfig(DingTimerDB)
@@ -242,7 +279,7 @@ function NS.InitStore()
     lastOpenTab = 1,
     schemaVersion = 9,
     meta = {
-      addonVersion = "1.1.0",
+      addonVersion = ADDON_VERSION,
       createdAt = GetTime(),
       lastSeenAt = GetTime(),
     },
@@ -262,17 +299,9 @@ function NS.InitStore()
   if not DingTimerDB then
     DingTimerDB = defaults
   else
-    -- 🛡️ Sentinel: Global bounds check for windowSeconds to prevent DoS from maliciously modified or corrupted SavedVariables
-    if DingTimerDB.windowSeconds then
-      -- Also explicitly check for NaN and Infinity to prevent validation bypass
-      if NS.IsInvalidNumber(DingTimerDB.windowSeconds) then
-        DingTimerDB.windowSeconds = 600
-      elseif DingTimerDB.windowSeconds < 30 then
-        DingTimerDB.windowSeconds = 30
-      elseif DingTimerDB.windowSeconds > 86400 then
-        DingTimerDB.windowSeconds = 86400
-      end
-    end
+    DingTimerDB.windowSeconds = normalizeWindowSeconds(DingTimerDB.windowSeconds)
+    DingTimerDB.minXPDeltaToPrint = normalizeMinXPDeltaToPrint(DingTimerDB.minXPDeltaToPrint)
+    DingTimerDB.graphWindowSeconds = normalizeGraphWindowSeconds(DingTimerDB.graphWindowSeconds)
 
     if DingTimerDB.graphFixedMaxXPH ~= nil then
       if NS.ClampGraphFixedMax then
@@ -366,6 +395,10 @@ function NS.InitStore()
   if DingTimerDB.pvp == nil then DingTimerDB.pvp = defaults.pvp end
   if not DingTimerDB.meta then DingTimerDB.meta = defaults.meta end
   cleanupObsoleteWindowState()
+  DingTimerDB.windowSeconds = normalizeWindowSeconds(DingTimerDB.windowSeconds)
+  DingTimerDB.minXPDeltaToPrint = normalizeMinXPDeltaToPrint(DingTimerDB.minXPDeltaToPrint)
+  DingTimerDB.graphWindowSeconds = normalizeGraphWindowSeconds(DingTimerDB.graphWindowSeconds)
+  DingTimerDB.mode = normalizeOutputMode(DingTimerDB.mode)
   DingTimerDB.graphScaleMode = normalizeScaleMode(DingTimerDB.graphScaleMode, DingTimerDB.graphFixedMaxXPH)
   DingTimerDB.graphFixedMaxXPH = NS.ClampGraphFixedMax and NS.ClampGraphFixedMax(DingTimerDB.graphFixedMaxXPH) or DingTimerDB.graphFixedMaxXPH
   DingTimerDB.meta.addonVersion = defaults.meta.addonVersion

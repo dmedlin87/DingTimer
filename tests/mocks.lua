@@ -14,6 +14,8 @@ local maxHonor = 75000
 local lifetimeHKs = 0
 local inInstance = false
 local instanceType = nil
+local honorApiFlavor = "legacy"
+local HONOR_CURRENCY_ID = 1792
 
 function GetTime()
   return currentTime
@@ -77,11 +79,15 @@ function SetZone(zone)
 end
 
 function GetHonorCurrency()
-  return currentHonor
+  if honorApiFlavor == "legacy" then
+    return currentHonor
+  end
 end
 
 function GetMaxHonorCurrency()
-  return maxHonor
+  if honorApiFlavor == "legacy" then
+    return maxHonor
+  end
 end
 
 function SetHonor(honor, cap)
@@ -89,6 +95,10 @@ function SetHonor(honor, cap)
   if cap then
     maxHonor = cap
   end
+end
+
+function SetHonorApiFlavor(flavor)
+  honorApiFlavor = flavor or "legacy"
 end
 
 function GetPVPLifetimeStats()
@@ -314,6 +324,19 @@ C_Timer = {
         if callback then callback() end
       end
     }
+  end
+}
+
+C_CurrencyInfo = {
+  GetCurrencyInfo = function(currencyId)
+    if honorApiFlavor == "retail" and tonumber(currencyId) == HONOR_CURRENCY_ID then
+      return {
+        quantity = currentHonor,
+        maxQuantity = maxHonor,
+        name = "Honor",
+      }
+    end
+    return nil
   end
 }
 

@@ -11,9 +11,10 @@ local math_huge = math.huge
 local string_format = string.format
 
 local PVP_PREFIX = (NS.C and NS.C.base or "") .. "[PVP]" .. (NS.C and NS.C.r or "")
-local DEFAULT_RESUME_MAX_AGE = 900
+local DEFAULT_RESUME_MAX_AGE = 1800
 local MATCH_GRACE_SECONDS = 15
 local RECENT_LIMIT = 4
+local DEFAULT_HONOR_CURRENCY_ID = 1792
 
 ---@class DingTimerPvpMatch
 ---@field startedAt number
@@ -57,6 +58,8 @@ local RECENT_LIMIT = 4
 ---@field noticeLog table[]
 ---@field queuedMessages string[]
 ---@field lastMilestone number|nil
+---@field profileKey string|nil
+---@field zone string|nil
 
 ---@class DingTimerPvpResume
 ---@field savedAt number|nil
@@ -144,11 +147,59 @@ local function readWholeNumber(value)
   return nil
 end
 
-local function readCurrentHonor()
-  if type(GetHonorCurrency) == "function" then
-    return readWholeNumber(GetHonorCurrency())
+local function readCurrencyInfoField(currencyInfo, keys)
+  if type(currencyInfo) ~= "table" then
+    return nil
+  end
+  for i = 1, #keys do
+    local value = readWholeNumber(currencyInfo[keys[i]])
+    if value ~= nil then
+      return value
+    end
   end
   return nil
+end
+
+local function resolveHonorCurrencyId()
+  local constants = type(Constants) == "table" and Constants or nil
+  local currencyConsts = constants and type(constants.CurrencyConsts) == "table" and constants.CurrencyConsts or nil
+  if currencyConsts then
+    local value = readWholeNumber(currencyConsts.HONOR_CURRENCY_ID) or
+      readWholeNumber(currencyConsts.HonorCurrencyID)
+    if value and value > 0 then
+      return value
+    end
+  end
+  return DEFAULT_HONOR_CURRENCY_ID
+end
+
+local function readHonorCurrencyInfo()
+  local currencyApi = type(C_CurrencyInfo) == "table" and C_CurrencyInfo or nil
+  if not currencyApi or type(currencyApi.GetCurrencyInfo) ~= "function" then
+    return nil
+  end
+
+  local info = currencyApi.GetCurrencyInfo(resolveHonorCurrencyId())
+  if type(info) == "table" then
+    return info
+  end
+  return nil
+end
+
+local function readCurrentHonor()
+  if type(GetHonorCurrency) == "function" then
+    local legacyValue = readWholeNumber(GetHonorCurrency())
+    if legacyValue ~= nil then
+      return legacyValue
+    end
+  end
+  local currencyInfo = readHonorCurrencyInfo()
+  return readCurrencyInfoField(currencyInfo, {
+    "quantity",
+    "currentQuantity",
+    "totalQuantity",
+    "trackedQuantity",
+  })
 end
 
 local function readHonorCap()
@@ -158,8 +209,18 @@ local function readHonorCap()
       return value
     end
   end
+  local currencyInfo = readHonorCurrencyInfo()
+  local currencyCap = readCurrencyInfoField(currencyInfo, {
+    "maxQuantity",
+    "quantityMax",
+    "totalMax",
+    "maximum",
+  })
+  if currencyCap and currencyCap > 0 then
+    return currencyCap
+  end
   local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
-  return math_floor((settings and settings.honorCap) or 75000)
+  return math_floor((settings and settings.honorCap) or 15000)
 end
 
 local function readLifetimeHKs()
@@ -176,6 +237,17 @@ local function readLifetimeHKs()
     end
   end
   return nil
+end
+
+function NS.IsRelevantPvpCurrencyEvent(currencyId)
+  if currencyId == nil then
+    return true
+  end
+  local numeric = readWholeNumber(currencyId)
+  if numeric == nil then
+    return true
+  end
+  return numeric == resolveHonorCurrencyId()
 end
 
 local function readPvpTotals()
@@ -240,7 +312,7 @@ local function getRuntime(now)
     currentHK = 0,
     lastHonor = nil,
     lastHK = nil,
-    honorCap = 75000,
+    honorCap = 15000,
     apiAvailable = false,
     apiMessage = "Honor API unavailable",
     enteredByAuto = false,
@@ -281,7 +353,7 @@ local function clearRuntime(now)
   return state
 end
 
-local function ensurePvpStore(createIfMissing)
+local function ensurePvpProfileStore(profileKey, createIfMissing)
   if not DingTimerDB then
     return nil
   end
@@ -293,7 +365,7 @@ local function ensurePvpStore(createIfMissing)
   end
   DingTimerDB.pvp.profiles = DingTimerDB.pvp.profiles or {}
 
-  local key = currentProfileKey()
+  local key = safeString(profileKey, currentProfileKey())
   local profile = DingTimerDB.pvp.profiles[key]
   if not profile and createIfMissing then
     profile = { sessions = {} }
@@ -303,6 +375,10 @@ local function ensurePvpStore(createIfMissing)
     profile.sessions = profile.sessions or {}
   end
   return profile
+end
+
+local function ensurePvpStore(createIfMissing)
+  return ensurePvpProfileStore(currentProfileKey(), createIfMissing)
 end
 
 local function pushRecent(list, entry)
@@ -658,6 +734,91 @@ local function storePvpSummary(summary)
   DingTimerDB.pvp.lastRecap = copyTable(summary)
 end
 
+local function appendPvpRecord(profile, record)
+  if not profile or not record then
+    return nil
+  end
+
+  profile.sessions[#profile.sessions + 1] = record
+  NS.TrimPvpSessions(profile)
+
+  local summary = NS.BuildPvpSummary(record)
+  record.summary = summary
+  storePvpSummary(summary)
+  if NS.RefreshInsightsWindow then
+    NS.RefreshInsightsWindow()
+  end
+  return record
+end
+
+local function buildPvpRecord(profile, startedAt, endedAt, honorGained, hkGained, zone, reason, startHonor, endHonor, goalMode, goalTarget)
+  local at = endedAt or GetTime()
+  local beganAt = tonumber(startedAt) or at
+  local totalHonor = tonumber(honorGained) or 0
+  local totalHKs = tonumber(hkGained) or 0
+  if totalHonor <= 0 and totalHKs <= 0 then
+    return nil
+  end
+
+  local durationSec = math_max(1, at - beganAt)
+  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
+  return {
+    id = string_format("%d-%d", math_floor(at + 0.5), #profile.sessions + 1),
+    startedAt = beganAt,
+    endedAt = at,
+    durationSec = durationSec,
+    honorGained = totalHonor,
+    hkGained = totalHKs,
+    avgHonorPerHour = (totalHonor / rateDivisor) * 3600,
+    avgHKPerHour = (totalHKs / rateDivisor) * 3600,
+    zone = safeString(zone, "Unknown"),
+    reason = reason or "MANUAL_RESET",
+    startHonor = tonumber(startHonor) or 0,
+    endHonor = tonumber(endHonor) or 0,
+    goalMode = goalMode or "cap",
+    goalTarget = goalTarget,
+  }
+end
+
+local function resolveStoredGoalTarget(goalMode, honorCap)
+  local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or {}
+  if goalMode == "cap" then
+    return tonumber(honorCap) or settings.honorCap or 15000
+  end
+  if goalMode == "custom" then
+    return settings.customGoalHonor
+  end
+  return nil
+end
+
+local function archiveResumeSession(resume, now)
+  if not resume or not DingTimerDB then
+    return nil
+  end
+
+  local profile = ensurePvpProfileStore(resume.profileKey, true)
+  if not profile then
+    return nil
+  end
+
+  local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or {}
+  local goalMode = settings.goalMode or "cap"
+  local record = buildPvpRecord(
+    profile,
+    resume.sessionStartTime,
+    now or GetTime(),
+    resume.sessionHonor,
+    resume.sessionHKs,
+    (resume.activeMatch and resume.activeMatch.zone) or resume.zone,
+    "LOGOUT",
+    resume.baselineHonor,
+    resume.currentHonor,
+    goalMode,
+    resolveStoredGoalTarget(goalMode, resume.honorCap)
+  )
+  return appendPvpRecord(profile, record)
+end
+
 function NS.ShowPvpRecap(now)
   local summary = nil
   local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(now or GetTime()) or nil
@@ -698,45 +859,26 @@ function NS.RecordPvpSession(reason, now)
   end
   local at = now or GetTime()
   local state = getRuntime(at)
-  local durationSec = math_max(1, at - (state.sessionStartTime or at))
-  if (state.sessionHonor or 0) <= 0 and (state.sessionHKs or 0) <= 0 then
-    return nil
-  end
-
   local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(at) or nil
   local profile = ensurePvpStore(true)
   if not profile then
     return nil
   end
 
-  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
-  local record = {
-    id = string_format("%d-%d", math_floor(at + 0.5), #profile.sessions + 1),
-    startedAt = state.sessionStartTime or at,
-    endedAt = at,
-    durationSec = durationSec,
-    honorGained = state.sessionHonor or 0,
-    hkGained = state.sessionHKs or 0,
-    avgHonorPerHour = ((state.sessionHonor or 0) / rateDivisor) * 3600,
-    avgHKPerHour = ((state.sessionHKs or 0) / rateDivisor) * 3600,
-    zone = snapshot and snapshot.zone or getZone(),
-    reason = reason or "MANUAL_RESET",
-    startHonor = snapshot and snapshot.startHonor or state.baselineHonor or 0,
-    endHonor = snapshot and snapshot.currentHonor or state.currentHonor or 0,
-    goalMode = snapshot and snapshot.goalMode or "cap",
-    goalTarget = snapshot and snapshot.targetHonor or nil,
-  }
-
-  profile.sessions[#profile.sessions + 1] = record
-  NS.TrimPvpSessions(profile)
-
-  local summary = NS.BuildPvpSummary(record)
-  record.summary = summary
-  storePvpSummary(summary)
-  if NS.RefreshInsightsWindow then
-    NS.RefreshInsightsWindow()
-  end
-  return record
+  local record = buildPvpRecord(
+    profile,
+    state.sessionStartTime or at,
+    at,
+    state.sessionHonor or 0,
+    state.sessionHKs or 0,
+    snapshot and snapshot.zone or getZone(),
+    reason or "MANUAL_RESET",
+    snapshot and snapshot.startHonor or state.baselineHonor or 0,
+    snapshot and snapshot.currentHonor or state.currentHonor or 0,
+    snapshot and snapshot.goalMode or "cap",
+    snapshot and snapshot.targetHonor or nil
+  )
+  return appendPvpRecord(profile, record)
 end
 
 function NS.EnterPvpMode(reason, enteredByAuto, now)
@@ -923,6 +1065,7 @@ function NS.PersistPvpResume(now)
   local state = getRuntime(at)
   DingTimerDB.pvp.resume = {
     savedAt = at,
+    profileKey = currentProfileKey(),
     sessionStartTime = state.sessionStartTime,
     sessionHonor = state.sessionHonor,
     sessionHKs = state.sessionHKs,
@@ -937,6 +1080,7 @@ function NS.PersistPvpResume(now)
     lastHonor = state.lastHonor,
     lastHK = state.lastHK,
     honorCap = state.honorCap,
+    zone = (state.activeMatch and state.activeMatch.zone) or getZone(),
     apiAvailable = state.apiAvailable,
     apiMessage = state.apiMessage,
     enteredByAuto = state.enteredByAuto,
@@ -959,7 +1103,17 @@ function NS.RestorePvpResumeIfAvailable(now)
 
   local at = now or GetTime()
   ---@cast resume DingTimerPvpResume
+  if resume.profileKey and resume.profileKey ~= currentProfileKey() then
+    if resume.savedAt and (at - resume.savedAt) > DEFAULT_RESUME_MAX_AGE then
+      archiveResumeSession(resume, at)
+      pvpStore.resume = nil
+    end
+    setActiveMode("xp")
+    return false
+  end
+
   if not resume.savedAt or (at - resume.savedAt) > DEFAULT_RESUME_MAX_AGE then
+    archiveResumeSession(resume, at)
     pvpStore.resume = nil
     setActiveMode("xp")
     return false

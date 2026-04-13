@@ -63,6 +63,26 @@ it("accepts multi-return honor APIs without crashing", function()
   assert_eq(75000, snapshot.targetHonor, "the PvP snapshot should still keep the honor cap goal")
 end)
 
+it("falls back to the retail currency API when legacy honor globals are unavailable", function()
+  local NS = newPvpHarness()
+  SetHonorApiFlavor("retail")
+  SetHonor(4200, 15000)
+  SetLifetimeHKs(25)
+
+  local ok, err = pcall(function()
+    NS.EnterPvpMode("MODE_SWITCH_TO_PVP", false, 100)
+  end)
+
+  SetHonorApiFlavor("legacy")
+
+  assert_true(ok, "retail currency fallback should not crash PvP mode: " .. tostring(err))
+
+  local snapshot = NS.GetPvpSnapshot(100)
+  assert_eq(4200, snapshot.currentHonor, "the PvP snapshot should read honor from the retail currency API")
+  assert_eq(15000, snapshot.targetHonor, "the PvP snapshot should use the retail honor cap from currency info")
+  assert_eq(25, snapshot.currentHK, "the PvP snapshot should keep reading lifetime HKs")
+end)
+
 it("queues recap notifications during combat and flushes them later", function()
   local NS = newPvpHarness()
   local settings = NS.EnsurePvpConfig(DingTimerDB)

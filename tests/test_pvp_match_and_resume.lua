@@ -68,11 +68,16 @@ assert_eq(400, snapshot.sessionHonor, "restored pvp sessions should preserve ses
 assert_eq(4, snapshot.sessionHKs, "restored pvp sessions should preserve session HK totals")
 
 NS.PersistPvpResume(145)
-DingTimerDB.pvp.resume.savedAt = 145 - 901
+DingTimerDB.pvp.resume.savedAt = 145 - 1801
 NS.state.pvp = nil
 DingTimerDB.activeMode = "xp"
 restored = NS.RestorePvpResumeIfAvailable(145)
 assert_false(restored, "stale resume data should be ignored")
 assert_eq("xp", DingTimerDB.activeMode, "stale resume data should leave the addon in leveling mode")
+local profile = NS.GetPvpProfileStore(true)
+assert_eq(1, #profile.sessions, "stale resume data should be archived as PvP history")
+assert_eq("LOGOUT", profile.sessions[1].reason, "archived stale resumes should carry the logout reason")
+assert_eq(400, profile.sessions[1].honorGained, "archived stale resumes should preserve session honor")
+assert_eq(4, profile.sessions[1].hkGained, "archived stale resumes should preserve session HK totals")
 
 print("PvP match and resume tests passed!")
