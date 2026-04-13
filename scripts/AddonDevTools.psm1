@@ -693,7 +693,7 @@ function Remove-PathIfPresent {
     }
 }
 
-function Stage-RuntimeFromToc {
+function Copy-RuntimeFromToc {
     param(
         [Parameter(Mandatory)]
         [AddonProject]$Project,
@@ -829,7 +829,7 @@ function Request-Elevation {
     throw [System.OperationCanceledException]::new("ElevationRelaunched")
 }
 
-function Ensure-WriteAccess {
+function Assert-WriteAccess {
     param(
         [Parameter(Mandatory)]
         [string]$DirectoryPath,
@@ -1094,7 +1094,7 @@ function Get-ManagedVersionRelativePaths {
     return ,$result
 }
 
-function Commit-ManagedVersionFiles {
+function Save-ManagedVersionFiles {
     param(
         [Parameter(Mandatory)]
         [AddonProject]$Project,
@@ -1164,7 +1164,7 @@ function Build-InstallerReadyReleaseAsset {
     Remove-ProjectReleaseArtifacts -Project $Project -OutputDir $OutputDir
 
     $stageRoot = Join-Path $OutputDir (".stage-{0}-{1}" -f $addonFolder, $version)
-    $stagedAddonPath = Stage-RuntimeFromToc -Project $Project -StageRoot $stageRoot
+    $stagedAddonPath = Copy-RuntimeFromToc -Project $Project -StageRoot $stageRoot
     $zipName = "{0}-v{1}.zip" -f $addonFolder, $version
     $zipPath = Join-Path $OutputDir $zipName
     $manifestPath = Join-Path $OutputDir "addon-manifest.json"
@@ -1306,12 +1306,12 @@ function Invoke-AddonAction {
             "install" {
                 $stageRoot = New-StageRoot -AddonFolder $addonFolder -Purpose "install"
                 try {
-                    $stagedAddonPath = Stage-RuntimeFromToc -Project $project -StageRoot $stageRoot
+                    $stagedAddonPath = Copy-RuntimeFromToc -Project $project -StageRoot $stageRoot
                     if (-not (Test-Path -LiteralPath $targetAddonDir -PathType Container)) {
                         throw "Target addon directory was not found at '$targetAddonDir'."
                     }
 
-                    Ensure-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Installing {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Installing {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
                     Write-Host ("Installing {0} to {1}..." -f $addonName, $targetPath) -ForegroundColor Cyan
                     Remove-PathIfPresent -Path $targetPath
                     Copy-Item -Recurse -Path $stagedAddonPath -Destination $targetPath -ErrorAction Stop
@@ -1328,7 +1328,7 @@ function Invoke-AddonAction {
                     throw "Target addon directory was not found at '$targetAddonDir'."
                 }
 
-                Ensure-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Linking {0}" -f $addonName) -RequireAdministrator:$true -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Linking {0}" -f $addonName) -RequireAdministrator:$true -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
                 Write-Host ("Creating Symbolic Link for {0}..." -f $addonName) -ForegroundColor Cyan
                 Remove-PathIfPresent -Path $targetPath
                 New-Item -ItemType SymbolicLink -Path $targetPath -Target $linkSourcePath -ErrorAction Stop | Out-Null
@@ -1341,7 +1341,7 @@ function Invoke-AddonAction {
                         throw "Target addon directory was not found at '$targetAddonDir'."
                     }
 
-                    Ensure-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Cleaning {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Cleaning {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
                     Write-Host ("Cleaning {0} from {1}..." -f $addonName, $targetPath) -ForegroundColor Yellow
                     Remove-PathIfPresent -Path $targetPath
                     Write-Host "Cleaned." -ForegroundColor Green
@@ -1356,7 +1356,7 @@ function Invoke-AddonAction {
                 $zipPath = Join-Path $project.RepoRoot ("{0}-v{1}.zip" -f $addonFolder, $version)
                 $stageRoot = New-StageRoot -AddonFolder $addonFolder -Purpose "dist"
                 try {
-                    $stagedAddonPath = Stage-RuntimeFromToc -Project $project -StageRoot $stageRoot
+                    $stagedAddonPath = Copy-RuntimeFromToc -Project $project -StageRoot $stageRoot
                     Write-Host ("Creating distribution zip: {0}" -f $zipPath) -ForegroundColor Cyan
                     if (Test-Path -LiteralPath $zipPath) {
                         Remove-Item -LiteralPath $zipPath -Force
@@ -1476,7 +1476,7 @@ function Invoke-AddonRelease {
 
     $statusOutput = Get-GitStatusText -Project $project
     if (-not [string]::IsNullOrWhiteSpace($statusOutput)) {
-        Commit-ManagedVersionFiles -Project $project -Version $resolvedVersion
+        Save-ManagedVersionFiles -Project $project -Version $resolvedVersion
     }
 
     $tagName = "v$resolvedVersion"
@@ -1530,8 +1530,13 @@ function Test-AddonProject {
         [Parameter(Mandatory)]
         [string]$RepoRoot,
 
-        [switch]$IncludePackaging = $true
+        [switch]$IncludePackaging
     )
+
+    $shouldIncludePackaging = $true
+    if ($PSBoundParameters.ContainsKey("IncludePackaging")) {
+        $shouldIncludePackaging = $IncludePackaging.IsPresent
+    }
 
     $project = Resolve-AddonProject -RepoRoot $RepoRoot
     Assert-AddonProjectStructure -Project $project
@@ -1541,7 +1546,7 @@ function Test-AddonProject {
         Assert-GeneratedFileMarker -Path $path
     }
 
-    if ($IncludePackaging) {
+    if ($shouldIncludePackaging) {
         $tempOutputDir = Join-Path ([System.IO.Path]::GetTempPath()) ("addon-dev-validation-{0}" -f [guid]::NewGuid().ToString("N"))
         try {
             New-Item -ItemType Directory -Path $tempOutputDir -Force | Out-Null
