@@ -283,12 +283,14 @@ local function calculateTrendPct(chartWindow, count, sessions)
 end
 
 --- Processes zone statistics to find the top 3 zones by average XP per hour.
---- @param zoneStats table The map of zone statistics.
+--- @param zoneStatsList table The array of zone statistics.
+--- @param count number The number of entries in the list.
 --- @return table The sorted list of top 3 zone leaders.
-local function calculateZoneLeaders(zoneStats)
+local function calculateZoneLeaders(zoneStatsList, count)
   local zoneLeaders = {}
-  for _, stat in pairs(zoneStats) do
-    zoneLeaders[#zoneLeaders + 1] = {
+  for i = 1, count do
+    local stat = zoneStatsList[i]
+    zoneLeaders[i] = {
       zone = stat.zone,
       avgXph = (stat.sessions > 0) and (stat.totalXph / stat.sessions) or 0,
       sessions = stat.sessions,
@@ -333,11 +335,12 @@ function NS.GetInsightsSummary(limit)
   local bestXph = 0
   local bestSession = nil
   local lastSession = sessions[count]
-  local zoneStats = {}
+  local zoneStatsMap = {}
+  local zoneStatsList = {}
 
   -- ⚡ Bolt: Use explicit counters for table insertion to avoid O(N) `#` operator
   -- overhead on every loop iteration, improving aggregation performance by ~35%
-  local x_count, d_count = 0, 0
+  local x_count, d_count, z_count = 0, 0, 0
   for i = 1, count do
     local s = sessions[i]
     local xph = tonumber(s.avgXph) or 0
@@ -358,10 +361,12 @@ function NS.GetInsightsSummary(limit)
     end
 
     local zoneKey = safeString(s.zone, "Unknown")
-    local zoneEntry = zoneStats[zoneKey]
+    local zoneEntry = zoneStatsMap[zoneKey]
     if not zoneEntry then
       zoneEntry = { zone = zoneKey, totalXph = 0, sessions = 0 }
-      zoneStats[zoneKey] = zoneEntry
+      zoneStatsMap[zoneKey] = zoneEntry
+      z_count = z_count + 1
+      zoneStatsList[z_count] = zoneEntry
     end
     zoneEntry.totalXph = zoneEntry.totalXph + xph
     zoneEntry.sessions = zoneEntry.sessions + 1
@@ -381,7 +386,7 @@ function NS.GetInsightsSummary(limit)
   end
 
   local trendPct = calculateTrendPct(chartWindow, count, sessions)
-  local zoneLeaders = calculateZoneLeaders(zoneStats)
+  local zoneLeaders = calculateZoneLeaders(zoneStatsList, z_count)
 
   return {
     totalSessions = count,

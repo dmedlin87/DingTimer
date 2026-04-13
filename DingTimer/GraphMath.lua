@@ -1,5 +1,9 @@
 local _, NS = ...
 
+local floor = math.floor
+local min = math.min
+local max = math.max
+
 --- Pure graph math functions, extracted from UI_XPGraphWindow.lua.
 --- All functions are stateless and take explicit parameters — no module-level state.
 --- This makes them easily testable outside the WoW environment.
@@ -14,8 +18,8 @@ local _, NS = ...
 --- @param maxBars number Maximum bar count.
 --- @return number The constrained number of bars to display.
 function NS.ComputeBarCount(windowSeconds, minSegmentSeconds, minBars, maxBars)
-  local raw = math.floor(windowSeconds / minSegmentSeconds)
-  return math.max(minBars, math.min(maxBars, raw))
+  local raw = floor(windowSeconds / minSegmentSeconds)
+  return max(minBars, min(maxBars, raw))
 end
 
 --- Calculates the duration of a single standard segment (bar) in seconds.
@@ -32,7 +36,7 @@ end
 --- @param segSeconds number The duration of one segment.
 --- @return number The zero-indexed segment position.
 function NS.GetSegmentIndex(timestamp, anchor, segSeconds)
-  return math.floor((timestamp - anchor) / segSeconds)
+  return floor((timestamp - anchor) / segSeconds)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -146,7 +150,7 @@ function NS.BuildAverageSeries(events, ctx)
   -- is reserved for a future optimisation where callers pre-stamp cumulative totals.
   local low, high = 1, #events
   while low <= high do
-    local mid = math.floor((low + high) / 2)
+    local mid = floor((low + high) / 2)
     if events[mid].t <= firstSegStart then
       low = mid + 1
     else
@@ -155,14 +159,20 @@ function NS.BuildAverageSeries(events, ctx)
   end
 
   if high > 0 and events[high] then
-    cumulativeXP = events[high].sessionXP or (cumulativeXP + events[high].xp)
+    if events[high].sessionXP then
+      cumulativeXP = events[high].sessionXP
+    else
+      for j = 1, high do
+        cumulativeXP = cumulativeXP + (events[j].xp or 0)
+      end
+    end
     eventIndex = high + 1
   end
 
   for i = 1, ctx.segmentCount do
     local segIdx = ctx.currentSegIdx - (ctx.segmentCount - i)
     local segEnd = ctx.anchor + (segIdx + 1) * ctx.segSeconds
-    local pointTime = math.min(segEnd, ctx.now)
+    local pointTime = min(segEnd, ctx.now)
 
     while events[eventIndex] and events[eventIndex].t <= pointTime do
       local event = events[eventIndex]
@@ -193,13 +203,13 @@ end
 function NS.ResolveGraphScaleMax(mode, visiblePeak, avgPeak, historyPeak, fixedMax)
   local normalized = NS.NormalizeGraphScaleMode(mode)
   if normalized == "fixed" then
-    return math.max(NS.ClampGraphFixedMax(fixedMax), 1)
+    return max(NS.ClampGraphFixedMax(fixedMax), 1)
   end
 
-  local peak = math.max(visiblePeak or 0, avgPeak or 0, 1)
+  local peak = max(visiblePeak or 0, avgPeak or 0, 1)
   if normalized == "session" then
-    peak = math.max(peak, historyPeak or 0)
+    peak = max(peak, historyPeak or 0)
   end
 
-  return math.max(1, peak * 1.12)
+  return max(1, peak * 1.12)
 end
