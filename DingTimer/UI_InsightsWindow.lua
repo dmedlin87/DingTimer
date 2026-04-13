@@ -206,9 +206,17 @@ local function refreshInsights()
     if pvpView then
       insightsFrame.pvpToggle:LockHighlight()
       insightsFrame.xpToggle:UnlockHighlight()
+      if NS.UI and NS.UI.SetButtonActive then
+        NS.UI.SetButtonActive(insightsFrame.pvpToggle, true)
+        NS.UI.SetButtonActive(insightsFrame.xpToggle, false)
+      end
     else
       insightsFrame.xpToggle:LockHighlight()
       insightsFrame.pvpToggle:UnlockHighlight()
+      if NS.UI and NS.UI.SetButtonActive then
+        NS.UI.SetButtonActive(insightsFrame.xpToggle, true)
+        NS.UI.SetButtonActive(insightsFrame.pvpToggle, false)
+      end
     end
   end
   local summary = pvpView and (NS.GetPvpInsightsSummary and NS.GetPvpInsightsSummary(MAX_ROWS) or { totalSessions = 0, rows = {}, chartValues = {}, zoneLeaders = {} })
@@ -294,6 +302,14 @@ function NS.InitInsightsPanel(parent)
   insightsFrame:SetAllPoints(parent)
 
   local _, scrollChild = NS.UI.CreateScrollFrame(insightsFrame, 680, 580)
+
+  if NS.UI and NS.UI.CreateSectionBlock then
+    NS.UI.CreateSectionBlock(scrollChild, 12, -62, 656, 86, "Session Comparison", "Best session callouts and how the current run stacks up.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -156, 656, 118, "Trend", "Recent pace history across your most recent stored sessions.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -286, 656, 76, "Zone Leaders", "Where your best historical pace has been.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -374, 656, 64, "Latest Recap", "The most recent coach or PvP summary stored with your runs.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -430, 656, 168, "Recent Sessions", "Newest runs first, with zone, pace, and trigger details.")
+  end
 
   local function createSummaryBlock(anchorX, label)
     local labelFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -396,6 +412,9 @@ function NS.InitInsightsPanel(parent)
   insightsFrame.xpToggle:SetSize(72, 22)
   insightsFrame.xpToggle:SetPoint("BOTTOMLEFT", insightsFrame, "BOTTOMLEFT", 146, 10)
   insightsFrame.xpToggle:SetText("Leveling")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(insightsFrame.xpToggle)
+  end
   insightsFrame.xpToggle:SetScript("OnClick", function()
     if NS.SetPvpHistoryView then
       NS.SetPvpHistoryView("xp")
@@ -407,6 +426,9 @@ function NS.InitInsightsPanel(parent)
   insightsFrame.pvpToggle:SetSize(56, 22)
   insightsFrame.pvpToggle:SetPoint("LEFT", insightsFrame.xpToggle, "RIGHT", 6, 0)
   insightsFrame.pvpToggle:SetText("PvP")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(insightsFrame.pvpToggle)
+  end
   insightsFrame.pvpToggle:SetScript("OnClick", function()
     if NS.SetPvpHistoryView then
       NS.SetPvpHistoryView("pvp")

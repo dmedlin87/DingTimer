@@ -233,9 +233,17 @@ end
 local function refreshControlState(_, _, _, snapshot)
   if not graphFrame then return end
   local mode = NS.NormalizeGraphScaleMode(DingTimerDB.graphScaleMode)
+  local zoomSeconds = tonumber(DingTimerDB.graphWindowSeconds) or 300
   graphFrame.scaleModeButton:SetText(NS.GetGraphScaleModeLabel(mode, true))
   graphFrame.fitButton:SetText(mode == "visible" and "Fitted" or "Fit")
   graphFrame.fixedMaxLabel:SetText("Fixed " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
+  if NS.UI and NS.UI.SetButtonActive then
+    NS.UI.SetButtonActive(graphFrame.scaleModeButton, mode ~= "visible")
+    NS.UI.SetButtonActive(graphFrame.fitButton, mode == "visible")
+    for i = 1, #graphFrame.zoomButtons do
+      NS.UI.SetButtonActive(graphFrame.zoomButtons[i], ZOOM_LEVELS[i] and ZOOM_LEVELS[i].seconds == zoomSeconds)
+    end
+  end
 
   if mode == "fixed" then
     graphFrame.fixedMaxLabel:Show()
@@ -670,6 +678,9 @@ function NS.InitGraphPanel(parent)
     local btn = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
     btn:SetSize(38, 22)
     btn:SetText(z.label)
+    if NS.UI and NS.UI.DecorateButton then
+      NS.UI.DecorateButton(btn)
+    end
     btn:SetScript("OnClick", function()
       NS.SetGraphZoom(z.label)
     end)
@@ -683,6 +694,9 @@ function NS.InitGraphPanel(parent)
   local decreaseFixedButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
   decreaseFixedButton:SetSize(24, 20)
   decreaseFixedButton:SetText("-")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(decreaseFixedButton)
+  end
   decreaseFixedButton:SetScript("OnClick", function()
     NS.AdjustGraphFixedMax(-25000)
   end)
@@ -691,6 +705,9 @@ function NS.InitGraphPanel(parent)
   local increaseFixedButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
   increaseFixedButton:SetSize(24, 20)
   increaseFixedButton:SetText("+")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(increaseFixedButton)
+  end
   increaseFixedButton:SetScript("OnClick", function()
     NS.AdjustGraphFixedMax(25000)
   end)
@@ -699,6 +716,9 @@ function NS.InitGraphPanel(parent)
   local scaleModeButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
   scaleModeButton:SetSize(96, 24)
   scaleModeButton:SetText("Scale")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(scaleModeButton)
+  end
   scaleModeButton:SetScript("OnClick", function()
     NS.CycleGraphScaleMode()
   end)
@@ -707,6 +727,9 @@ function NS.InitGraphPanel(parent)
   local fitButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")
   fitButton:SetSize(58, 24)
   fitButton:SetText("Fit")
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(fitButton)
+  end
   fitButton:SetScript("OnClick", function()
     NS.SetGraphScale("visible")
   end)

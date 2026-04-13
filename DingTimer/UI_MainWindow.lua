@@ -39,9 +39,12 @@ end
 
 local function createTabButton(parent, id, text, x, y)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  btn:SetSize(110, 24)
+  btn:SetSize(102, 24)
   btn:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", x, y)
   btn:SetText(text)
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(btn)
+  end
   
   btn:SetScript("OnClick", function()
     NS.SelectTab(id)
@@ -57,10 +60,16 @@ local function refreshSubtitle()
   if NS.IsPvpMode and NS.IsPvpMode() then
     local goal = NS.GetPvpGoalLabel and NS.GetPvpGoalLabel() or "Cap"
     mainWindow.subtitle:SetText("PvP Mode  |  Goal: " .. tostring(goal))
+    if mainWindow.modePill and NS.UI and NS.UI.SetPill then
+      NS.UI.SetPill(mainWindow.modePill, "PvP Active", "warn")
+    end
     return
   end
   local coachGoal = DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal or "ding"
   mainWindow.subtitle:SetText("Session Coach  |  Goal: " .. tostring(coachGoal))
+  if mainWindow.modePill and NS.UI and NS.UI.SetPill then
+    NS.UI.SetPill(mainWindow.modePill, "Leveling", "good")
+  end
 end
 
 NS.RefreshMainWindowSubtitle = refreshSubtitle
@@ -79,7 +88,9 @@ function NS.InitMainWindow()
     saveMainWindowPosition(self)
   end)
 
-  NS.ApplyThemeToFrame(mainWindow)
+  if NS.ApplyThemeToFrame then
+    NS.ApplyThemeToFrame(mainWindow)
+  end
   restoreMainWindowPosition(mainWindow)
 
   local closeBtn = CreateFrame("Button", nil, mainWindow, "UIPanelCloseButton")
@@ -106,16 +117,24 @@ function NS.InitMainWindow()
   subtitle:SetText("Session Coach")
   mainWindow.subtitle = subtitle
 
+  if NS.UI and NS.UI.CreatePill then
+    local modePill = NS.UI.CreatePill(mainWindow, MAIN_WIDTH - 122, -14, 96, "Leveling")
+    mainWindow.modePill = modePill
+  end
+
   local contentArea = CreateFrame("Frame", "DingTimerMainContent", mainWindow)
-  contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 10, -54)
+  contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 10, -60)
   contentArea:SetPoint("BOTTOMRIGHT", mainWindow, "BOTTOMRIGHT", -10, 10)
+  if NS.ApplyThemeToFrame then
+    NS.ApplyThemeToFrame(contentArea, true)
+  end
   mainWindow.contentArea = contentArea
 
   -- Create Tabs
   tabs[1] = createTabButton(contentArea, 1, "Live", 0, 2)
-  tabs[2] = createTabButton(contentArea, 2, "Analysis", 112, 2)
-  tabs[3] = createTabButton(contentArea, 3, "History", 224, 2)
-  tabs[4] = createTabButton(contentArea, 4, "Settings", 336, 2)
+  tabs[2] = createTabButton(contentArea, 2, "Analysis", 106, 2)
+  tabs[3] = createTabButton(contentArea, 3, "History", 212, 2)
+  tabs[4] = createTabButton(contentArea, 4, "Settings", 318, 2)
   mainWindow.tabs = tabs
   mainWindow.panels = panels
 
@@ -175,8 +194,14 @@ function NS.SelectTab(id)
     local tab = tabs[i]
     if i == id then
       tab:LockHighlight()
+      if NS.UI and NS.UI.SetButtonActive then
+        NS.UI.SetButtonActive(tab, true)
+      end
     else
       tab:UnlockHighlight()
+      if NS.UI and NS.UI.SetButtonActive then
+        NS.UI.SetButtonActive(tab, false)
+      end
     end
   end
 

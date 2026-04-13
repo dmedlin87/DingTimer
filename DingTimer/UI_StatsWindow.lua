@@ -5,6 +5,7 @@ local CARD_WIDTH = 151
 local CARD_HEIGHT = 56
 local CARD_GAP = 10
 
+local math_abs = math.abs
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
@@ -28,6 +29,7 @@ local function setProgress(snapshot)
   if not statsFrame then return end
   local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
   local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
+  statsFrame.progressFill:SetColorTexture(0.24, 0.78, 0.92, 0.9)
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
     "Level %s  |  %s / %s XP  (%.1f%%)",
@@ -49,6 +51,7 @@ local function setPvpProgress(snapshot)
   if not statsFrame then return end
   local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
   local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
+  statsFrame.progressFill:SetColorTexture(0.92, 0.74, 0.24, 0.9)
   local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
@@ -165,6 +168,40 @@ local function applyModeLabels()
   end
 end
 
+local function setStatusPills(isPvp, snapshot, coach)
+  if not statsFrame or not NS.UI or not NS.UI.SetPill then
+    return
+  end
+
+  if isPvp then
+    NS.UI.SetPill(statsFrame.modePill, "PvP Mode", "warn")
+    if snapshot and snapshot.targetHonor and snapshot.targetHonor > 0 then
+      NS.UI.SetPill(
+        statsFrame.goalPill,
+        "Goal " .. NS.FormatNumber(snapshot.targetHonor),
+        "good"
+      )
+    else
+      NS.UI.SetPill(statsFrame.goalPill, "Honor Run", "neutral")
+    end
+    return
+  end
+
+  NS.UI.SetPill(statsFrame.modePill, "Leveling", "good")
+  if coach and coach.goal and coach.goal.targetXph and coach.goal.targetXph > 0 then
+    local delta = (snapshot.currentXph or 0) - (coach.goal.targetXph or 0)
+    if delta >= 0 then
+      NS.UI.SetPill(statsFrame.goalPill, "On Pace +" .. NS.FormatNumber(NS.Round(delta)), "good")
+    else
+      NS.UI.SetPill(statsFrame.goalPill, "Behind " .. NS.FormatNumber(NS.Round(math_abs(delta))), "bad")
+    end
+  elseif snapshot.currentXph and snapshot.currentXph > 0 then
+    NS.UI.SetPill(statsFrame.goalPill, "Rolling Window", "info")
+  else
+    NS.UI.SetPill(statsFrame.goalPill, "Need XP", "neutral")
+  end
+end
+
 local function updateButtons()
   if not statsFrame then return end
   statsFrame.hudButton:SetText(DingTimerDB.float and "Hide HUD" or "Show HUD")
@@ -188,6 +225,7 @@ local function updateValues()
     end
 
     setPvpProgress(snapshot)
+    setStatusPills(true, snapshot, nil)
 
     local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
     local matchValue = "--"
@@ -233,6 +271,7 @@ local function updateValues()
   local currentSegment = coach and coach.currentSegment or nil
 
   setProgress(snapshot)
+  setStatusPills(false, snapshot, coach)
 
   local currentPaceSub = "Rolling pace"
   if snapshot.showSettledOverlay then
@@ -309,6 +348,11 @@ function NS.InitStatsPanel(parent)
   progressSub:SetText("")
   statsFrame.progressSub = progressSub
 
+  if NS.UI and NS.UI.CreatePill then
+    statsFrame.modePill = NS.UI.CreatePill(progressFrame, FRAME_WIDTH - 196, -10, 84, "Leveling")
+    statsFrame.goalPill = NS.UI.CreatePill(progressFrame, FRAME_WIDTH - 104, -10, 92, "Rolling")
+  end
+
   local progressBar = CreateFrame("Frame", nil, progressFrame, "BackdropTemplate")
   progressBar:SetSize(FRAME_WIDTH - 20, 10)
   progressBar:SetPoint("BOTTOMLEFT", progressFrame, "BOTTOMLEFT", 10, 10)
@@ -340,27 +384,63 @@ function NS.InitStatsPanel(parent)
     bestSegment = NS.UI.CreateMetricCard(scrollChild, CARD_WIDTH, CARD_HEIGHT, 16 + ((CARD_WIDTH + CARD_GAP) * 3), -178, "Best Segment"),
   }
 
-  NS.UI.CreateSectionTitle(scrollChild, 16, -254, "Session Coach", "Goal tracking, current segment status, and recent guidance.")
-  statsFrame.goalStatus = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  statsFrame.goalStatus:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -282)
-  statsFrame.goalStatus:SetWidth(680)
+  local coachSection = NS.UI.CreateSectionBlock and NS.UI.CreateSectionBlock(
+    scrollChild,
+    16,
+    -254,
+    664,
+    70,
+    "Session Coach",
+    "Goal tracking, current segment status, and recent guidance."
+  ) or scrollChild
+  statsFrame.goalStatus = coachSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  statsFrame.goalStatus:SetPoint("TOPLEFT", coachSection, "TOPLEFT", 12, -42)
+  statsFrame.goalStatus:SetWidth(636)
   statsFrame.goalStatus:SetJustifyH("LEFT")
   statsFrame.goalStatus:SetText("")
 
-  statsFrame.segmentStatus = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  statsFrame.segmentStatus = coachSection:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   statsFrame.segmentStatus:SetPoint("TOPLEFT", statsFrame.goalStatus, "BOTTOMLEFT", 0, -6)
-  statsFrame.segmentStatus:SetWidth(680)
+  statsFrame.segmentStatus:SetWidth(636)
   statsFrame.segmentStatus:SetJustifyH("LEFT")
   statsFrame.segmentStatus:SetText("")
 
-  local alertTitle, alertSub = NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
-  statsFrame.alertRows = NS.UI.CreateListRows(scrollChild, {
-    startX = 16, startY = -360, width = 680, rowCount = 4, spacing = 16, fontObject = "GameFontHighlightSmall"
+  local alertsSection, alertTitle, alertSub
+  if NS.UI.CreateSectionBlock then
+    alertsSection, alertTitle, alertSub = NS.UI.CreateSectionBlock(
+      scrollChild,
+      16,
+      -332,
+      664,
+      96,
+      "Recent Alerts",
+      "Coach warnings and milestones from this run."
+    )
+  else
+    alertsSection = scrollChild
+    alertTitle, alertSub = NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
+  end
+  statsFrame.alertRows = NS.UI.CreateListRows(alertsSection, {
+    startX = 12, startY = -42, width = 636, rowCount = 4, spacing = 16, fontObject = "GameFontHighlightSmall"
   })
 
-  local recapTitle, recapSub = NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
-  statsFrame.recapRows = NS.UI.CreateListRows(scrollChild, {
-    startX = 16, startY = -466, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontDisableSmall"
+  local recapSection, recapTitle, recapSub
+  if NS.UI.CreateSectionBlock then
+    recapSection, recapTitle, recapSub = NS.UI.CreateSectionBlock(
+      scrollChild,
+      16,
+      -438,
+      664,
+      88,
+      "Latest Recap",
+      "The most recent recap is kept here for quick review."
+    )
+  else
+    recapSection = scrollChild
+    recapTitle, recapSub = NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
+  end
+  statsFrame.recapRows = NS.UI.CreateListRows(recapSection, {
+    startX = 12, startY = -42, width = 636, rowCount = 3, spacing = 16, fontObject = "GameFontDisableSmall"
   })
   statsFrame.sectionTitles = {
     alertTitle = alertTitle,
@@ -369,12 +449,12 @@ function NS.InitStatsPanel(parent)
     recapSub = recapSub,
   }
 
-  statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 88, "Show HUD", function()
+  statsFrame.hudButton = NS.UI.CreateActionButton(statsFrame, 16, 12, 76, "Show HUD", function()
     DingTimerDB.float = not DingTimerDB.float
     NS.setFloatVisible(DingTimerDB.float)
     updateButtons()
   end)
-  statsFrame.secondaryButton = NS.UI.CreateActionButton(statsFrame, 112, 12, 88, "Split", function()
+  statsFrame.secondaryButton = NS.UI.CreateActionButton(statsFrame, 100, 12, 72, "Split", function()
     if NS.IsPvpMode and NS.IsPvpMode() then
       if NS.ShowPvpRecap then
         NS.ShowPvpRecap()
@@ -387,26 +467,34 @@ function NS.InitStatsPanel(parent)
     end
     updateValues()
   end)
-  NS.UI.CreateActionButton(statsFrame, 208, 12, 88, "Analysis", function()
+  statsFrame.graphButton = NS.UI.CreateActionButton(statsFrame, 180, 12, 72, "Graph", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(2)
     end
   end)
-  NS.UI.CreateActionButton(statsFrame, 304, 12, 88, "History", function()
+  statsFrame.historyButton = NS.UI.CreateActionButton(statsFrame, 260, 12, 76, "History", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(3)
     end
   end)
-  NS.CreateConfirmButton(statsFrame, 400, 12, 100, "Reset", "Confirm Reset", function()
+  statsFrame.settingsButton = NS.UI.CreateActionButton(statsFrame, 344, 12, 76, "Settings", function()
+    if NS.ShowMainWindow then
+      NS.ShowMainWindow(4)
+    end
+  end)
+  local resetButton = NS.CreateConfirmButton(statsFrame, 428, 12, 96, "Reset", "Confirm Reset", function()
     if NS.ResetSession then
       NS.ResetSession("MANUAL_RESET")
     end
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
   end)
+  if NS.UI and NS.UI.DecorateButton then
+    NS.UI.DecorateButton(resetButton)
+  end
 
   local footer = statsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   footer:SetPoint("BOTTOMRIGHT", -16, 18)
-  footer:SetText("Live panel")
+  footer:SetText("Live tab")
 
   statsFrame:Hide()
   NS.ManageFrameTicker(statsFrame, 1, updateValues, "uiWindowVisible")

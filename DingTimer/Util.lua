@@ -41,11 +41,136 @@ function NS.UI.CreateSectionTitle(parent, x, y, title, description)
   return header, sub
 end
 
+function NS.UI.CreateSectionBlock(parent, x, y, width, height, title, description)
+  local section = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+  section:SetSize(width, height)
+  section:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+  NS.ApplyThemeToFrame(section, true)
+
+  local fill = section:CreateTexture(nil, "BACKGROUND")
+  fill:SetPoint("TOPLEFT", section, "TOPLEFT", 2, -2)
+  fill:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -2, 2)
+  fill:SetColorTexture(0.03, 0.05, 0.08, 0.42)
+  section._dingFill = fill
+
+  local header, sub = NS.UI.CreateSectionTitle(section, 12, -12, title, description)
+  section.title = header
+  section.subtitle = sub
+  return section, header, sub
+end
+
+function NS.UI.CreatePill(parent, x, y, width, text)
+  local pill = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+  pill:SetSize(width or 84, 20)
+  pill:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+  NS.ApplyThemeToFrame(pill, true)
+
+  local fill = pill:CreateTexture(nil, "BACKGROUND")
+  fill:SetPoint("TOPLEFT", pill, "TOPLEFT", 2, -2)
+  fill:SetPoint("BOTTOMRIGHT", pill, "BOTTOMRIGHT", -2, 2)
+  fill:SetColorTexture(0.07, 0.11, 0.15, 0.65)
+  pill._dingFill = fill
+
+  local label = pill:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  label:SetPoint("CENTER", pill, "CENTER", 0, 0)
+  label:SetText(text or "")
+  pill.label = label
+  return pill
+end
+
+function NS.UI.SetPill(pill, text, tone)
+  if not pill then
+    return
+  end
+
+  local borderR, borderG, borderB, borderA = 0.26, 0.62, 0.78, 0.9
+  local fillR, fillG, fillB, fillA = 0.07, 0.11, 0.15, 0.7
+  local accentR, accentG, accentB, accentA = 0.24, 0.78, 0.92, 0.85
+
+  if tone == "good" then
+    borderR, borderG, borderB = 0.22, 0.66, 0.38
+    fillR, fillG, fillB = 0.05, 0.13, 0.08
+    accentR, accentG, accentB = 0.34, 0.88, 0.52
+  elseif tone == "warn" then
+    borderR, borderG, borderB = 0.72, 0.56, 0.18
+    fillR, fillG, fillB = 0.15, 0.11, 0.03
+    accentR, accentG, accentB = 0.95, 0.78, 0.24
+  elseif tone == "bad" then
+    borderR, borderG, borderB = 0.78, 0.28, 0.28
+    fillR, fillG, fillB = 0.14, 0.04, 0.04
+    accentR, accentG, accentB = 0.94, 0.40, 0.40
+  elseif tone == "neutral" then
+    borderR, borderG, borderB = 0.35, 0.39, 0.44
+    fillR, fillG, fillB = 0.08, 0.09, 0.10
+    accentR, accentG, accentB = 0.55, 0.59, 0.64
+  end
+
+  pill:SetBackdropBorderColor(borderR, borderG, borderB, borderA)
+  if pill._dingFill then
+    pill._dingFill:SetColorTexture(fillR, fillG, fillB, fillA)
+  end
+  if pill._dingAccent then
+    pill._dingAccent:SetColorTexture(accentR, accentG, accentB, accentA)
+  end
+  pill.label:SetText(text or "")
+end
+
+function NS.UI.DecorateButton(btn)
+  if not btn or btn._dingStyled then
+    return btn
+  end
+
+  local fill = btn:CreateTexture(nil, "BACKGROUND")
+  fill:SetAllPoints(btn)
+  fill:SetColorTexture(0.06, 0.08, 0.10, 0.55)
+  btn._dingFill = fill
+
+  local accent = btn:CreateTexture(nil, "ARTWORK")
+  accent:SetHeight(2)
+  accent:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 6, 4)
+  accent:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -6, 4)
+  accent:SetColorTexture(0.24, 0.78, 0.92, 0.45)
+  btn._dingAccent = accent
+  btn._dingStyled = true
+  return btn
+end
+
+function NS.UI.SetButtonActive(btn, active)
+  if not btn then
+    return
+  end
+  if not btn._dingStyled then
+    NS.UI.DecorateButton(btn)
+  end
+
+  if active then
+    if btn._dingFill then
+      btn._dingFill:SetColorTexture(0.08, 0.13, 0.17, 0.92)
+    end
+    if btn._dingAccent then
+      btn._dingAccent:SetColorTexture(0.34, 0.88, 1.0, 0.98)
+    end
+  else
+    if btn._dingFill then
+      btn._dingFill:SetColorTexture(0.06, 0.08, 0.10, 0.55)
+    end
+    if btn._dingAccent then
+      btn._dingAccent:SetColorTexture(0.24, 0.78, 0.92, 0.45)
+    end
+  end
+end
+
 function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
   local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   card:SetSize(width, height)
   card:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   NS.ApplyThemeToFrame(card, true)
+
+  local fill = card:CreateTexture(nil, "BACKGROUND")
+  fill:SetPoint("TOPLEFT", card, "TOPLEFT", 2, -2)
+  fill:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -2, 2)
+  fill:SetColorTexture(0.03, 0.05, 0.07, 0.5)
+  card._dingFill = fill
 
   local accent = card:CreateTexture(nil, "ARTWORK")
   accent:SetHeight(2)
@@ -85,6 +210,7 @@ function NS.UI.CreateActionButton(parent, x, y, width, label, callback)
   btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
   btn:SetText(label)
   btn:SetScript("OnClick", callback)
+  NS.UI.DecorateButton(btn)
   return btn
 end
 
