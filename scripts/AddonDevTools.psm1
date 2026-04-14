@@ -829,6 +829,21 @@ function Request-Elevation {
     throw [System.OperationCanceledException]::new("ElevationRelaunched")
 }
 
+function Get-AddonActionUsageScriptName {
+    param(
+        [Parameter(Mandatory)]
+        [AddonProject]$Project,
+
+        [string]$EntryScriptPath
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($EntryScriptPath)) {
+        return [System.IO.Path]::GetFileName($EntryScriptPath)
+    }
+
+    return "{0}.ps1" -f (Get-ProjectInstallScriptBaseName -Project $Project)
+}
+
 function Assert-WriteAccess {
     param(
         [Parameter(Mandatory)]
@@ -843,7 +858,7 @@ function Assert-WriteAccess {
         [Parameter(Mandatory)]
         [string]$ProbeName,
 
-        [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$EntryScriptPath,
 
         [Parameter(Mandatory)]
@@ -1282,7 +1297,8 @@ function Invoke-AddonAction {
     try {
         $normalizedAction = if ([string]::IsNullOrWhiteSpace($Action)) { "install" } else { $Action.ToLowerInvariant() }
         if (-not ($script:SupportedActions -contains $normalizedAction)) {
-            $usage = ".\" + [System.IO.Path]::GetFileName($EntryScriptPath) + " -Action [" + ($script:SupportedActions -join "|") + "] [-Flavor retail|classic|classic_era|ptr] [-WowPath '<WoW client path>']"
+            $usageScriptName = Get-AddonActionUsageScriptName -Project $project -EntryScriptPath $EntryScriptPath
+            $usage = ".\" + $usageScriptName + " -Action [" + ($script:SupportedActions -join "|") + "] [-Flavor retail|classic|classic_era|ptr] [-WowPath '<WoW client path>']"
             throw "Unknown action: $Action`nUse: $usage"
         }
 
@@ -1524,6 +1540,36 @@ function Invoke-AddonRelease {
     throw "Tag $tagName was pushed, but GitHub did not publish a matching release within $PublishTimeoutSeconds seconds."
 }
 
+function Test-DirectAddonActionContract {
+    param(
+        [Parameter(Mandatory)]
+        [AddonProject]$Project
+    )
+
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("addon-dev-direct-action-{0}" -f [guid]::NewGuid().ToString("N"))
+    try {
+        $wowRoot = Join-Path $tempRoot "World of Warcraft"
+        $targetAddonDir = Join-Path $wowRoot "Interface\AddOns"
+        New-Item -ItemType Directory -Path $targetAddonDir -Force | Out-Null
+
+        $addonFolder = Get-ProjectAddonFolder -Project $Project
+        $targetPath = Join-Path $targetAddonDir $addonFolder
+
+        Invoke-AddonAction -RepoRoot $Project.RepoRoot -Action "install" -WowPath $wowRoot
+        if (-not (Test-Path -LiteralPath $targetPath -PathType Container)) {
+            throw "Direct-action validation failed: install did not create '$targetPath'."
+        }
+
+        Invoke-AddonAction -RepoRoot $Project.RepoRoot -Action "clean" -WowPath $wowRoot
+        if (Test-Path -LiteralPath $targetPath) {
+            throw "Direct-action validation failed: clean did not remove '$targetPath'."
+        }
+    }
+    finally {
+        Remove-PathIfPresent -Path $tempRoot
+    }
+}
+
 function Test-AddonProject {
     [CmdletBinding()]
     param(
@@ -1545,6 +1591,8 @@ function Test-AddonProject {
     foreach ($path in @($generatedFiles.ModulePath, $generatedFiles.BuildScriptPath, $generatedFiles.ValidationScriptPath, $generatedFiles.InstallScriptPath, $generatedFiles.InstallCmdPath)) {
         Assert-GeneratedFileMarker -Path $path
     }
+
+    Test-DirectAddonActionContract -Project $project
 
     if ($shouldIncludePackaging) {
         $tempOutputDir = Join-Path ([System.IO.Path]::GetTempPath()) ("addon-dev-validation-{0}" -f [guid]::NewGuid().ToString("N"))
