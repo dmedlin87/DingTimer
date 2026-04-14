@@ -27,6 +27,15 @@ NS.GraphWindowDefaults = {
   maxHeight = 680,
 }
 
+NS.MainWindowDefaults = {
+  width = 720,
+  height = 540,
+  minWidth = 720,
+  minHeight = 540,
+  maxWidth = 1120,
+  maxHeight = 820,
+}
+
 NS.UI = NS.UI or {}
 
 function NS.UI.CreateSectionTitle(parent, x, y, title, description)
@@ -448,6 +457,13 @@ end
 
 function NS.ClampGraphWindowSize(width, height)
   local bounds = NS.GraphWindowDefaults
+  local w = math_floor(NS.Clamp(width, bounds.minWidth, bounds.maxWidth))
+  local h = math_floor(NS.Clamp(height, bounds.minHeight, bounds.maxHeight))
+  return w, h
+end
+
+function NS.ClampMainWindowSize(width, height)
+  local bounds = NS.MainWindowDefaults
   local w = math_floor(NS.Clamp(width, bounds.minWidth, bounds.maxWidth))
   local h = math_floor(NS.Clamp(height, bounds.minHeight, bounds.maxHeight))
   return w, h

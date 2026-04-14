@@ -38,6 +38,7 @@ assert_true(DingTimerMainWindow.panels[1] == statsPanel, "live tab should map to
 assert_true(statsPanel:IsShown(), "live tab should display the stats panel")
 assert_true(not graphPanel:IsShown(), "graph panel should remain hidden while the live tab is active")
 assert_true(not settingsPanel:IsShown(), "settings panel should remain hidden while the live tab is active")
+assert_eq(DingTimerMainWindow.activeTabPill.label:GetText(), "Live", "live tab should be reflected in the header pill")
 
 NS.ToggleMainWindow(4)
 
@@ -47,5 +48,6 @@ assert_true(DingTimerMainWindow.panels[4] == settingsPanel, "settings tab should
 assert_true(settingsPanel:IsShown(), "settings tab should display the settings panel")
 assert_true(not statsPanel:IsShown(), "stats panel should hide when switching away")
 assert_true(not graphPanel:IsShown(), "graph panel should remain hidden when settings is selected")
+assert_eq(DingTimerMainWindow.activeTabPill.label:GetText(), "Settings", "settings tab should be reflected in the header pill")
 
 print("UI window lifecycle test passed!")

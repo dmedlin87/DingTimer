@@ -276,6 +276,7 @@ function NS.InitStore()
     minimapHidden = false,
     mainWindowVisible = false,
     mainWindowPosition = nil,
+    mainWindowSize = nil,
     lastOpenTab = 1,
     schemaVersion = 9,
     meta = {
@@ -389,6 +390,7 @@ function NS.InitStore()
   if DingTimerDB.minimapHidden == nil then DingTimerDB.minimapHidden = defaults.minimapHidden end
   if DingTimerDB.mainWindowVisible == nil then DingTimerDB.mainWindowVisible = defaults.mainWindowVisible end
   if DingTimerDB.mainWindowPosition == nil then DingTimerDB.mainWindowPosition = defaults.mainWindowPosition end
+  if DingTimerDB.mainWindowSize == nil then DingTimerDB.mainWindowSize = defaults.mainWindowSize end
   if DingTimerDB.lastOpenTab == nil then DingTimerDB.lastOpenTab = defaults.lastOpenTab end
   if DingTimerDB.floatShowInCombat == nil then DingTimerDB.floatShowInCombat = defaults.floatShowInCombat end
   if DingTimerDB.coach == nil then DingTimerDB.coach = copyCoachDefaults() end
