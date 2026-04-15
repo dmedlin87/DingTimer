@@ -38,6 +38,48 @@ NS.MainWindowDefaults = {
 
 NS.UI = NS.UI or {}
 
+-- Named RGBA color palette for frame painting.
+-- Use NS.SetColor(texture, key, alpha) for convenience.
+NS.Colors = {
+  -- Primary accent (signature DingTimer teal-blue)
+  accent         = { 0.24, 0.78, 0.92 },
+  accentActive   = { 0.34, 0.88, 1.0 },
+
+  -- Semantic tones (match SetPill branches)
+  good           = { 0.22, 0.66, 0.38 },
+  warn           = { 0.72, 0.56, 0.18 },
+  bad            = { 0.78, 0.28, 0.28 },
+  neutral        = { 0.35, 0.39, 0.44 },
+  info           = { 0.26, 0.62, 0.78 },
+
+  -- Frame chrome
+  borderDefault  = { 0.2, 0.6, 0.8 },
+  borderMuted    = { 0.3, 0.3, 0.3 },
+  bgSolid        = { 0.05, 0.05, 0.05 },
+  fillDark       = { 0.03, 0.05, 0.08 },
+  fillCard       = { 0.03, 0.05, 0.07 },
+  fillCardHover  = { 0.06, 0.09, 0.12 },
+  fillPill       = { 0.07, 0.11, 0.15 },
+  fillButton     = { 0.06, 0.08, 0.10 },
+  fillBtnActive  = { 0.08, 0.13, 0.17 },
+
+  -- Progress bar fills
+  progressXP     = { 0.24, 0.78, 0.92 },
+  progressPvP    = { 0.92, 0.74, 0.24 },
+
+  -- Graph palette (includes alpha as 4th element for graph code compat)
+  graphGreen     = { 0.22, 0.82, 0.46, 0.95 },
+  graphRed       = { 0.92, 0.32, 0.32, 0.95 },
+  graphGray      = { 0.42, 0.46, 0.54, 0.55 },
+  graphLine      = { 1.0, 0.82, 0.18, 0.95 },
+  graphGrid      = { 0.26, 0.29, 0.34, 0.75 },
+}
+
+function NS.SetColor(texture, colorKey, alpha)
+  local c = NS.Colors[colorKey] or NS.Colors.accent
+  texture:SetColorTexture(c[1], c[2], c[3], alpha or 1)
+end
+
 function NS.UI.CreateSectionTitle(parent, x, y, title, description)
   local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -59,7 +101,7 @@ function NS.UI.CreateSectionBlock(parent, x, y, width, height, title, descriptio
   local fill = section:CreateTexture(nil, "BACKGROUND")
   fill:SetPoint("TOPLEFT", section, "TOPLEFT", 2, -2)
   fill:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -2, 2)
-  fill:SetColorTexture(0.03, 0.05, 0.08, 0.42)
+  fill:SetColorTexture(NS.Colors.fillDark[1], NS.Colors.fillDark[2], NS.Colors.fillDark[3], 0.42)
   section._dingFill = fill
 
   local header, sub = NS.UI.CreateSectionTitle(section, 12, -12, title, description)
@@ -77,7 +119,7 @@ function NS.UI.CreatePill(parent, x, y, width, text)
   local fill = pill:CreateTexture(nil, "BACKGROUND")
   fill:SetPoint("TOPLEFT", pill, "TOPLEFT", 2, -2)
   fill:SetPoint("BOTTOMRIGHT", pill, "BOTTOMRIGHT", -2, 2)
-  fill:SetColorTexture(0.07, 0.11, 0.15, 0.65)
+  fill:SetColorTexture(NS.Colors.fillPill[1], NS.Colors.fillPill[2], NS.Colors.fillPill[3], 0.65)
   pill._dingFill = fill
 
   local label = pill:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -108,6 +150,10 @@ function NS.UI.SetPill(pill, text, tone)
     borderR, borderG, borderB = 0.78, 0.28, 0.28
     fillR, fillG, fillB = 0.14, 0.04, 0.04
     accentR, accentG, accentB = 0.94, 0.40, 0.40
+  elseif tone == "info" then
+    borderR, borderG, borderB = 0.26, 0.62, 0.78
+    fillR, fillG, fillB = 0.06, 0.10, 0.14
+    accentR, accentG, accentB = 0.38, 0.72, 0.88
   elseif tone == "neutral" then
     borderR, borderG, borderB = 0.35, 0.39, 0.44
     fillR, fillG, fillB = 0.08, 0.09, 0.10
@@ -131,14 +177,14 @@ function NS.UI.DecorateButton(btn)
 
   local fill = btn:CreateTexture(nil, "BACKGROUND")
   fill:SetAllPoints(btn)
-  fill:SetColorTexture(0.06, 0.08, 0.10, 0.55)
+  fill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.55)
   btn._dingFill = fill
 
   local accent = btn:CreateTexture(nil, "ARTWORK")
   accent:SetHeight(2)
   accent:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 6, 4)
   accent:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -6, 4)
-  accent:SetColorTexture(0.24, 0.78, 0.92, 0.45)
+  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.45)
   btn._dingAccent = accent
   btn._dingStyled = true
   return btn
@@ -154,17 +200,17 @@ function NS.UI.SetButtonActive(btn, active)
 
   if active then
     if btn._dingFill then
-      btn._dingFill:SetColorTexture(0.08, 0.13, 0.17, 0.92)
+      btn._dingFill:SetColorTexture(NS.Colors.fillBtnActive[1], NS.Colors.fillBtnActive[2], NS.Colors.fillBtnActive[3], 0.92)
     end
     if btn._dingAccent then
-      btn._dingAccent:SetColorTexture(0.34, 0.88, 1.0, 0.98)
+      btn._dingAccent:SetColorTexture(NS.Colors.accentActive[1], NS.Colors.accentActive[2], NS.Colors.accentActive[3], 0.98)
     end
   else
     if btn._dingFill then
-      btn._dingFill:SetColorTexture(0.06, 0.08, 0.10, 0.55)
+      btn._dingFill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.55)
     end
     if btn._dingAccent then
-      btn._dingAccent:SetColorTexture(0.24, 0.78, 0.92, 0.45)
+      btn._dingAccent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.45)
     end
   end
 end
@@ -178,14 +224,14 @@ function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
   local fill = card:CreateTexture(nil, "BACKGROUND")
   fill:SetPoint("TOPLEFT", card, "TOPLEFT", 2, -2)
   fill:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -2, 2)
-  fill:SetColorTexture(0.03, 0.05, 0.07, 0.5)
+  fill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.5)
   card._dingFill = fill
 
   local accent = card:CreateTexture(nil, "ARTWORK")
   accent:SetHeight(2)
   accent:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -8)
   accent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
-  accent:SetColorTexture(0.24, 0.78, 0.92, 0.72)
+  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.72)
 
   local label = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   label:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -12)
@@ -202,15 +248,52 @@ function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
   card.label = label
   card.value = value
   card.sub = sub
+
+  card:EnableMouse(true)
+  card:SetScript("OnEnter", function(self)
+    if self._dingFill then
+      self._dingFill:SetColorTexture(NS.Colors.fillCardHover[1], NS.Colors.fillCardHover[2], NS.Colors.fillCardHover[3], 0.65)
+    end
+  end)
+  card:SetScript("OnLeave", function(self)
+    if self._dingFill then
+      self._dingFill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.5)
+    end
+  end)
+
   return card
 end
 
-function NS.UI.SetMetricCard(card, value, subValue)
+function NS.UI.SetMetricCard(card, value, subValue, labelOverride)
   if not card then
     return
   end
   card.value:SetText(value or "--")
   card.sub:SetText(subValue or "")
+  if labelOverride and card.label then card.label:SetText(labelOverride) end
+end
+
+function NS.UI.AnimateWidth(texture, targetWidth, duration)
+  duration = duration or 0.2
+  local startWidth = texture.GetWidth and texture:GetWidth() or targetWidth
+  if math_abs(targetWidth - startWidth) < 2 then
+    texture:SetWidth(targetWidth)
+    return
+  end
+  local parent = texture.GetParent and texture:GetParent()
+  if not parent or not parent.SetScript then
+    texture:SetWidth(targetWidth)
+    return
+  end
+  local elapsed = 0
+  parent:SetScript("OnUpdate", function(self, dt)
+    elapsed = elapsed + dt
+    local t = math.min(elapsed / duration, 1)
+    texture:SetWidth(math.max(1, startWidth + (targetWidth - startWidth) * t))
+    if t >= 1 then
+      self:SetScript("OnUpdate", nil)
+    end
+  end)
 end
 
 function NS.UI.CreateActionButton(parent, x, y, width, label, callback)
@@ -529,10 +612,10 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
   })
   if isTransparent then
     frame:SetBackdropColor(0, 0, 0, 0.6)
-    frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+    frame:SetBackdropBorderColor(NS.Colors.borderMuted[1], NS.Colors.borderMuted[2], NS.Colors.borderMuted[3], 0.8)
   else
-    frame:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
-    frame:SetBackdropBorderColor(0.2, 0.6, 0.8, 1)
+    frame:SetBackdropColor(NS.Colors.bgSolid[1], NS.Colors.bgSolid[2], NS.Colors.bgSolid[3], 0.95)
+    frame:SetBackdropBorderColor(NS.Colors.borderDefault[1], NS.Colors.borderDefault[2], NS.Colors.borderDefault[3], 1)
   end
 
   if not frame._dingAccent then
@@ -540,7 +623,7 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
     accent:SetHeight(2)
     accent:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
     accent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
-    accent:SetColorTexture(0.24, 0.78, 0.92, isTransparent and 0.4 or 0.85)
+    accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], isTransparent and 0.4 or 0.85)
     frame._dingAccent = accent
   end
 end

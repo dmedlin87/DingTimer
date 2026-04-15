@@ -29,7 +29,7 @@ local function setProgress(snapshot)
   if not statsFrame then return end
   local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
   local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
-  statsFrame.progressFill:SetColorTexture(0.24, 0.78, 0.92, 0.9)
+  statsFrame.progressFill:SetColorTexture(NS.Colors.progressXP[1], NS.Colors.progressXP[2], NS.Colors.progressXP[3], 0.9)
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
     "Level %s  |  %s / %s XP  (%.1f%%)",
@@ -44,14 +44,14 @@ local function setProgress(snapshot)
     NS.fmtTime(snapshot.rollingWindow or 0),
     NS.fmtTime(snapshot.sessionElapsed or 0)
   ))
-  statsFrame.progressFill:SetWidth(width)
+  NS.UI.AnimateWidth(statsFrame.progressFill, width, 0.2)
 end
 
 local function setPvpProgress(snapshot)
   if not statsFrame then return end
   local progressPct = math_max(0, math_min((snapshot.progress or 0) * 100, 100))
   local width = math_max(1, math_floor((statsFrame.progressBar:GetWidth() or 1) * (snapshot.progress or 0)))
-  statsFrame.progressFill:SetColorTexture(0.92, 0.74, 0.24, 0.9)
+  statsFrame.progressFill:SetColorTexture(NS.Colors.progressPvP[1], NS.Colors.progressPvP[2], NS.Colors.progressPvP[3], 0.9)
   local goalValue = snapshot.targetHonor and NS.FormatNumber(snapshot.targetHonor) or "Off"
   statsFrame.zoneText:SetText(snapshot.zone or "Unknown")
   statsFrame.progressTitle:SetText(string.format(
@@ -66,7 +66,7 @@ local function setPvpProgress(snapshot)
     NS.fmtTime(snapshot.rollingWindow or 0),
     NS.fmtTime(snapshot.sessionElapsed or 0)
   ))
-  statsFrame.progressFill:SetWidth(width)
+  NS.UI.AnimateWidth(statsFrame.progressFill, width, 0.2)
 end
 
 local function buildAlertRows(coach)
@@ -359,8 +359,8 @@ function NS.InitStatsPanel(parent)
   progressBar:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 12,
-    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
   })
   progressBar:SetBackdropColor(0, 0, 0, 0.45)
   progressBar:SetBackdropBorderColor(0.2, 0.24, 0.28, 0.8)
@@ -370,7 +370,7 @@ function NS.InitStatsPanel(parent)
   progressFill:SetPoint("TOPLEFT", progressBar, "TOPLEFT", 2, -2)
   progressFill:SetPoint("BOTTOMLEFT", progressBar, "BOTTOMLEFT", 2, 2)
   progressFill:SetWidth(1)
-  progressFill:SetColorTexture(0.24, 0.78, 0.92, 0.9)
+  progressFill:SetColorTexture(NS.Colors.progressXP[1], NS.Colors.progressXP[2], NS.Colors.progressXP[3], 0.9)
   statsFrame.progressFill = progressFill
 
   statsFrame.cards = {

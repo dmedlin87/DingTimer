@@ -247,6 +247,8 @@ local function newFrame(name)
   frame.SetBackdropColor = function() end
   frame.SetBackdropBorderColor = function() end
   frame.SetClampedToScreen = function() end
+  frame.SetAlpha = function(self, a) self._alpha = a end
+  frame.GetAlpha = function(self) return self._alpha or 1 end
   frame.SetHitRectInsets = function() end
   frame.RegisterEvent = function() end
   frame.SetChecked = function(self, checked) self._checked = checked and true or false end
@@ -324,7 +326,8 @@ C_Timer = {
         if callback then callback() end
       end
     }
-  end
+  end,
+  After = function(_, callback) if callback then callback() end end
 }
 
 C_CurrencyInfo = {
@@ -352,6 +355,14 @@ GameTooltip = {
 
 function RegisterStateDriver() end
 function UnregisterStateDriver() end
+
+function UIFrameFadeIn(frame, _, _, endAlpha)
+  if frame and frame.SetAlpha then frame:SetAlpha(endAlpha or 1) end
+end
+function UIFrameFadeOut(frame, _, _, endAlpha)
+  if frame and frame.SetAlpha then frame:SetAlpha(endAlpha or 0) end
+end
+function PlaySound() end
 
 SlashCmdList = {}
 UISpecialFrames = {}

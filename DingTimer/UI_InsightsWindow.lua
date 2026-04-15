@@ -376,8 +376,8 @@ function NS.InitInsightsPanel(parent)
   sparkArea:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 14,
-    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 }
   })
   sparkArea:SetBackdropColor(0, 0, 0, 0.35)
   sparkArea:SetBackdropBorderColor(0.25, 0.25, 0.25, 0.8)
@@ -385,18 +385,16 @@ function NS.InitInsightsPanel(parent)
 
   for i = 1, MAX_SPARK_POINTS - 1 do
     local line = NS.CreateLineCompat(sparkArea, "OVERLAY")
-    line:SetColorTexture(0.24, 0.78, 0.92, 0.95)
+    line:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.95)
     line:SetThickness(2)
     line:Hide()
     sparkLines[i] = line
   end
 
-  NS.UI.CreateSectionTitle(scrollChild, 16, -286, "Zone Leaders", "Where your best historical pace has been.")
   insightsFrame.zoneRows = NS.UI.CreateListRows(scrollChild, {
     startX = 16, startY = -314, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontHighlightSmall"
   })
 
-  NS.UI.CreateSectionTitle(scrollChild, 16, -374, "Latest Recap", "The most recent coach summary stored with your runs.")
   insightsFrame.recapValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   insightsFrame.recapValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -402)
   insightsFrame.recapValue:SetWidth(680)

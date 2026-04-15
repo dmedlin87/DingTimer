@@ -90,6 +90,9 @@ local function onLevelUp(level)
 
   NS.chat(header)
   NS.chat(stats)
+  if PlaySound and DingTimerDB.dingSoundEnabled ~= false then
+    PlaySound(12891, "Master")
+  end
   if NS.RecordSession then
     NS.RecordSession("LEVEL_UP")
   end

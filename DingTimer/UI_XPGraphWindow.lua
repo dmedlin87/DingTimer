@@ -21,11 +21,11 @@ for _, z in ipairs(ZOOM_LEVELS) do
   ZOOM_SECONDS_TO_LABEL[z.seconds] = z.label
 end
 
-local COLOR_GREEN = { 0.22, 0.82, 0.46, 0.95 }
-local COLOR_RED = { 0.92, 0.32, 0.32, 0.95 }
-local COLOR_GRAY = { 0.42, 0.46, 0.54, 0.55 }
-local COLOR_LINE = { 1.0, 0.82, 0.18, 0.95 }
-local COLOR_GRID = { 0.26, 0.29, 0.34, 0.75 }
+local COLOR_GREEN = NS.Colors.graphGreen
+local COLOR_RED = NS.Colors.graphRed
+local COLOR_GRAY = NS.Colors.graphGray
+local COLOR_LINE = NS.Colors.graphLine
+local COLOR_GRID = NS.Colors.graphGrid
 local BRIGHT_BOOST = 0.08
 
 local graphFrame = nil
@@ -98,9 +98,7 @@ local function formatAxisTime(seconds)
 end
 
 local function applySummaryCard(card, label, value, subValue)
-  card.label:SetText(label)
-  card.value:SetText(value)
-  card.sub:SetText(subValue or "")
+  NS.UI.SetMetricCard(card, value, subValue, label)
 end
 
 --- Repositions and dynamically scales inner layout components of the graph frame.
@@ -575,28 +573,6 @@ local function redrawGraph()
   end
 end
 
-local function createSummaryCard(parent)
-  local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-  NS.ApplyThemeToFrame(card, true)
-
-  local accent = card:CreateTexture(nil, "ARTWORK")
-  accent:SetHeight(2)
-  accent:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -8)
-  accent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
-  accent:SetColorTexture(0.24, 0.78, 0.92, 0.7)
-
-  card.label = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  card.label:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -12)
-
-  card.value = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  card.value:SetPoint("TOPLEFT", card.label, "BOTTOMLEFT", 0, -4)
-
-  card.sub = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  card.sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 8)
-
-  return card
-end
-
 --- Initializes the primary graph panel UI.
 --- Contains the coordinate system, layout definition, and zoom controls.
 --- @param parent Frame The host tab or container frame.
@@ -613,15 +589,15 @@ function NS.InitGraphPanel(parent)
 
   graphFrame.summaryCards = {}
   for i = 1, 4 do
-    graphFrame.summaryCards[i] = createSummaryCard(graphFrame)
+    graphFrame.summaryCards[i] = NS.UI.CreateMetricCard(graphFrame, 0, 48, 0, 0, "")
   end
 
   local graphArea = CreateFrame("Frame", nil, graphFrame, "BackdropTemplate")
   graphArea:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 14,
-    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
   })
   graphArea:SetBackdropColor(0.01, 0.01, 0.01, 0.75)
   graphArea:SetBackdropBorderColor(0.22, 0.24, 0.28, 0.9)

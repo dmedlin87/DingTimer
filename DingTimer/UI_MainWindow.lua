@@ -91,6 +91,9 @@ local function createTabButton(parent, id, text, x, y)
 
   local meta = TAB_META[id]
   btn:SetScript("OnEnter", function(self)
+    if self._dingFill then
+      self._dingFill:SetColorTexture(0.10, 0.14, 0.18, 0.75)
+    end
     if meta then
       GameTooltip:SetOwner(self, "ANCHOR_TOP")
       GameTooltip:AddLine(meta.label, 1, 1, 1)
@@ -98,8 +101,11 @@ local function createTabButton(parent, id, text, x, y)
       GameTooltip:Show()
     end
   end)
-  btn:SetScript("OnLeave", function()
+  btn:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
+    if NS.UI and NS.UI.SetButtonActive then
+      NS.UI.SetButtonActive(self, (DingTimerDB.lastOpenTab or 1) == id)
+    end
   end)
   
   return btn
@@ -271,7 +277,7 @@ function NS.InitMainWindow()
   end)
   local gripTex = resizeGrip:CreateTexture(nil, "ARTWORK")
   gripTex:SetAllPoints(resizeGrip)
-  gripTex:SetColorTexture(0.24, 0.78, 0.92, 0.35)
+  gripTex:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.35)
   mainWindow.resizeGrip = resizeGrip
 
   tinsert(UISpecialFrames, mainWindow:GetName())
@@ -339,9 +345,16 @@ function NS.SelectTab(id)
     local panel = panels[i]
     if panel then
       if i == id then
-        panel:Show()
+        if UIFrameFadeIn then
+          panel:SetAlpha(0)
+          panel:Show()
+          UIFrameFadeIn(panel, 0.1, 0, 1)
+        else
+          panel:Show()
+        end
       else
         panel:Hide()
+        if panel.SetAlpha then panel:SetAlpha(1) end
       end
     end
   end
@@ -359,17 +372,40 @@ function NS.ShowMainWindow(tabId)
   end
 
   NS.SelectTab(getActiveTabId(tabId))
+  ---@diagnostic disable-next-line: need-check-nil, undefined-field, inject-field
+  mainWindow._dingFadingOut = false
   ---@diagnostic disable-next-line: need-check-nil, undefined-field
   if not mainWindow:IsShown() then
-    ---@diagnostic disable-next-line: need-check-nil, undefined-field
-    mainWindow:Show()
+    if UIFrameFadeIn then
+      ---@diagnostic disable-next-line: need-check-nil, undefined-field
+      mainWindow:SetAlpha(0)
+      ---@diagnostic disable-next-line: need-check-nil, undefined-field
+      mainWindow:Show()
+      ---@diagnostic disable-next-line: need-check-nil, undefined-field
+      UIFrameFadeIn(mainWindow, 0.15, 0, 1)
+    else
+      ---@diagnostic disable-next-line: need-check-nil, undefined-field
+      mainWindow:Show()
+    end
   end
   return true
 end
 
 function NS.HideMainWindow()
   if mainWindow and mainWindow:IsShown() then
-    mainWindow:Hide()
+    if UIFrameFadeOut and C_Timer and C_Timer.After then
+      mainWindow._dingFadingOut = true
+      UIFrameFadeOut(mainWindow, 0.15, 1, 0)
+      C_Timer.After(0.15, function()
+        if mainWindow and mainWindow._dingFadingOut then
+          mainWindow._dingFadingOut = false
+          mainWindow:Hide()
+          mainWindow:SetAlpha(1)
+        end
+      end)
+    else
+      mainWindow:Hide()
+    end
     return true
   end
   return false
