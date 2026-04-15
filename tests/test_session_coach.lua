@@ -67,8 +67,8 @@ DingTimerDB.coach.goal = "ding"
 goal = NS.GetCoachGoalStatus(NS.GetSessionSnapshot(200))
 assert_eq(goal.goalLabel, "Session high pace", "ding goal should use a distinct benchmark label")
 assert_eq(goal.shortLabel, "High", "ding goal should expose a short HUD label")
--- Peak is 500 XP over 80s (t=130 event excluded by the 60s warmup guard) → 22500 XP/hr
-assert_near(goal.targetXph, 22500, 0.001, "ding goal should benchmark against the best post-warmup pace seen this session")
+-- Peak should track the highest observed rolling pace immediately.
+assert_near(goal.targetXph, 36000, 0.001, "ding goal should benchmark against the highest observed session pace")
 
 DingTimerDB.coach.goal = "30m"
 SetTime(291)

@@ -281,9 +281,22 @@ local function refreshInsights()
     rowTexts[i]:SetText(row and ((pvpView and formatPvpSessionRow(i, row)) or formatSessionRow(i, row)) or "")
   end
 
-  local recap = pvpView
-    and (summary.lastRecap or (summary.lastSession and summary.lastSession.summary) or nil)
-    or ((summary.lastSession and summary.lastSession.coachSummary) or (DingTimerDB.coach and DingTimerDB.coach.lastRecap) or nil)
+  local recap = nil
+  if pvpView then
+    if summary.lastSession and NS.BuildPvpSummary then
+      recap = NS.BuildPvpSummary(summary.lastSession)
+    end
+    if not recap then
+      recap = summary.lastRecap or (summary.lastSession and summary.lastSession.summary) or nil
+    end
+  else
+    if summary.lastSession and NS.BuildCoachSummary then
+      recap = NS.BuildCoachSummary(summary.lastSession)
+    end
+    if not recap then
+      recap = (summary.lastSession and summary.lastSession.coachSummary) or (DingTimerDB.coach and DingTimerDB.coach.lastRecap) or nil
+    end
+  end
   if recap then
     insightsFrame.recapValue:SetText((recap.headline or "") .. "  " .. (recap.segmentLine or ""))
   else

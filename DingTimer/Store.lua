@@ -15,7 +15,6 @@ local COACH_DEFAULTS = {
   paceDropPct = 15,
   alertCooldownSeconds = 90,
   alertHistoryLimit = 4,
-  stabilizeEarlyPace = true,
 }
 
 local PVP_DEFAULTS = {
@@ -76,6 +75,7 @@ function NS.ValidateCoachConfig(coach)
   coach.paceDropPct = math.max(5, math.min(50, math.floor(tonumber(coach.paceDropPct) or COACH_DEFAULTS.paceDropPct)))
   coach.alertCooldownSeconds = math.max(30, math.floor(tonumber(coach.alertCooldownSeconds) or COACH_DEFAULTS.alertCooldownSeconds))
   coach.alertHistoryLimit = math.max(1, math.min(8, math.floor(tonumber(coach.alertHistoryLimit) or COACH_DEFAULTS.alertHistoryLimit)))
+  coach.stabilizeEarlyPace = nil
 
   return coach
 end
@@ -93,8 +93,9 @@ function NS.ValidatePvpConfig(settings)
   end
 
   local customGoalHonor = tonumber(settings.customGoalHonor)
-  if customGoalHonor and not NS.IsInvalidNumber(customGoalHonor) then
-    settings.customGoalHonor = math.max(0, math.floor(customGoalHonor))
+  local flooredCustomGoalHonor = customGoalHonor and math.floor(customGoalHonor) or nil
+  if customGoalHonor and not NS.IsInvalidNumber(customGoalHonor) and flooredCustomGoalHonor and flooredCustomGoalHonor > 0 then
+    settings.customGoalHonor = flooredCustomGoalHonor
   else
     settings.customGoalHonor = nil
   end
@@ -114,6 +115,10 @@ function NS.ValidatePvpConfig(settings)
   settings.milestoneAnnouncements = settings.milestoneAnnouncements == true
   settings.matchRecap = settings.matchRecap == true
   settings.historyView = (settings.historyView == "pvp") and "pvp" or "xp"
+
+  if settings.goalMode == "custom" and settings.customGoalHonor == nil then
+    settings.goalMode = PVP_DEFAULTS.goalMode
+  end
 
   if settings.goalMode ~= "custom" then
     settings.customGoalHonor = nil
@@ -209,6 +214,54 @@ local function normalizeOutputMode(mode)
     return "ttl"
   end
   return "full"
+end
+
+local function recomputeHistoricalRates()
+  local xpProfiles = DingTimerDB and DingTimerDB.xp and DingTimerDB.xp.profiles or nil
+  if xpProfiles then
+    for _, profile in pairs(xpProfiles) do
+      local sessions = profile and profile.sessions or nil
+      if type(sessions) == "table" then
+        for i = 1, #sessions do
+          local session = sessions[i]
+          local durationSec = tonumber(session.durationSec)
+          if durationSec and not NS.IsInvalidNumber(durationSec) and durationSec > 0 then
+            local xpGained = tonumber(session.xpGained)
+            if xpGained and not NS.IsInvalidNumber(xpGained) then
+              session.avgXph = (xpGained / durationSec) * 3600
+            end
+            local moneyNetCopper = tonumber(session.moneyNetCopper)
+            if moneyNetCopper and not NS.IsInvalidNumber(moneyNetCopper) then
+              session.avgMoneyPh = (moneyNetCopper / durationSec) * 3600
+            end
+          end
+        end
+      end
+    end
+  end
+
+  local pvpProfiles = DingTimerDB and DingTimerDB.pvp and DingTimerDB.pvp.profiles or nil
+  if pvpProfiles then
+    for _, profile in pairs(pvpProfiles) do
+      local sessions = profile and profile.sessions or nil
+      if type(sessions) == "table" then
+        for i = 1, #sessions do
+          local session = sessions[i]
+          local durationSec = tonumber(session.durationSec)
+          if durationSec and not NS.IsInvalidNumber(durationSec) and durationSec > 0 then
+            local honorGained = tonumber(session.honorGained)
+            if honorGained and not NS.IsInvalidNumber(honorGained) then
+              session.avgHonorPerHour = (honorGained / durationSec) * 3600
+            end
+            local hkGained = tonumber(session.hkGained)
+            if hkGained and not NS.IsInvalidNumber(hkGained) then
+              session.avgHKPerHour = (hkGained / durationSec) * 3600
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 local function ensureCoachConfig()
@@ -415,6 +468,7 @@ function NS.InitStore()
   if NS.TrimPvpSessions then
     NS.TrimPvpSessions(pvpProfile, DingTimerDB.pvp.settings.keepSessions)
   end
+  recomputeHistoricalRates()
   for _, existingProfile in pairs(DingTimerDB.xp.profiles or {}) do
     local sessions = existingProfile.sessions or {}
     for i = 1, #sessions do

@@ -15,7 +15,6 @@ it("NS.GetCoachDefaults returns a table with the expected keys", function()
   assert_equal(15, defaults.paceDropPct)
   assert_equal(90, defaults.alertCooldownSeconds)
   assert_equal(4, defaults.alertHistoryLimit)
-  assert_equal(true, defaults.stabilizeEarlyPace)
 end)
 
 it("NS.GetCoachDefaults returns a new table reference each time (no side effects on mutation)", function()

@@ -8,8 +8,6 @@ local math_abs = math.abs
 local math_huge = math.huge
 local string_format = string.format
 
-local EARLY_PACE_WARMUP_SECONDS = 60
-
 NS.state = {
   sessionStartTime = 0,
   levelStart = 0,
@@ -131,17 +129,11 @@ function NS.ComputeRollingRateDetails(evList, now, sessionStart, windowSeconds, 
   end
 
   local sessionElapsed = now - (sessionStart or now)
-  local rawElapsed = math_min(sessionElapsed, windowSeconds)
-  if rawElapsed <= 0 then rawElapsed = 1 end
-
-  local settledElapsed = math_min(math_max(sessionElapsed, EARLY_PACE_WARMUP_SECONDS), windowSeconds)
-  if settledElapsed <= 0 then settledElapsed = 1 end
+  local elapsed = math_min(sessionElapsed, windowSeconds)
+  if elapsed <= 0 then elapsed = 1 end
 
   return {
-    rawXph = (sum / rawElapsed) * 3600,
-    settledXph = (sum / settledElapsed) * 3600,
-    isWarmup = sessionElapsed < EARLY_PACE_WARMUP_SECONDS,
-    warmupSeconds = EARLY_PACE_WARMUP_SECONDS,
+    rawXph = (sum / elapsed) * 3600,
   }
 end
 
@@ -187,15 +179,11 @@ function NS.GetSessionSnapshot(now)
   local window = getRollingWindowSeconds()
   local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
   local moneyRate = NS.ComputeRollingRateDetails(NS.state.moneyEvents, now, sessionStart, window, "money", NS.state, "windowMoney")
-  local coachConfig = (NS.EnsureCoachConfig and NS.EnsureCoachConfig()) or ((DingTimerDB and DingTimerDB.coach) or {})
-  local stabilizeEarlyPace = coachConfig.stabilizeEarlyPace ~= false
   local rawCurrentXph = xpRate.rawXph
-  local settledCurrentXph = xpRate.settledXph
-  local currentXph = (stabilizeEarlyPace and xpRate.isWarmup) and settledCurrentXph or rawCurrentXph
+  local currentXph = rawCurrentXph
   local sessionXph = (sessionXP / sessionElapsed) * 3600
   local rawMoneyPerHour = moneyRate.rawXph
-  local settledMoneyPerHour = moneyRate.settledXph
-  local moneyPerHour = (stabilizeEarlyPace and moneyRate.isWarmup) and settledMoneyPerHour or rawMoneyPerHour
+  local moneyPerHour = rawMoneyPerHour
   local remainingXP = math_max(0, maxXP - xp)
   local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
   local zone = "Unknown"
@@ -215,21 +203,14 @@ function NS.GetSessionSnapshot(now)
     sessionMoney = sessionMoney,
     currentXph = currentXph,
     rawCurrentXph = rawCurrentXph,
-    settledCurrentXph = settledCurrentXph,
-    showSettledOverlay = stabilizeEarlyPace and xpRate.isWarmup and rawCurrentXph > 0
-      and math_abs(rawCurrentXph - settledCurrentXph) > 0.5,
-    settleLabel = string_format("%ss norm", xpRate.warmupSeconds),
     sessionPeakXph = NS.state.sessionPeakXph or 0,
     sessionXph = sessionXph,
     moneyPerHour = moneyPerHour,
     rawMoneyPerHour = rawMoneyPerHour,
-    settledMoneyPerHour = settledMoneyPerHour,
     ttl = ttl,
     rollingWindow = window,
     zone = zone,
     coachGoal = (DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or "ding",
-    stabilizeEarlyPace = stabilizeEarlyPace,
-    earlyPaceWarmupSeconds = xpRate.warmupSeconds,
   }
 
   tickCache.now = now
@@ -395,16 +376,7 @@ function NS.RefreshFloatingHUD(now)
   local paceParts = {}
 
   if snapshot.currentXph and snapshot.currentXph > 0 then
-    local paceText = NS.FormatNumber(NS.Round(snapshot.currentXph)) .. " XP/hr"
-    if snapshot.showSettledOverlay then
-      paceText = string_format(
-        "%s XP/hr (%s %s)",
-        NS.FormatNumber(NS.Round(snapshot.rawCurrentXph or 0)),
-        snapshot.settleLabel or "Settled",
-        NS.FormatNumber(NS.Round(snapshot.currentXph or 0))
-      )
-    end
-    paceParts[#paceParts + 1] = paceText
+    paceParts[#paceParts + 1] = NS.FormatNumber(NS.Round(snapshot.currentXph)) .. " XP/hr"
   else
     paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
   end
@@ -464,12 +436,7 @@ function NS.onXPUpdate()
     return
   end
   local xph = snapshot.currentXph or 0
-  -- Only record peak once the rate has a full confidence window; avoids the first-kill
-  -- spike (elapsed=1s → inflated XP/hr) from becoming the permanent pace-drop benchmark.
-  local MIN_RATE_CONFIDENCE_SECONDS = 60
-  if (now - (NS.state.sessionStartTime or now)) >= MIN_RATE_CONFIDENCE_SECONDS then
-    NS.state.sessionPeakXph = math_max(NS.state.sessionPeakXph or 0, xph or 0)
-  end
+  NS.state.sessionPeakXph = math_max(NS.state.sessionPeakXph or 0, xph or 0)
   local ttl = snapshot.ttl or math_huge
 
   local tcol = NS.ttlColor(ttl, NS.state.lastTTL)

@@ -1,9 +1,5 @@
 local _, NS = ...
 
--- Treat any session under 30 minutes as taking 30 minutes when calculating historical rates
--- to prevent rapid PvP mark turn-ins from skewing "Honor/hr" and "HK/hr" records.
-local MIN_SESSION_DURATION = 1800
-
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
@@ -460,7 +456,6 @@ local function finalizeMatch(now, forcedReason)
 
   local endedAt = match.exitedAt or now or GetTime()
   local durationSec = math_max(1, endedAt - (match.startedAt or endedAt))
-  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
   local summary = {
     zone = safeString(match.zone, "Unknown"),
     startedAt = match.startedAt,
@@ -469,8 +464,8 @@ local function finalizeMatch(now, forcedReason)
     honorGained = match.honorGained or 0,
     hkGained = match.hkGained or 0,
     reason = forcedReason or "MATCH_COMPLETE",
-    avgHonorPerHour = ((match.honorGained or 0) / rateDivisor) * 3600,
-    avgHKPerHour = ((match.hkGained or 0) / rateDivisor) * 3600,
+    avgHonorPerHour = ((match.honorGained or 0) / durationSec) * 3600,
+    avgHKPerHour = ((match.hkGained or 0) / durationSec) * 3600,
   }
 
   state.activeMatch = nil
@@ -657,11 +652,12 @@ function NS.SetPvpGoal(value)
     settings.customGoalHonor = nil
   else
     local numeric = tonumber(value)
-    if not numeric or NS.IsInvalidNumber(numeric) or numeric < 0 then
+    local floored = numeric and math_floor(numeric) or nil
+    if not numeric or NS.IsInvalidNumber(numeric) or not floored or floored <= 0 then
       return false, "Use '/ding pvp goal off', '/ding pvp goal cap', or a positive honor value."
     end
     settings.goalMode = "custom"
-    settings.customGoalHonor = math_floor(numeric)
+    settings.customGoalHonor = floored
   end
 
   refreshPvpViews()
@@ -761,7 +757,6 @@ local function buildPvpRecord(profile, startedAt, endedAt, honorGained, hkGained
   end
 
   local durationSec = math_max(1, at - beganAt)
-  local rateDivisor = math_max(MIN_SESSION_DURATION, durationSec)
   return {
     id = string_format("%d-%d", math_floor(at + 0.5), #profile.sessions + 1),
     startedAt = beganAt,
@@ -769,8 +764,8 @@ local function buildPvpRecord(profile, startedAt, endedAt, honorGained, hkGained
     durationSec = durationSec,
     honorGained = totalHonor,
     hkGained = totalHKs,
-    avgHonorPerHour = (totalHonor / rateDivisor) * 3600,
-    avgHKPerHour = (totalHKs / rateDivisor) * 3600,
+    avgHonorPerHour = (totalHonor / durationSec) * 3600,
+    avgHKPerHour = (totalHKs / durationSec) * 3600,
     zone = safeString(zone, "Unknown"),
     reason = reason or "MANUAL_RESET",
     startHonor = tonumber(startHonor) or 0,
@@ -838,6 +833,14 @@ function NS.ShowPvpRecap(now)
       goalMode = snapshot.goalMode,
       goalTarget = snapshot.targetHonor,
     })
+  end
+  if not summary then
+    local profile = ensurePvpStore(false)
+    local sessions = profile and profile.sessions or nil
+    local lastSession = sessions and sessions[#sessions] or nil
+    if lastSession then
+      summary = NS.BuildPvpSummary(lastSession)
+    end
   end
   if not summary and DingTimerDB and DingTimerDB.pvp then
     summary = DingTimerDB.pvp.lastRecap

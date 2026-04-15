@@ -514,7 +514,7 @@ function NS.BuildCoachSummary(record)
     end
   end
 
-  local goal = normalizeGoal((DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or DEFAULTS.goal)
+  local goal = normalizeGoal(record.coachGoal or ((DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or DEFAULTS.goal))
   local headline = string_format(
     "%s XP in %s at %s XP/hr.",
     NS.FormatNumber(record.xpGained or 0),
@@ -603,11 +603,20 @@ function NS.ShowCoachRecap(now)
       xpGained = snapshot.sessionXP,
       avgXph = snapshot.sessionXph,
       moneyNetCopper = snapshot.sessionMoney,
+      coachGoal = snapshot.coachGoal,
       reason = "MANUAL_SPLIT",
       endedAt = now or GetTime(),
       segments = NS.GetCoachSegments(true, now or GetTime()),
     }
     summary = NS.BuildCoachSummary(preview)
+  end
+  if not summary and NS.GetProfileStore then
+    local profile = NS.GetProfileStore(false)
+    local sessions = profile and profile.sessions or nil
+    local lastSession = sessions and sessions[#sessions] or nil
+    if lastSession then
+      summary = NS.BuildCoachSummary(lastSession) or lastSession.coachSummary
+    end
   end
   if not summary and DingTimerDB and DingTimerDB.coach then
     summary = DingTimerDB.coach.lastRecap

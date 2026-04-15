@@ -273,17 +273,7 @@ local function updateValues()
   setProgress(snapshot)
   setStatusPills(false, snapshot, coach)
 
-  local currentPaceSub = "Rolling pace"
-  if snapshot.showSettledOverlay then
-    currentPaceSub = string.format(
-      "Raw %s  |  %s %s",
-      NS.FormatNumber(NS.Round(snapshot.rawCurrentXph or 0)),
-      snapshot.settleLabel or "Settled",
-      NS.FormatNumber(NS.Round(snapshot.currentXph or 0))
-    )
-  end
-
-  NS.UI.SetMetricCard(statsFrame.cards.currentXph, NS.FormatNumber(NS.Round(snapshot.currentXph)), currentPaceSub)
+  NS.UI.SetMetricCard(statsFrame.cards.currentXph, NS.FormatNumber(NS.Round(snapshot.currentXph)), "Rolling pace")
   NS.UI.SetMetricCard(statsFrame.cards.sessionAvg, NS.FormatNumber(NS.Round(snapshot.sessionXph)), "Whole-session pace")
   NS.UI.SetMetricCard(statsFrame.cards.ttl, NS.fmtTime(snapshot.ttl), "Time to next ding")
   NS.UI.SetMetricCard(statsFrame.cards.goal, goalValue, goalSub)

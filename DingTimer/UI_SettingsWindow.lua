@@ -128,7 +128,7 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls = {}
   settingsFrame.summaryCards = {}
 
-  local _, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 660)
+  local _, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 680, 720)
 
   if NS.UI and NS.UI.CreateMetricCard then
     settingsFrame.summaryCards.output = NS.UI.CreateMetricCard(scrollChild, 151, 56, 16, -18, "Output")
@@ -139,51 +139,51 @@ function NS.InitSettingsPanel(parent)
 
   if NS.UI.CreateSectionBlock then
     NS.UI.CreateSectionBlock(scrollChild, 16, -92, 304, 130, "Output", "Chat behavior and rolling window controls.")
-    NS.UI.CreateSectionBlock(scrollChild, 360, -92, 304, 130, "HUD", "On-screen visibility and launcher behavior.")
-    NS.UI.CreateSectionBlock(scrollChild, 16, -248, 304, 150, "Coach", "Goal presets, alert behavior, and recap access.")
-    NS.UI.CreateSectionBlock(scrollChild, 360, -248, 304, 150, "Graph", "Analysis scaling and zoom behavior.")
-    NS.UI.CreateSectionBlock(scrollChild, 16, -416, 304, 138, "Data", "Run maintenance, history retention, and quick navigation.")
-    NS.UI.CreateSectionBlock(scrollChild, 360, -416, 304, 222, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
+    NS.UI.CreateSectionBlock(scrollChild, 360, -92, 304, 160, "HUD", "On-screen visibility and launcher behavior.")
+    NS.UI.CreateSectionBlock(scrollChild, 16, -268, 304, 190, "Coach", "Goal presets, alert behavior, and recap access.")
+    NS.UI.CreateSectionBlock(scrollChild, 360, -268, 304, 190, "Graph", "Analysis scaling and zoom behavior.")
+    NS.UI.CreateSectionBlock(scrollChild, 16, -474, 304, 130, "Data", "Run maintenance, history retention, and quick navigation.")
+    NS.UI.CreateSectionBlock(scrollChild, 360, -474, 304, 230, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
   else
     NS.UI.CreateSectionTitle(scrollChild, 16, -92, "Output", "Chat behavior and rolling window controls.")
     NS.UI.CreateSectionTitle(scrollChild, 360, -92, "HUD", "On-screen visibility and launcher behavior.")
-    NS.UI.CreateSectionTitle(scrollChild, 16, -248, "Coach", "Goal presets, alert behavior, and recap access.")
-    NS.UI.CreateSectionTitle(scrollChild, 360, -248, "Graph", "Analysis scaling and zoom behavior.")
-    NS.UI.CreateSectionTitle(scrollChild, 16, -416, "Data", "Run maintenance, history retention, and quick navigation.")
-    NS.UI.CreateSectionTitle(scrollChild, 360, -416, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
+    NS.UI.CreateSectionTitle(scrollChild, 16, -268, "Coach", "Goal presets, alert behavior, and recap access.")
+    NS.UI.CreateSectionTitle(scrollChild, 360, -268, "Graph", "Analysis scaling and zoom behavior.")
+    NS.UI.CreateSectionTitle(scrollChild, 16, -474, "Data", "Run maintenance, history retention, and quick navigation.")
+    NS.UI.CreateSectionTitle(scrollChild, 360, -474, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
   end
 
-  settingsFrame.controls.enabled = createCheckbox(scrollChild, 16, -122, "Enable chat output", function(checked)
+  settingsFrame.controls.enabled = createCheckbox(scrollChild, 16, -128, "Enable chat output", function(checked)
     DingTimerDB.enabled = checked
   end, "Print XP, XP/hr, TTL, and level-up summaries to chat.")
-  settingsFrame.controls.modeButton = createButton(scrollChild, 16, -154, 116, "Cycle Mode", function()
+  settingsFrame.controls.modeButton = createButton(scrollChild, 16, -156, 116, "Cycle Mode", function()
     DingTimerDB.mode = cycleValue(DingTimerDB.mode or "full", MODE_ORDER)
   end)
   settingsFrame.controls.modeValue = NS.UI.CreateValueLabel(scrollChild, 142, -159)
   settingsFrame.controls.modeValue:ClearAllPoints()
   settingsFrame.controls.modeValue:SetPoint("TOPLEFT", settingsFrame.controls.modeButton, "TOPRIGHT", 10, -5)
-  createButton(scrollChild, 16, -188, 44, "1m", function() NS.SetRollingWindowSeconds(60) end)
-  createButton(scrollChild, 68, -188, 44, "5m", function() NS.SetRollingWindowSeconds(300) end)
-  createButton(scrollChild, 120, -188, 52, "10m", function() NS.SetRollingWindowSeconds(600) end)
-  settingsFrame.controls.windowButton = createButton(scrollChild, 180, -188, 52, "15m", function() NS.SetRollingWindowSeconds(900) end)
+  createButton(scrollChild, 16, -184, 44, "1m", function() NS.SetRollingWindowSeconds(60) end)
+  createButton(scrollChild, 68, -184, 44, "5m", function() NS.SetRollingWindowSeconds(300) end)
+  createButton(scrollChild, 120, -184, 52, "10m", function() NS.SetRollingWindowSeconds(600) end)
+  settingsFrame.controls.windowButton = createButton(scrollChild, 180, -184, 52, "15m", function() NS.SetRollingWindowSeconds(900) end)
   settingsFrame.controls.windowValue = NS.UI.CreateValueLabel(scrollChild, 242, -193)
   settingsFrame.controls.windowValue:ClearAllPoints()
   settingsFrame.controls.windowValue:SetPoint("TOPLEFT", settingsFrame.controls.windowButton, "TOPRIGHT", 10, -5)
 
-  settingsFrame.controls.float = createCheckbox(scrollChild, 360, -122, "Show floating HUD", function(checked)
+  settingsFrame.controls.float = createCheckbox(scrollChild, 360, -128, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
     NS.setFloatVisible(checked)
   end, "Display the compact TTL and pace HUD above your character.")
-  settingsFrame.controls.floatLocked = createCheckbox(scrollChild, 360, -150, "Lock floating HUD", function(checked)
+  settingsFrame.controls.floatLocked = createCheckbox(scrollChild, 360, -156, "Lock floating HUD", function(checked)
     DingTimerDB.floatLocked = checked
   end, "Prevent the floating HUD from being dragged.")
-  settingsFrame.controls.floatShowInCombat = createCheckbox(scrollChild, 360, -178, "Show floating HUD in combat", function(checked)
+  settingsFrame.controls.floatShowInCombat = createCheckbox(scrollChild, 360, -184, "Show floating HUD in combat", function(checked)
     DingTimerDB.floatShowInCombat = checked
     if DingTimerDB.float then
       NS.setFloatVisible(true)
     end
   end, "Keep the floating HUD visible during combat instead of hiding it automatically.")
-  settingsFrame.controls.minimapHidden = createCheckbox(scrollChild, 360, -206, "Hide minimap button", function(checked)
+  settingsFrame.controls.minimapHidden = createCheckbox(scrollChild, 360, -212, "Hide minimap button", function(checked)
     DingTimerDB.minimapHidden = checked
     if DingTimerMinimapButton then
       if checked then
@@ -194,7 +194,7 @@ function NS.InitSettingsPanel(parent)
     end
   end, "Remove the DingTimer launcher from the minimap ring.")
 
-  settingsFrame.controls.cycleGoalButton = createButton(scrollChild, 16, -278, 116, "Cycle Goal", function()
+  settingsFrame.controls.cycleGoalButton = createButton(scrollChild, 16, -304, 116, "Cycle Goal", function()
     local coach = ensureCoachConfig()
     if NS.SetCoachGoal then
       NS.SetCoachGoal(cycleValue(coach.goal, GOAL_ORDER))
@@ -203,83 +203,71 @@ function NS.InitSettingsPanel(parent)
   settingsFrame.controls.goalValue = NS.UI.CreateValueLabel(scrollChild, 142, -283)
   settingsFrame.controls.goalValue:ClearAllPoints()
   settingsFrame.controls.goalValue:SetPoint("TOPLEFT", settingsFrame.controls.cycleGoalButton, "TOPRIGHT", 10, -5)
-  settingsFrame.controls.alertsEnabled = createCheckbox(scrollChild, 16, -312, "Enable coach alerts", function(checked)
+  settingsFrame.controls.alertsEnabled = createCheckbox(scrollChild, 16, -332, "Enable coach alerts", function(checked)
     ensureCoachConfig().alertsEnabled = checked
   end, "Store idle, pace-drop, and best-segment alerts during the session.")
-  settingsFrame.controls.chatAlerts = createCheckbox(scrollChild, 16, -340, "Print coach alerts to chat", function(checked)
+  settingsFrame.controls.chatAlerts = createCheckbox(scrollChild, 16, -360, "Print coach alerts to chat", function(checked)
     ensureCoachConfig().chatAlerts = checked
   end, "Echo coach alerts into chat in addition to the Live panel.")
-  settingsFrame.controls.stabilizeEarlyPace = createCheckbox(scrollChild, 16, -368, "Stabilize early pace display", function(checked)
-    ensureCoachConfig().stabilizeEarlyPace = checked
-    if NS.InvalidateTickCache then
-      NS.InvalidateTickCache()
-    end
-    if NS.RefreshStatsWindow then
-      NS.RefreshStatsWindow()
-    end
-    if NS.RefreshFloatingHUD then
-      NS.RefreshFloatingHUD()
-    end
-  end, "Show a normalized pace beside early spikes and use that stabilized pace for TTL and coach comparisons during the first minute.")
-  settingsFrame.controls.recapButton = createButton(scrollChild, 16, -396, 88, "Recap", function()
+  settingsFrame.controls.recapButton = createButton(scrollChild, 16, -388, 88, "Recap", function()
     if NS.ShowCoachRecap then
       NS.ShowCoachRecap()
     end
   end)
   settingsFrame.controls.coachInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", settingsFrame.controls.recapButton, "TOPRIGHT", 8, -6)
-  settingsFrame.controls.coachInfo:SetWidth(220)
+  settingsFrame.controls.coachInfo:SetWidth(190)
   settingsFrame.controls.coachInfo:SetJustifyH("LEFT")
   settingsFrame.controls.coachInfo:SetText("")
 
-  createButton(scrollChild, 360, -278, 116, "Cycle Scale", function()
+  createButton(scrollChild, 360, -304, 116, "Cycle Scale", function()
     if NS.CycleGraphScaleMode then
       NS.CycleGraphScaleMode()
     end
   end)
-  createButton(scrollChild, 484, -278, 70, "Fit", function()
+  createButton(scrollChild, 484, -304, 70, "Fit", function()
     if NS.SetGraphScale then
       NS.SetGraphScale("visible")
     end
   end)
-  createButton(scrollChild, 562, -278, 28, "-", function()
+  createButton(scrollChild, 562, -304, 28, "-", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(-25000)
     end
   end)
-  createButton(scrollChild, 596, -278, 28, "+", function()
+  createButton(scrollChild, 596, -304, 28, "+", function()
     if NS.AdjustGraphFixedMax then
       NS.AdjustGraphFixedMax(25000)
     end
   end)
-  settingsFrame.controls.graphScaleValue = NS.UI.CreateValueLabel(scrollChild, 360, -311)
-  settingsFrame.controls.graphMaxValue = NS.UI.CreateValueLabel(scrollChild, 360, -330)
-  settingsFrame.controls.graphZoomValue = NS.UI.CreateValueLabel(scrollChild, 360, -349)
-  createButton(scrollChild, 360, -366, 40, "3m", function() NS.SetGraphZoom("3m") end)
-  createButton(scrollChild, 406, -366, 40, "5m", function() NS.SetGraphZoom("5m") end)
-  createButton(scrollChild, 452, -366, 40, "15m", function() NS.SetGraphZoom("15m") end)
-  createButton(scrollChild, 498, -366, 40, "30m", function() NS.SetGraphZoom("30m") end)
-  createButton(scrollChild, 544, -366, 40, "60m", function() NS.SetGraphZoom("60m") end)
+  settingsFrame.controls.graphScaleValue = NS.UI.CreateValueLabel(scrollChild, 360, -336)
+  settingsFrame.controls.graphMaxValue = NS.UI.CreateValueLabel(scrollChild, 360, -358)
+  settingsFrame.controls.graphZoomValue = NS.UI.CreateValueLabel(scrollChild, 360, -380)
+  createButton(scrollChild, 360, -402, 40, "3m", function() NS.SetGraphZoom("3m") end)
+  createButton(scrollChild, 406, -402, 40, "5m", function() NS.SetGraphZoom("5m") end)
+  createButton(scrollChild, 452, -402, 40, "15m", function() NS.SetGraphZoom("15m") end)
+  createButton(scrollChild, 498, -402, 40, "30m", function() NS.SetGraphZoom("30m") end)
+  createButton(scrollChild, 544, -402, 40, "60m", function() NS.SetGraphZoom("60m") end)
 
-  createButton(scrollChild, 360, -446, 116, "Toggle Mode", function()
+  createButton(scrollChild, 360, -510, 116, "Toggle Mode", function()
     if NS.TogglePvpMode then
       NS.TogglePvpMode(GetTime and GetTime() or nil)
     end
   end)
-  createButton(scrollChild, 484, -446, 70, "Goal Cap", function()
+  createButton(scrollChild, 484, -510, 70, "Goal Cap", function()
     if NS.SetPvpGoal then
       NS.SetPvpGoal("cap")
     end
   end)
-  createButton(scrollChild, 562, -446, 62, "Goal Off", function()
+  createButton(scrollChild, 562, -510, 62, "Goal Off", function()
     if NS.SetPvpGoal then
       NS.SetPvpGoal("off")
     end
   end)
   settingsFrame.controls.pvpGoalLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  settingsFrame.controls.pvpGoalLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -478)
+  settingsFrame.controls.pvpGoalLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -538)
   settingsFrame.controls.pvpGoalLabel:SetText("Custom Honor goal")
-  settingsFrame.controls.pvpGoal = createEditBox(scrollChild, 360, -500, 120, function(text)
+  settingsFrame.controls.pvpGoal = createEditBox(scrollChild, 360, -558, 120, function(text)
     if NS.SetPvpGoal then
       local ok, result = NS.SetPvpGoal(text)
       if not ok and NS.chat then
@@ -287,61 +275,61 @@ function NS.InitSettingsPanel(parent)
       end
     end
   end, "Enter a custom absolute Honor target and press Enter. Use /ding pvp goal <honor> for the same action.")
-  settingsFrame.controls.pvpAutoSwitch = createCheckbox(scrollChild, 360, -534, "Auto-switch in battlegrounds", function(checked)
+  settingsFrame.controls.pvpAutoSwitch = createCheckbox(scrollChild, 360, -586, "Auto-switch in battlegrounds", function(checked)
     if NS.SetPvpAutoSwitch then
       NS.SetPvpAutoSwitch(checked)
     end
   end, "When enabled, entering a battleground automatically enables PvP mode and leaving after the recap grace window returns to leveling mode.")
-  settingsFrame.controls.pvpMilestones = createCheckbox(scrollChild, 360, -562, "Honor milestone notices", function(checked)
+  settingsFrame.controls.pvpMilestones = createCheckbox(scrollChild, 360, -614, "Honor milestone notices", function(checked)
     local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
     if settings then
       settings.milestoneAnnouncements = checked
     end
   end, "Print local milestone notices when your total Honor crosses the configured threshold.")
-  settingsFrame.controls.pvpRecap = createCheckbox(scrollChild, 360, -590, "Battleground recap notices", function(checked)
+  settingsFrame.controls.pvpRecap = createCheckbox(scrollChild, 360, -642, "Battleground recap notices", function(checked)
     local settings = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or nil
     if settings then
       settings.matchRecap = checked
     end
   end, "Print a local recap after battleground exit once the grace window closes.")
   settingsFrame.controls.pvpInfo = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -620)
-  settingsFrame.controls.pvpInfo:SetWidth(260)
+  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -670)
+  settingsFrame.controls.pvpInfo:SetWidth(290)
   settingsFrame.controls.pvpInfo:SetJustifyH("LEFT")
   settingsFrame.controls.pvpInfo:SetText("")
 
-  createButton(scrollChild, 16, -446, 72, "Live", function()
+  createButton(scrollChild, 16, -510, 72, "Live", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(1)
     end
   end)
-  createButton(scrollChild, 96, -446, 72, "Graph", function()
+  createButton(scrollChild, 96, -510, 72, "Graph", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(2)
     end
   end)
-  createButton(scrollChild, 176, -446, 84, "History", function()
+  createButton(scrollChild, 176, -510, 84, "History", function()
     if NS.ShowMainWindow then
       NS.ShowMainWindow(3)
     end
   end)
-  settingsFrame.controls.keep10Button = createButton(scrollChild, 16, -480, 84, "Keep 10", function()
+  settingsFrame.controls.keep10Button = createButton(scrollChild, 16, -538, 84, "Keep 10", function()
     if NS.SetKeepSessions then
       NS.SetKeepSessions(10)
     end
   end)
-  settingsFrame.controls.keep30Button = createButton(scrollChild, 108, -480, 84, "Keep 30", function()
+  settingsFrame.controls.keep30Button = createButton(scrollChild, 108, -538, 84, "Keep 30", function()
     if NS.SetKeepSessions then
       NS.SetKeepSessions(30)
     end
   end)
-  settingsFrame.controls.keep50Button = createButton(scrollChild, 200, -480, 84, "Keep 50", function()
+  settingsFrame.controls.keep50Button = createButton(scrollChild, 200, -538, 84, "Keep 50", function()
     if NS.SetKeepSessions then
       NS.SetKeepSessions(50)
     end
   end)
   settingsFrame.controls.keepValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -514)
+  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -566)
   settingsFrame.controls.keepValue:SetText("")
 
   NS.CreateConfirmButton(settingsFrame, 16, 14, 140, "Reset Session", "Confirm Reset", function()
@@ -370,7 +358,6 @@ function NS.InitSettingsPanel(parent)
     self.controls.minimapHidden:SetChecked(DingTimerDB.minimapHidden)
     self.controls.alertsEnabled:SetChecked(coach.alertsEnabled)
     self.controls.chatAlerts:SetChecked(coach.chatAlerts)
-    self.controls.stabilizeEarlyPace:SetChecked(coach.stabilizeEarlyPace ~= false)
     local pvp = NS.EnsurePvpConfig and NS.EnsurePvpConfig(DingTimerDB) or {}
     self.controls.pvpAutoSwitch:SetChecked(pvp.autoSwitchBattlegrounds == true)
     self.controls.pvpMilestones:SetChecked(pvp.milestoneAnnouncements == true)

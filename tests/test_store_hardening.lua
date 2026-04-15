@@ -69,4 +69,67 @@ it("sanitizes graph zoom settings before graph math consumes them", function()
   assert_eq(300, DingTimerDB.graphWindowSeconds, "invalid graph zoom settings should normalize to the default")
 end)
 
+it("recomputes stored historical rates from actual durations and clears invalid custom PvP goals", function()
+  DingTimerDB = {
+    schemaVersion = 9,
+    xp = {
+      activeProfile = "default",
+      profiles = {
+        default = {
+          sessions = {
+            {
+              durationSec = 100,
+              xpGained = 2500,
+              moneyNetCopper = 500,
+              avgXph = 5000,
+              avgMoneyPh = 2000,
+            },
+          },
+        },
+      },
+    },
+    pvp = {
+      activeProfile = "default",
+      settings = {
+        goalMode = "custom",
+        customGoalHonor = 0.5,
+      },
+      profiles = {
+        default = {
+          sessions = {
+            {
+              durationSec = 20,
+              honorGained = 200,
+              hkGained = 3,
+              avgHonorPerHour = 400,
+              avgHKPerHour = 10,
+            },
+          },
+        },
+      },
+    },
+  }
+
+  NS.InitStore()
+
+  local profileKey = nil
+  for key, profile in pairs(DingTimerDB.xp.profiles) do
+    if profile.sessions and #profile.sessions > 0 then
+      profileKey = key
+      break
+    end
+  end
+  assert_true(profileKey ~= nil, "the fixture should preserve one populated XP profile after store init")
+
+  local xpSession = DingTimerDB.xp.profiles[profileKey].sessions[1]
+  assert_near((2500 / 100) * 3600, xpSession.avgXph, 0.01, "xp history should be recomputed from the recorded duration")
+  assert_near((500 / 100) * 3600, xpSession.avgMoneyPh, 0.01, "money history should be recomputed from the recorded duration")
+
+  local pvpSession = DingTimerDB.pvp.profiles[profileKey].sessions[1]
+  assert_near((200 / 20) * 3600, pvpSession.avgHonorPerHour, 0.01, "honor history should be recomputed from the recorded duration")
+  assert_near((3 / 20) * 3600, pvpSession.avgHKPerHour, 0.01, "HK history should be recomputed from the recorded duration")
+  assert_eq("cap", DingTimerDB.pvp.settings.goalMode, "invalid custom goals should fall back to the default goal mode")
+  assert_eq(nil, DingTimerDB.pvp.settings.customGoalHonor, "invalid custom goals should be cleared during store init")
+end)
+
 run_tests()

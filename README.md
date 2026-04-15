@@ -282,6 +282,7 @@ The History tab also has a PvP view for session-level Honor/HK analysis and reca
 - Shows median XP/hr, best XP/hr, average time in level, and trend percent
 - Includes a mini trend chart built from your most recent sessions
 - Lists the latest 10 sessions with level range, duration, XP/hr, money, zone, and trigger reason
+- Historical XP/hr, Money/hr, Honor/hr, and HK/hr are computed from each session's actual recorded duration
 - Supports history controls via `/ding insights clear` and `/ding insights keep <n>`
 
 ---
@@ -316,6 +317,8 @@ DingTimer uses a **rolling time window** rather than a session average. Here's w
 ```
 
 The default window is **10 minutes (600 seconds)**. Use `/ding window <seconds>` to tune it.
+
+Historical session summaries and recap rates use the actual recorded session duration as well. DingTimer does not smooth or normalize those stored rates.
 
 ---
 

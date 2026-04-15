@@ -23,7 +23,6 @@ DingTimerDB = {
   windowSeconds = 600,
   coach = {
     goal = "ding",
-    stabilizeEarlyPace = true,
   },
 }
 
@@ -42,16 +41,7 @@ SetXP(500, 1000)
 NS.onXPUpdate()
 
 local snapshot = NS.GetSessionSnapshot(10)
-assert_near(snapshot.rawCurrentXph, 180000, 0.1, "raw pace should reflect the immediate 10s spike")
-assert_near(snapshot.currentXph, 30000, 0.1, "current pace should use the 60s normalized denominator during warmup")
-assert_eq(60, math.floor(snapshot.ttl + 0.5), "TTL should use the stabilized pace while warmup is active")
-assert_true(snapshot.showSettledOverlay, "warmup spike should request a settled overlay")
+assert_near(snapshot.currentXph, 180000, 0.1, "current pace should reflect the immediate 10s spike")
+assert_eq(10, math.floor(snapshot.ttl + 0.5), "TTL should use the same raw pace immediately")
 
-DingTimerDB.coach.stabilizeEarlyPace = false
-NS.InvalidateTickCache()
-snapshot = NS.GetSessionSnapshot(10)
-assert_near(snapshot.currentXph, 180000, 0.1, "disabling stabilization should surface the raw pace")
-assert_eq(10, math.floor(snapshot.ttl + 0.5), "TTL should fall back to the raw pace when stabilization is off")
-assert_true(not snapshot.showSettledOverlay, "overlay should be suppressed when stabilization is disabled")
-
-print("Stabilized pace test passed!")
+print("Live pace test passed!")

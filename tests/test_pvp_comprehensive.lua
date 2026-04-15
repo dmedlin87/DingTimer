@@ -123,7 +123,7 @@ it("queues recap notifications during combat and flushes them later", function()
 
   local recent = NS.GetPvpRecentNotices(1)
   assert_eq(1, #recent, "flushed recap should be recorded in the notice log")
-  assert_eq("Warsong Gulch recap: 200 Honor, 3 HKs, 400 Honor/hr over 20s.", recent[1].text,
+  assert_eq("Warsong Gulch recap: 200 Honor, 3 HKs, 36,000 Honor/hr over 20s.", recent[1].text,
     "recap text should reflect the closed battleground match")
 
   InCombatLockdown = previousCombatLockdown
@@ -270,6 +270,11 @@ it("validates PvP goal modes and reports the off state clearly", function()
   assert_false(ok, "negative honor goals should be rejected")
   assert_eq("Use '/ding pvp goal off', '/ding pvp goal cap', or a positive honor value.", result,
     "invalid goal input should return the validation message")
+
+  ok, result = NS.SetPvpGoal(0)
+  assert_false(ok, "zero honor goals should be rejected")
+  assert_eq("Use '/ding pvp goal off', '/ding pvp goal cap', or a positive honor value.", result,
+    "zero goals should use the same validation message")
 
   ok, result = NS.SetPvpGoal(9100)
   assert_true(ok, "numeric PvP goals should be accepted")
