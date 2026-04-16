@@ -109,7 +109,7 @@ local function layoutGraphFrame()
   end
 
   local width = graphFrame:GetWidth()
-  local cardGap = 8
+  local cardGap = 10
   local cardWidth = math.floor((width - 24 - (cardGap * 3)) / 4)
   local left = 12
 
@@ -119,26 +119,26 @@ local function layoutGraphFrame()
   for i = 1, #graphFrame.summaryCards do
     local card = graphFrame.summaryCards[i]
     card:ClearAllPoints()
-    card:SetSize(cardWidth, 48)
-    card:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", left, -6)
+    card:SetSize(cardWidth, 54)
+    card:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", left, -8)
     left = left + cardWidth + cardGap
   end
 
   graphFrame.graphArea:ClearAllPoints()
-  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 64, -76)
-  graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -18, 132)
+  graphFrame.graphArea:SetPoint("TOPLEFT", graphFrame, "TOPLEFT", 66, -86)
+  graphFrame.graphArea:SetPoint("BOTTOMRIGHT", graphFrame, "BOTTOMRIGHT", -20, 144)
 
   graphFrame.legendLabel:ClearAllPoints()
-  graphFrame.legendLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 108)
+  graphFrame.legendLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 118)
 
   graphFrame.segmentSummaryLabel:ClearAllPoints()
-  graphFrame.segmentSummaryLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 92)
+  graphFrame.segmentSummaryLabel:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, 100)
 
-  local rowY = 74
+  local rowY = 80
   for i = 1, #segmentRows do
     segmentRows[i]:ClearAllPoints()
     segmentRows[i]:SetPoint("BOTTOMLEFT", graphFrame, "BOTTOMLEFT", 16, rowY)
-    rowY = rowY - 16
+    rowY = rowY - 18
   end
 
   graphFrame.zoomFooter:ClearAllPoints()
@@ -629,16 +629,25 @@ function NS.InitGraphPanel(parent)
   local emptyState = graphArea:CreateFontString(nil, "OVERLAY", "GameFontDisable")
   emptyState:SetPoint("CENTER", graphArea, "CENTER", 0, 0)
   emptyState:SetText("Earn something. The graph fills after your first tracked event.")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(emptyState, "subtle")
+  end
   graphFrame.emptyState = emptyState
 
   local legendLabel = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   legendLabel:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(legendLabel, "subtle")
+  end
   graphFrame.legendLabel = legendLabel
 
   local segmentSummaryLabel = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   segmentSummaryLabel:SetWidth(640)
   segmentSummaryLabel:SetJustifyH("LEFT")
   segmentSummaryLabel:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(segmentSummaryLabel, "body")
+  end
   graphFrame.segmentSummaryLabel = segmentSummaryLabel
 
   segmentRows = NS.UI.CreateListRows(graphFrame, {
@@ -647,6 +656,9 @@ function NS.InitGraphPanel(parent)
 
   local zoomFooter = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoomFooter:SetText("Zoom")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(zoomFooter, "subtle")
+  end
   graphFrame.zoomFooter = zoomFooter
 
   graphFrame.zoomButtons = {}
@@ -665,6 +677,9 @@ function NS.InitGraphPanel(parent)
 
   local fixedMaxLabel = graphFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   fixedMaxLabel:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(fixedMaxLabel, "subtle")
+  end
   graphFrame.fixedMaxLabel = fixedMaxLabel
 
   local decreaseFixedButton = CreateFrame("Button", nil, graphFrame, "UIPanelButtonTemplate")

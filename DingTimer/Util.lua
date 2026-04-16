@@ -28,15 +28,21 @@ NS.GraphWindowDefaults = {
 }
 
 NS.MainWindowDefaults = {
-  width = 720,
-  height = 540,
-  minWidth = 720,
-  minHeight = 540,
+  width = 780,
+  height = 590,
+  minWidth = 780,
+  minHeight = 590,
   maxWidth = 1120,
   maxHeight = 820,
 }
 
 NS.UI = NS.UI or {}
+NS.UI.Layout = {
+  pageInset = 16,
+  blockGap = 12,
+  blockGapWide = 16,
+  controlGap = 28,
+}
 
 -- Named RGBA color palette for frame painting.
 -- Use NS.SetColor(texture, key, alpha) for convenience.
@@ -80,14 +86,56 @@ function NS.SetColor(texture, colorKey, alpha)
   texture:SetColorTexture(c[1], c[2], c[3], alpha or 1)
 end
 
+function NS.UI.ApplyTextStyle(fs, style)
+  if not fs then
+    return
+  end
+
+  local fontObject = "GameFontHighlightSmall"
+  local shadowX, shadowY = 1, -1
+  local shadowA = 0.65
+
+  if style == "title" then
+    fontObject = "GameFontHighlightLarge"
+    shadowA = 0.85
+  elseif style == "heading" then
+    fontObject = "GameFontNormal"
+    shadowA = 0.75
+  elseif style == "label" then
+    fontObject = "GameFontHighlightSmall"
+    shadowA = 0.6
+  elseif style == "value" then
+    fontObject = "GameFontHighlight"
+    shadowA = 0.85
+  elseif style == "subtle" then
+    fontObject = "GameFontDisableSmall"
+    shadowA = 0.4
+  end
+
+  if fs.SetFontObject then
+    fs:SetFontObject(fontObject)
+  end
+  if fs.SetShadowOffset then
+    fs:SetShadowOffset(shadowX, shadowY)
+  end
+  if fs.SetShadowColor then
+    fs:SetShadowColor(0, 0, 0, shadowA)
+  end
+  if fs.SetJustifyH then
+    fs:SetJustifyH("LEFT")
+  end
+end
+
 function NS.UI.CreateSectionTitle(parent, x, y, title, description)
   local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   header:SetText(title)
+  NS.UI.ApplyTextStyle(header, "heading")
 
   local sub = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  sub:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
+  sub:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -4)
   sub:SetText(description or "")
+  NS.UI.ApplyTextStyle(sub, "subtle")
 
   return header, sub
 end
@@ -101,18 +149,54 @@ function NS.UI.CreateSectionBlock(parent, x, y, width, height, title, descriptio
   local fill = section:CreateTexture(nil, "BACKGROUND")
   fill:SetPoint("TOPLEFT", section, "TOPLEFT", 2, -2)
   fill:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -2, 2)
-  fill:SetColorTexture(NS.Colors.fillDark[1], NS.Colors.fillDark[2], NS.Colors.fillDark[3], 0.42)
+  fill:SetColorTexture(NS.Colors.fillDark[1], NS.Colors.fillDark[2], NS.Colors.fillDark[3], 0.52)
   section._dingFill = fill
 
   local header, sub = NS.UI.CreateSectionTitle(section, 12, -12, title, description)
   section.title = header
   section.subtitle = sub
+
+  local content = CreateFrame("Frame", nil, section)
+  content:SetPoint("TOPLEFT", section, "TOPLEFT", 12, -38)
+  content:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -12, 12)
+  section.content = content
   return section, header, sub
+end
+
+function NS.UI.CreateGridLayout(parent, options)
+  local layout = {
+    parent = parent,
+    columns = options.columns or 1,
+    cellWidth = options.cellWidth or 120,
+    rowHeight = options.rowHeight or 24,
+    columnGap = options.columnGap or 8,
+    rowGap = options.rowGap or 8,
+    originX = options.originX or 0,
+    originY = options.originY or 0,
+  }
+
+  function layout:GetPoint(column, row, xOffset, yOffset)
+    local x = self.originX + ((column - 1) * (self.cellWidth + self.columnGap)) + (xOffset or 0)
+    local y = self.originY - ((row - 1) * (self.rowHeight + self.rowGap)) + (yOffset or 0)
+    return x, y
+  end
+
+  function layout:Place(frame, column, row, xOffset, yOffset)
+    if not frame then
+      return frame
+    end
+    local x, y = self:GetPoint(column, row, xOffset, yOffset)
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", self.parent, "TOPLEFT", x, y)
+    return frame
+  end
+
+  return layout
 end
 
 function NS.UI.CreatePill(parent, x, y, width, text)
   local pill = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-  pill:SetSize(width or 84, 20)
+  pill:SetSize(width or 92, 22)
   pill:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   NS.ApplyThemeToFrame(pill, true)
 
@@ -125,6 +209,7 @@ function NS.UI.CreatePill(parent, x, y, width, text)
   local label = pill:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   label:SetPoint("CENTER", pill, "CENTER", 0, 0)
   label:SetText(text or "")
+  NS.UI.ApplyTextStyle(label, "label")
   pill.label = label
   return pill
 end
@@ -177,14 +262,14 @@ function NS.UI.DecorateButton(btn)
 
   local fill = btn:CreateTexture(nil, "BACKGROUND")
   fill:SetAllPoints(btn)
-  fill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.55)
+  fill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.7)
   btn._dingFill = fill
 
   local accent = btn:CreateTexture(nil, "ARTWORK")
-  accent:SetHeight(2)
+  accent:SetHeight(3)
   accent:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 6, 4)
   accent:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -6, 4)
-  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.45)
+  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.65)
   btn._dingAccent = accent
   btn._dingStyled = true
   return btn
@@ -200,14 +285,14 @@ function NS.UI.SetButtonActive(btn, active)
 
   if active then
     if btn._dingFill then
-      btn._dingFill:SetColorTexture(NS.Colors.fillBtnActive[1], NS.Colors.fillBtnActive[2], NS.Colors.fillBtnActive[3], 0.92)
+      btn._dingFill:SetColorTexture(NS.Colors.fillBtnActive[1], NS.Colors.fillBtnActive[2], NS.Colors.fillBtnActive[3], 0.96)
     end
     if btn._dingAccent then
       btn._dingAccent:SetColorTexture(NS.Colors.accentActive[1], NS.Colors.accentActive[2], NS.Colors.accentActive[3], 0.98)
     end
   else
     if btn._dingFill then
-      btn._dingFill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.55)
+      btn._dingFill:SetColorTexture(NS.Colors.fillButton[1], NS.Colors.fillButton[2], NS.Colors.fillButton[3], 0.7)
     end
     if btn._dingAccent then
       btn._dingAccent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.45)
@@ -224,26 +309,33 @@ function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
   local fill = card:CreateTexture(nil, "BACKGROUND")
   fill:SetPoint("TOPLEFT", card, "TOPLEFT", 2, -2)
   fill:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -2, 2)
-  fill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.5)
+  fill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.62)
   card._dingFill = fill
 
   local accent = card:CreateTexture(nil, "ARTWORK")
-  accent:SetHeight(2)
+  accent:SetHeight(3)
   accent:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -8)
   accent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
-  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.72)
+  accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], 0.82)
 
   local label = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   label:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -12)
+  label:SetWidth(math.max(1, width - 20))
   label:SetText(labelText or "")
+  NS.UI.ApplyTextStyle(label, "subtle")
 
   local value = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+  value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -6)
+  value:SetWidth(math.max(1, width - 20))
   value:SetText("--")
+  NS.UI.ApplyTextStyle(value, "value")
 
   local sub = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 8)
+  sub:SetWidth(math.max(1, width - 20))
+  sub:SetJustifyH("LEFT")
   sub:SetText("")
+  NS.UI.ApplyTextStyle(sub, "subtle")
 
   card.label = label
   card.value = value
@@ -252,12 +344,12 @@ function NS.UI.CreateMetricCard(parent, width, height, x, y, labelText)
   card:EnableMouse(true)
   card:SetScript("OnEnter", function(self)
     if self._dingFill then
-      self._dingFill:SetColorTexture(NS.Colors.fillCardHover[1], NS.Colors.fillCardHover[2], NS.Colors.fillCardHover[3], 0.65)
+      self._dingFill:SetColorTexture(NS.Colors.fillCardHover[1], NS.Colors.fillCardHover[2], NS.Colors.fillCardHover[3], 0.78)
     end
   end)
   card:SetScript("OnLeave", function(self)
     if self._dingFill then
-      self._dingFill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.5)
+      self._dingFill:SetColorTexture(NS.Colors.fillCard[1], NS.Colors.fillCard[2], NS.Colors.fillCard[3], 0.62)
     end
   end)
 
@@ -298,7 +390,7 @@ end
 
 function NS.UI.CreateActionButton(parent, x, y, width, label, callback)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  btn:SetSize(width, 24)
+  btn:SetSize(width, 26)
   btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", x, y)
   btn:SetText(label)
   btn:SetScript("OnClick", callback)
@@ -310,6 +402,7 @@ function NS.UI.CreateValueLabel(parent, x, y)
   local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   fs:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   fs:SetText("--")
+  NS.UI.ApplyTextStyle(fs, "value")
   return fs
 end
 
@@ -322,6 +415,13 @@ function NS.UI.CreateListRows(parent, options)
     fs:SetJustifyH("LEFT")
     fs:SetWidth(options.width)
     fs:SetText("")
+    if fontObj == "GameFontDisableSmall" then
+      NS.UI.ApplyTextStyle(fs, "subtle")
+    elseif fontObj == "GameFontHighlight" then
+      NS.UI.ApplyTextStyle(fs, "value")
+    else
+      NS.UI.ApplyTextStyle(fs, "body")
+    end
     rows[i] = fs
   end
   return rows
@@ -342,8 +442,8 @@ end
 
 function NS.UI.CreateScrollFrame(parent, childWidth, childHeight)
   local scrollFrame = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-  scrollFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, -50)
-  scrollFrame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -30, 40)
+  scrollFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -56)
+  scrollFrame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -30, 42)
 
   local scrollChild = CreateFrame("Frame", nil, scrollFrame)
   scrollChild:SetSize(childWidth or 680, childHeight or 500)
@@ -620,7 +720,7 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
 
   if not frame._dingAccent then
     local accent = frame:CreateTexture(nil, "BORDER")
-    accent:SetHeight(2)
+    accent:SetHeight(3)
     accent:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
     accent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
     accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], isTransparent and 0.4 or 0.85)
@@ -667,4 +767,3 @@ function NS.CreateConfirmButton(parent, x, y, width, idleLabel, confirmLabel, on
 
   return btn --[[@as Button]]
 end
-

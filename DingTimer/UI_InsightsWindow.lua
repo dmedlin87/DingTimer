@@ -314,24 +314,30 @@ function NS.InitInsightsPanel(parent)
   insightsFrame = CreateFrame("Frame", "DingTimerInsightsPanel", parent)
   insightsFrame:SetAllPoints(parent)
 
-  local _, scrollChild = NS.UI.CreateScrollFrame(insightsFrame, 680, 580)
+  local _, scrollChild = NS.UI.CreateScrollFrame(insightsFrame, 704, 600)
 
   if NS.UI and NS.UI.CreateSectionBlock then
-    NS.UI.CreateSectionBlock(scrollChild, 12, -62, 656, 86, "Session Comparison", "Best session callouts and how the current run stacks up.")
-    NS.UI.CreateSectionBlock(scrollChild, 12, -156, 656, 118, "Trend", "Recent pace history across your most recent stored sessions.")
-    NS.UI.CreateSectionBlock(scrollChild, 12, -286, 656, 76, "Zone Leaders", "Where your best historical pace has been.")
-    NS.UI.CreateSectionBlock(scrollChild, 12, -374, 656, 64, "Latest Recap", "The most recent coach or PvP summary stored with your runs.")
-    NS.UI.CreateSectionBlock(scrollChild, 12, -430, 656, 168, "Recent Sessions", "Newest runs first, with zone, pace, and trigger details.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -62, 680, 92, "Session Comparison", "Best session callouts and how the current run stacks up.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -164, 680, 124, "Trend", "Recent pace history across your most recent stored sessions.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -300, 680, 82, "Zone Leaders", "Where your best historical pace has been.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -394, 680, 70, "Latest Recap", "The most recent coach or PvP summary stored with your runs.")
+    NS.UI.CreateSectionBlock(scrollChild, 12, -456, 680, 180, "Recent Sessions", "Newest runs first, with zone, pace, and trigger details.")
   end
 
   local function createSummaryBlock(anchorX, label)
     local labelFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     labelFS:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", anchorX, -16)
     labelFS:SetText(label)
+    if NS.UI and NS.UI.ApplyTextStyle then
+      NS.UI.ApplyTextStyle(labelFS, "subtle")
+    end
 
     local valueFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     valueFS:SetPoint("TOPLEFT", labelFS, "BOTTOMLEFT", 0, -2)
     valueFS:SetText("--")
+    if NS.UI and NS.UI.ApplyTextStyle then
+      NS.UI.ApplyTextStyle(valueFS, "value")
+    end
     return labelFS, valueFS
   end
 
@@ -344,10 +350,16 @@ function NS.InitInsightsPanel(parent)
   local countLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   countLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 572, -16)
   countLabel:SetText("Stored Runs")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(countLabel, "subtle")
+  end
 
   insightsFrame.valueCount = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   insightsFrame.valueCount:SetPoint("TOPLEFT", countLabel, "BOTTOMLEFT", 0, -2)
   insightsFrame.valueCount:SetText("0")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(insightsFrame.valueCount, "value")
+  end
 
   local bestSessionLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   bestSessionLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -68)
@@ -359,6 +371,9 @@ function NS.InitInsightsPanel(parent)
   insightsFrame.bestSessionValue:SetWidth(320)
   insightsFrame.bestSessionValue:SetJustifyH("LEFT")
   insightsFrame.bestSessionValue:SetText("--")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(insightsFrame.bestSessionValue, "body")
+  end
 
   local compareLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   compareLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -108)
@@ -370,12 +385,18 @@ function NS.InitInsightsPanel(parent)
   insightsFrame.compareLine1:SetWidth(680)
   insightsFrame.compareLine1:SetJustifyH("LEFT")
   insightsFrame.compareLine1:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(insightsFrame.compareLine1, "body")
+  end
 
   insightsFrame.compareLine2 = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   insightsFrame.compareLine2:SetPoint("TOPLEFT", insightsFrame.compareLine1, "BOTTOMLEFT", 0, -4)
   insightsFrame.compareLine2:SetWidth(680)
   insightsFrame.compareLine2:SetJustifyH("LEFT")
   insightsFrame.compareLine2:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(insightsFrame.compareLine2, "subtle")
+  end
 
   local sparkLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   sparkLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -162)
@@ -383,9 +404,9 @@ function NS.InitInsightsPanel(parent)
   insightsFrame.labels.spark = sparkLabel
 
   local sparkArea = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
-  sparkArea:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -182)
-  sparkArea:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -16, -182)
-  sparkArea:SetHeight(84)
+  sparkArea:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -190)
+  sparkArea:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -16, -190)
+  sparkArea:SetHeight(88)
   sparkArea:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -405,17 +426,20 @@ function NS.InitInsightsPanel(parent)
   end
 
   insightsFrame.zoneRows = NS.UI.CreateListRows(scrollChild, {
-    startX = 16, startY = -314, width = 680, rowCount = 3, spacing = 16, fontObject = "GameFontHighlightSmall"
+    startX = 16, startY = -326, width = 680, rowCount = 3, spacing = 18, fontObject = "GameFontHighlightSmall"
   })
 
   insightsFrame.recapValue = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  insightsFrame.recapValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -402)
+  insightsFrame.recapValue:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -420)
   insightsFrame.recapValue:SetWidth(680)
   insightsFrame.recapValue:SetJustifyH("LEFT")
   insightsFrame.recapValue:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(insightsFrame.recapValue, "subtle")
+  end
 
   local rowsHeader = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  rowsHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -438)
+  rowsHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -468)
   rowsHeader:SetText("Recent Sessions (newest first)")
   insightsFrame.labels.rows = rowsHeader
 
@@ -448,7 +472,7 @@ function NS.InitInsightsPanel(parent)
   end)
 
   rowTexts = NS.UI.CreateListRows(scrollChild, {
-    startX = 16, startY = -458, width = 680, rowCount = MAX_ROWS, spacing = 14, fontObject = "GameFontHighlightSmall"
+    startX = 16, startY = -488, width = 680, rowCount = MAX_ROWS, spacing = 16, fontObject = "GameFontHighlightSmall"
   })
 
   NS.CreateConfirmButton(insightsFrame, 16, 10, 120, "Clear History", "Confirm Clear", function()

@@ -1,9 +1,9 @@
 local _, NS = ...
 
-local FRAME_WIDTH = 664
-local CARD_WIDTH = 151
-local CARD_HEIGHT = 56
-local CARD_GAP = 10
+local FRAME_WIDTH = 700
+local CARD_WIDTH = 160
+local CARD_HEIGHT = 62
+local CARD_GAP = 12
 
 local math_abs = math.abs
 local math_floor = math.floor
@@ -316,7 +316,7 @@ function NS.InitStatsPanel(parent)
   statsFrame = CreateFrame("Frame", "DingTimerStatsPanel", parent)
   statsFrame:SetAllPoints(parent)
 
-  local _, scrollChild = NS.UI.CreateScrollFrame(statsFrame, 664, 550)
+  local _, scrollChild = NS.UI.CreateScrollFrame(statsFrame, 700, 560)
 
   local zoneText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   zoneText:SetPoint("TOPLEFT", 16, -16)
@@ -324,17 +324,23 @@ function NS.InitStatsPanel(parent)
   statsFrame.zoneText = zoneText
 
   local progressFrame = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
-  progressFrame:SetSize(FRAME_WIDTH, 60)
+  progressFrame:SetSize(FRAME_WIDTH, 66)
   progressFrame:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -36)
   NS.ApplyThemeToFrame(progressFrame, true)
 
   local progressTitle = progressFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  progressTitle:SetPoint("TOPLEFT", 10, -12)
+  progressTitle:SetPoint("TOPLEFT", 12, -14)
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(progressTitle, "value")
+  end
   progressTitle:SetText("--")
   statsFrame.progressTitle = progressTitle
 
   local progressSub = progressFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  progressSub:SetPoint("TOPLEFT", progressTitle, "BOTTOMLEFT", 0, -4)
+  progressSub:SetPoint("TOPLEFT", progressTitle, "BOTTOMLEFT", 0, -5)
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(progressSub, "subtle")
+  end
   progressSub:SetText("")
   statsFrame.progressSub = progressSub
 
@@ -344,8 +350,8 @@ function NS.InitStatsPanel(parent)
   end
 
   local progressBar = CreateFrame("Frame", nil, progressFrame, "BackdropTemplate")
-  progressBar:SetSize(FRAME_WIDTH - 20, 10)
-  progressBar:SetPoint("BOTTOMLEFT", progressFrame, "BOTTOMLEFT", 10, 10)
+  progressBar:SetSize(FRAME_WIDTH - 24, 12)
+  progressBar:SetPoint("BOTTOMLEFT", progressFrame, "BOTTOMLEFT", 12, 10)
   progressBar:SetBackdrop({
     bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -378,20 +384,20 @@ function NS.InitStatsPanel(parent)
     scrollChild,
     16,
     -254,
-    664,
-    70,
+      700,
+      76,
     "Session Coach",
     "Goal tracking, current segment status, and recent guidance."
   ) or scrollChild
   statsFrame.goalStatus = coachSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   statsFrame.goalStatus:SetPoint("TOPLEFT", coachSection, "TOPLEFT", 12, -42)
-  statsFrame.goalStatus:SetWidth(636)
+  statsFrame.goalStatus:SetWidth(672)
   statsFrame.goalStatus:SetJustifyH("LEFT")
   statsFrame.goalStatus:SetText("")
 
   statsFrame.segmentStatus = coachSection:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   statsFrame.segmentStatus:SetPoint("TOPLEFT", statsFrame.goalStatus, "BOTTOMLEFT", 0, -6)
-  statsFrame.segmentStatus:SetWidth(636)
+  statsFrame.segmentStatus:SetWidth(672)
   statsFrame.segmentStatus:SetJustifyH("LEFT")
   statsFrame.segmentStatus:SetText("")
 
@@ -401,8 +407,8 @@ function NS.InitStatsPanel(parent)
       scrollChild,
       16,
       -332,
-      664,
-      96,
+      700,
+      104,
       "Recent Alerts",
       "Coach warnings and milestones from this run."
     )
@@ -411,7 +417,7 @@ function NS.InitStatsPanel(parent)
     alertTitle, alertSub = NS.UI.CreateSectionTitle(scrollChild, 16, -332, "Recent Alerts", "Coach warnings and milestones from this run.")
   end
   statsFrame.alertRows = NS.UI.CreateListRows(alertsSection, {
-    startX = 12, startY = -42, width = 636, rowCount = 4, spacing = 16, fontObject = "GameFontHighlightSmall"
+    startX = 12, startY = -44, width = 672, rowCount = 4, spacing = 18, fontObject = "GameFontHighlightSmall"
   })
 
   local recapSection, recapTitle, recapSub
@@ -420,8 +426,8 @@ function NS.InitStatsPanel(parent)
       scrollChild,
       16,
       -438,
-      664,
-      88,
+      700,
+      96,
       "Latest Recap",
       "The most recent recap is kept here for quick review."
     )
@@ -430,7 +436,7 @@ function NS.InitStatsPanel(parent)
     recapTitle, recapSub = NS.UI.CreateSectionTitle(scrollChild, 16, -438, "Latest Recap", "The most recent recap is kept here for quick review.")
   end
   statsFrame.recapRows = NS.UI.CreateListRows(recapSection, {
-    startX = 12, startY = -42, width = 636, rowCount = 3, spacing = 16, fontObject = "GameFontDisableSmall"
+    startX = 12, startY = -44, width = 672, rowCount = 3, spacing = 18, fontObject = "GameFontDisableSmall"
   })
   statsFrame.sectionTitles = {
     alertTitle = alertTitle,

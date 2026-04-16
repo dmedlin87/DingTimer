@@ -68,4 +68,26 @@ it("keeps settings value labels anchored to their control rows", function()
   )
 end)
 
+it("parents busy settings controls inside their owning sections", function()
+  NS.InitSettingsPanel(nil)
+
+  assert_true(DingTimerSettingsPanel.sections ~= nil, "settings sections should be tracked")
+
+  local outputPoint, outputRelativeTo = DingTimerSettingsPanel.controls.enabled:GetPoint()
+  assert_eq(outputPoint, "TOPLEFT", "output toggle should use top-left section anchoring")
+  assert_eq(outputRelativeTo, DingTimerSettingsPanel.sections.output.content, "output toggle should be contained by output section content")
+
+  local hudPoint, hudRelativeTo = DingTimerSettingsPanel.controls.float:GetPoint()
+  assert_eq(hudPoint, "TOPLEFT", "hud toggle should use top-left section anchoring")
+  assert_eq(hudRelativeTo, DingTimerSettingsPanel.sections.hud.content, "hud toggle should be contained by hud section content")
+
+  local graphPoint, graphRelativeTo = DingTimerSettingsPanel.controls.cycleScaleButton:GetPoint()
+  assert_eq(graphPoint, "TOPLEFT", "graph controls should use top-left section anchoring")
+  assert_eq(graphRelativeTo, DingTimerSettingsPanel.sections.graph.content, "graph controls should be contained by graph section content")
+
+  local pvpPoint, pvpRelativeTo = DingTimerSettingsPanel.controls.togglePvpMode:GetPoint()
+  assert_eq(pvpPoint, "TOPLEFT", "pvp controls should use top-left section anchoring")
+  assert_eq(pvpRelativeTo, DingTimerSettingsPanel.sections.pvp.content, "pvp controls should be contained by pvp section content")
+end)
+
 run_tests()

@@ -2,6 +2,9 @@ local _, NS = ...
 
 local MAIN_WIDTH = (NS.MainWindowDefaults and NS.MainWindowDefaults.width) or 720
 local MAIN_HEIGHT = (NS.MainWindowDefaults and NS.MainWindowDefaults.height) or 540
+local HEADER_INSET = 16
+local CONTENT_INSET = 12
+local TAB_GAP = 8
 
 local mainWindow = nil
 local tabs = {}
@@ -78,7 +81,7 @@ end
 
 local function createTabButton(parent, id, text, x, y)
   local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  btn:SetSize(102, 24)
+  btn:SetSize(102, 26)
   btn:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", x, y)
   btn:SetText(text)
   if NS.UI and NS.UI.DecorateButton then
@@ -109,6 +112,72 @@ local function createTabButton(parent, id, text, x, y)
   end)
   
   return btn
+end
+
+local function layoutMainWindow()
+  if not mainWindow then
+    return
+  end
+
+  local width = mainWindow:GetWidth() or MAIN_WIDTH
+  local contentWidth = math.max(420, width - (CONTENT_INSET * 2))
+  local pillClusterWidth = 220
+  local headerWidth = math.max(260, width - (HEADER_INSET * 2) - pillClusterWidth - 16)
+  local tabWidth = math.floor((contentWidth - (TAB_GAP * 3)) / 4)
+  tabWidth = math.max(104, math.min(140, tabWidth))
+
+  if mainWindow.header then
+    mainWindow.header:ClearAllPoints()
+    mainWindow.header:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", HEADER_INSET, -14)
+    if mainWindow.header.SetWidth then
+      mainWindow.header:SetWidth(headerWidth)
+    end
+  end
+  if mainWindow.subtitle then
+    mainWindow.subtitle:ClearAllPoints()
+    mainWindow.subtitle:SetPoint("TOPLEFT", mainWindow.header, "BOTTOMLEFT", 0, -4)
+    if mainWindow.subtitle.SetWidth then
+      mainWindow.subtitle:SetWidth(headerWidth)
+    end
+  end
+  if mainWindow.contextLine then
+    mainWindow.contextLine:ClearAllPoints()
+    mainWindow.contextLine:SetPoint("TOPLEFT", mainWindow.subtitle, "BOTTOMLEFT", 0, -10)
+    if mainWindow.contextLine.SetWidth then
+      mainWindow.contextLine:SetWidth(math.max(260, width - (HEADER_INSET * 2) - 8))
+    end
+  end
+  if mainWindow.helpLine then
+    mainWindow.helpLine:ClearAllPoints()
+    mainWindow.helpLine:SetPoint("TOPLEFT", mainWindow.contextLine, "BOTTOMLEFT", 0, -4)
+    if mainWindow.helpLine.SetWidth then
+      mainWindow.helpLine:SetWidth(math.max(260, width - (HEADER_INSET * 2) - 8))
+    end
+  end
+  if mainWindow.modePill then
+    mainWindow.modePill:ClearAllPoints()
+    mainWindow.modePill:SetPoint("TOPRIGHT", mainWindow, "TOPRIGHT", -32, -14)
+  end
+  if mainWindow.activeTabPill and mainWindow.modePill then
+    mainWindow.activeTabPill:ClearAllPoints()
+    mainWindow.activeTabPill:SetPoint("RIGHT", mainWindow.modePill, "LEFT", -10, 0)
+  end
+  if mainWindow.contentArea then
+    mainWindow.contentArea:ClearAllPoints()
+    mainWindow.contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", CONTENT_INSET, -102)
+    mainWindow.contentArea:SetPoint("BOTTOMRIGHT", mainWindow, "BOTTOMRIGHT", -CONTENT_INSET, 12)
+  end
+
+  local tabX = 0
+  for i = 1, #tabs do
+    local tab = tabs[i]
+    if tab then
+      tab:ClearAllPoints()
+      tab:SetSize(tabWidth, 26)
+      tab:SetPoint("BOTTOMLEFT", mainWindow.contentArea, "TOPLEFT", tabX, 4)
+      tabX = tabX + tabWidth + TAB_GAP
+    end
+  end
 end
 
 local function refreshSubtitle()
@@ -197,13 +266,17 @@ function NS.InitMainWindow()
   end)
 
   local header = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  header:SetPoint("TOPLEFT", 14, -12)
   header:SetText(NS.C.base .. "DingTimer" .. NS.C.r)
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(header, "title")
+  end
   mainWindow.header = header
 
   local subtitle = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  subtitle:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
   subtitle:SetText("Session Coach")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(subtitle, "subtle")
+  end
   mainWindow.subtitle = subtitle
 
   if NS.UI and NS.UI.CreatePill then
@@ -219,18 +292,20 @@ function NS.InitMainWindow()
   end
 
   local contextLine = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  contextLine:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -10)
   contextLine:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(contextLine, "body")
+  end
   mainWindow.contextLine = contextLine
 
   local helpLine = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  helpLine:SetPoint("TOPLEFT", contextLine, "BOTTOMLEFT", 0, -4)
   helpLine:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(helpLine, "subtle")
+  end
   mainWindow.helpLine = helpLine
 
   local contentArea = CreateFrame("Frame", "DingTimerMainContent", mainWindow, "BackdropTemplate")
-  contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 10, -88)
-  contentArea:SetPoint("BOTTOMRIGHT", mainWindow, "BOTTOMRIGHT", -10, 10)
   if NS.ApplyThemeToFrame then
     NS.ApplyThemeToFrame(contentArea, true)
   end
@@ -243,6 +318,7 @@ function NS.InitMainWindow()
   tabs[4] = createTabButton(contentArea, 4, "Settings", 318, 2)
   mainWindow.tabs = tabs
   mainWindow.panels = panels
+  layoutMainWindow()
 
   mainWindow:SetScript("OnShow", function()
     DingTimerDB.mainWindowVisible = true
@@ -259,6 +335,7 @@ function NS.InitMainWindow()
       self:SetSize(clampedWidth, clampedHeight)
       return
     end
+    layoutMainWindow()
     saveMainWindowSize(self)
   end)
 
