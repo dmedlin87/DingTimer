@@ -1,21 +1,27 @@
 local ADDON, NS = ...
 
 local frame = CreateFrame("Frame")
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_XP_UPDATE")
-frame:RegisterEvent("PLAYER_LEVEL_UP")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("PLAYER_MONEY")
-frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("PLAYER_PVP_KILLS_CHANGED")
-frame:RegisterEvent("HONOR_XP_UPDATE")
-frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
-frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
-frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-frame:RegisterEvent("ZONE_CHANGED")
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+
+local function safeRegisterEvent(targetFrame, eventName)
+  local ok = pcall(targetFrame.RegisterEvent, targetFrame, eventName)
+  return ok
+end
+
+safeRegisterEvent(frame, "ADDON_LOADED")
+safeRegisterEvent(frame, "PLAYER_LOGIN")
+safeRegisterEvent(frame, "PLAYER_ENTERING_WORLD")
+safeRegisterEvent(frame, "PLAYER_XP_UPDATE")
+safeRegisterEvent(frame, "PLAYER_LEVEL_UP")
+safeRegisterEvent(frame, "PLAYER_REGEN_ENABLED")
+safeRegisterEvent(frame, "PLAYER_MONEY")
+safeRegisterEvent(frame, "PLAYER_LOGOUT")
+safeRegisterEvent(frame, "PLAYER_PVP_KILLS_CHANGED")
+safeRegisterEvent(frame, "HONOR_XP_UPDATE")
+safeRegisterEvent(frame, "UPDATE_BATTLEFIELD_SCORE")
+safeRegisterEvent(frame, "CHAT_MSG_COMBAT_HONOR_GAIN")
+safeRegisterEvent(frame, "CURRENCY_DISPLAY_UPDATE")
+safeRegisterEvent(frame, "ZONE_CHANGED")
+safeRegisterEvent(frame, "ZONE_CHANGED_NEW_AREA")
 
 local function showStartupMessages()
   NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " tracking started. (/ding help)")
