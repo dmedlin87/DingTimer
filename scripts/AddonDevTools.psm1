@@ -387,6 +387,38 @@ function Get-ProjectGeneratedFileMap {
     }
 }
 
+function Normalize-WowFlavor {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Flavor
+    )
+
+    $normalized = $Flavor.Trim().ToLowerInvariant()
+    switch ($normalized) {
+        "retail" { return "retail" }
+        "classic" { return "classic" }
+        "mop" { return "classic" }
+        "mop_classic" { return "classic" }
+        "mopclassic" { return "classic" }
+        "classic_era" { return "classic_era" }
+        "era" { return "classic_era" }
+        "ptr" { return "ptr" }
+        default {
+            $supportedFlavors = "retail, classic, mop, mop_classic, classic_era, ptr"
+            throw "Unknown flavor: $Flavor`nSupported flavors: $supportedFlavors"
+        }
+    }
+}
+
+function Get-FlavorDirectoryName {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Flavor
+    )
+
+    return "_{0}_" -f (Normalize-WowFlavor -Flavor $Flavor)
+}
+
 function Read-JsonFile {
     param(
         [Parameter(Mandatory)]
@@ -733,12 +765,29 @@ function Get-TargetAddonDir {
         [string]$Flavor
     )
 
-    $directAddonDir = Join-Path $WowPath "Interface\AddOns"
+    $resolvedWowPath = [System.IO.Path]::GetFullPath($WowPath)
+    $trimmedWowPath = $resolvedWowPath.TrimEnd('\', '/')
+    $leafName = [System.IO.Path]::GetFileName($trimmedWowPath)
+    $parentPath = Split-Path -Parent $trimmedWowPath
+    $parentLeafName = if ([string]::IsNullOrWhiteSpace($parentPath)) { "" } else { [System.IO.Path]::GetFileName($parentPath) }
+
+    if ($leafName -ieq "AddOns" -and $parentLeafName -ieq "Interface") {
+        return $trimmedWowPath
+    }
+
+    if ($leafName -ieq "Interface") {
+        $interfaceAddonDir = Join-Path $trimmedWowPath "AddOns"
+        if (Test-Path -LiteralPath $interfaceAddonDir -PathType Container) {
+            return $interfaceAddonDir
+        }
+    }
+
+    $directAddonDir = Join-Path $trimmedWowPath "Interface\AddOns"
     if (Test-Path -LiteralPath $directAddonDir -PathType Container) {
         return $directAddonDir
     }
 
-    return Join-Path $WowPath ("_{0}_\Interface\AddOns" -f $Flavor)
+    return Join-Path $trimmedWowPath ((Get-FlavorDirectoryName -Flavor $Flavor) + "\Interface\AddOns")
 }
 
 function Test-IsAdministrator {
@@ -1296,16 +1345,18 @@ function Invoke-AddonAction {
 
     try {
         $normalizedAction = if ([string]::IsNullOrWhiteSpace($Action)) { "install" } else { $Action.ToLowerInvariant() }
+        $requestedFlavor = if ([string]::IsNullOrWhiteSpace($Flavor)) { "retail" } else { $Flavor }
+        $normalizedFlavor = Normalize-WowFlavor -Flavor $requestedFlavor
         if (-not ($script:SupportedActions -contains $normalizedAction)) {
             $usageScriptName = Get-AddonActionUsageScriptName -Project $project -EntryScriptPath $EntryScriptPath
-            $usage = ".\" + $usageScriptName + " -Action [" + ($script:SupportedActions -join "|") + "] [-Flavor retail|classic|classic_era|ptr] [-WowPath '<WoW client path>']"
+            $usage = ".\" + $usageScriptName + " -Action [" + ($script:SupportedActions -join "|") + "] [-Flavor retail|classic|mop|mop_classic|classic_era|ptr] [-WowPath '<WoW client root or AddOns path>']"
             throw "Unknown action: $Action`nUse: $usage"
         }
 
         Assert-AddonProjectStructure -Project $project -Action $normalizedAction
 
         if (-not $PSBoundParameters.ContainsKey("WowPath")) {
-            if ($Flavor -eq "ptr") {
+            if ($normalizedFlavor -eq "ptr") {
                 $WowPath = Get-ProjectPtrWowPath -Project $project
             }
             else {
@@ -1315,7 +1366,7 @@ function Invoke-AddonAction {
 
         $addonName = Get-ProjectDisplayName -Project $project
         $addonFolder = Get-ProjectAddonFolder -Project $project
-        $targetAddonDir = Get-TargetAddonDir -WowPath $WowPath -Flavor $Flavor
+        $targetAddonDir = Get-TargetAddonDir -WowPath $WowPath -Flavor $normalizedFlavor
         $targetPath = Join-Path $targetAddonDir $addonFolder
 
         switch ($normalizedAction) {
@@ -1327,7 +1378,7 @@ function Invoke-AddonAction {
                         throw "Target addon directory was not found at '$targetAddonDir'."
                     }
 
-                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Installing {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Installing {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $normalizedFlavor -PauseOnExit:$PauseOnExit
                     Write-Host ("Installing {0} to {1}..." -f $addonName, $targetPath) -ForegroundColor Cyan
                     Remove-PathIfPresent -Path $targetPath
                     Copy-Item -Recurse -Path $stagedAddonPath -Destination $targetPath -ErrorAction Stop
@@ -1344,7 +1395,7 @@ function Invoke-AddonAction {
                     throw "Target addon directory was not found at '$targetAddonDir'."
                 }
 
-                Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Linking {0}" -f $addonName) -RequireAdministrator:$true -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Linking {0}" -f $addonName) -RequireAdministrator:$true -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $normalizedFlavor -PauseOnExit:$PauseOnExit
                 Write-Host ("Creating Symbolic Link for {0}..." -f $addonName) -ForegroundColor Cyan
                 Remove-PathIfPresent -Path $targetPath
                 New-Item -ItemType SymbolicLink -Path $targetPath -Target $linkSourcePath -ErrorAction Stop | Out-Null
@@ -1357,7 +1408,7 @@ function Invoke-AddonAction {
                         throw "Target addon directory was not found at '$targetAddonDir'."
                     }
 
-                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Cleaning {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $Flavor -PauseOnExit:$PauseOnExit
+                    Assert-WriteAccess -DirectoryPath $targetAddonDir -ActionDescription ("Cleaning {0}" -f $addonName) -RequireAdministrator:$false -ProbeName $addonFolder -EntryScriptPath $EntryScriptPath -Action $normalizedAction -WowPath $WowPath -Flavor $normalizedFlavor -PauseOnExit:$PauseOnExit
                     Write-Host ("Cleaning {0} from {1}..." -f $addonName, $targetPath) -ForegroundColor Yellow
                     Remove-PathIfPresent -Path $targetPath
                     Write-Host "Cleaned." -ForegroundColor Green
@@ -1637,6 +1688,7 @@ param(
     [string]$WowPath,
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet("retail", "classic", "mop", "mop_classic", "classic_era", "ptr")]
     [string]$Flavor = "retail",
 
     [Parameter(Mandatory = $false)]

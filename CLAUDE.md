@@ -52,7 +52,7 @@ git tag v1.1.2 && git push origin v1.1.2
 
 ## Key Gotchas
 
-**WoW target:** Retail WoW. `## Interface: 120001` is the addon target, the default installer path points at `World of Warcraft\\_retail_`, and PvP Honor reads fall back from legacy globals to the retail currency API.
+**WoW target:** Retail WoW and MoP Classic. `## Interface: 120001, 50500` keeps the addon loadable on both clients, the default installer path still points at `World of Warcraft\\_retail_`, and the installer now also accepts the MoP Classic `_classic_` client root or direct `Interface\\AddOns` path. PvP Honor still falls back from legacy globals to the retail currency API.
 
 **Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store owns the coach default table plus `GetCoachDefaults`, `ValidateCoachConfig`, and `EnsureCoachConfig`. SessionCoach reads those helpers and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
 

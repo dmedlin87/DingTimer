@@ -1,4 +1,4 @@
-## Interface: 120001
+## Interface: 120001, 50500
 ## Title: DingTimer
 ## Notes: Chat XP/hr + Time-to-Level
 ## Author: dmedlin87

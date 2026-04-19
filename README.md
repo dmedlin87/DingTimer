@@ -69,7 +69,7 @@ No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your
    <WoW client>\Interface\AddOns\DingTimer\
    ```
 
-   The bundled PowerShell installer defaults to the Retail client path and also understands `_retail_`, `_classic_`, and `_classic_era_` folder layouts when you pass an explicit `-WowPath`.
+   The bundled PowerShell installer defaults to the Retail client path and also supports MoP Classic under `_classic_`. You can pass either the client root such as `C:\Program Files (x86)\World of Warcraft\_classic_` or the full AddOns path such as `C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns`. The `-Flavor` switch accepts `retail`, `classic`, `mop`, `mop_classic`, `classic_era`, and `ptr`.
 
 3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
 4. Log in — DingTimer activates automatically
