@@ -50,6 +50,7 @@ NS.Colors = {
   -- Primary accent (signature DingTimer teal-blue)
   accent         = { 0.24, 0.78, 0.92 },
   accentActive   = { 0.34, 0.88, 1.0 },
+  accentSoft     = { 0.17, 0.40, 0.52 },
 
   -- Semantic tones (match SetPill branches)
   good           = { 0.22, 0.66, 0.38 },
@@ -62,6 +63,7 @@ NS.Colors = {
   borderDefault  = { 0.2, 0.6, 0.8 },
   borderMuted    = { 0.3, 0.3, 0.3 },
   bgSolid        = { 0.05, 0.05, 0.05 },
+  bgPanel        = { 0.04, 0.06, 0.08 },
   fillDark       = { 0.03, 0.05, 0.08 },
   fillCard       = { 0.03, 0.05, 0.07 },
   fillCardHover  = { 0.06, 0.09, 0.12 },
@@ -110,6 +112,12 @@ function NS.UI.ApplyTextStyle(fs, style)
   elseif style == "subtle" then
     fontObject = "GameFontDisableSmall"
     shadowA = 0.4
+  elseif style == "body" then
+    fontObject = "GameFontHighlightSmall"
+    shadowA = 0.55
+  elseif style == "eyebrow" then
+    fontObject = "GameFontNormalSmall"
+    shadowA = 0.5
   end
 
   if fs.SetFontObject then
@@ -718,6 +726,19 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
     frame:SetBackdropBorderColor(NS.Colors.borderDefault[1], NS.Colors.borderDefault[2], NS.Colors.borderDefault[3], 1)
   end
 
+  if not frame._dingInnerFill then
+    local innerFill = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+    innerFill:SetPoint("TOPLEFT", frame, "TOPLEFT", 2, -2)
+    innerFill:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
+    frame._dingInnerFill = innerFill
+  end
+  frame._dingInnerFill:SetColorTexture(
+    NS.Colors.bgPanel[1],
+    NS.Colors.bgPanel[2],
+    NS.Colors.bgPanel[3],
+    isTransparent and 0.32 or 0.72
+  )
+
   if not frame._dingAccent then
     local accent = frame:CreateTexture(nil, "BORDER")
     accent:SetHeight(3)
@@ -726,6 +747,20 @@ function NS.ApplyThemeToFrame(frame, isTransparent)
     accent:SetColorTexture(NS.Colors.accent[1], NS.Colors.accent[2], NS.Colors.accent[3], isTransparent and 0.4 or 0.85)
     frame._dingAccent = accent
   end
+
+  if not frame._dingGlow then
+    local glow = frame:CreateTexture(nil, "BORDER", nil, -6)
+    glow:SetHeight(18)
+    glow:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -9)
+    glow:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -9)
+    frame._dingGlow = glow
+  end
+  frame._dingGlow:SetColorTexture(
+    NS.Colors.accentSoft[1],
+    NS.Colors.accentSoft[2],
+    NS.Colors.accentSoft[3],
+    isTransparent and 0.18 or 0.34
+  )
 end
 
 --- Creates a two-click confirmed action button.

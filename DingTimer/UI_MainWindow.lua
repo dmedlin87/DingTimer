@@ -5,6 +5,7 @@ local MAIN_HEIGHT = (NS.MainWindowDefaults and NS.MainWindowDefaults.height) or 
 local HEADER_INSET = 16
 local CONTENT_INSET = 12
 local TAB_GAP = 8
+local HEADER_HEIGHT = 118
 
 local mainWindow = nil
 local tabs = {}
@@ -128,7 +129,10 @@ local function layoutMainWindow()
 
   if mainWindow.header then
     mainWindow.header:ClearAllPoints()
-    mainWindow.header:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", HEADER_INSET, -14)
+    local anchor = mainWindow.eyebrow or mainWindow
+    local relative = mainWindow.eyebrow and "BOTTOMLEFT" or "TOPLEFT"
+    local offsetY = mainWindow.eyebrow and -6 or -14
+    mainWindow.header:SetPoint("TOPLEFT", anchor, relative, 0, offsetY)
     if mainWindow.header.SetWidth then
       mainWindow.header:SetWidth(headerWidth)
     end
@@ -156,7 +160,7 @@ local function layoutMainWindow()
   end
   if mainWindow.modePill then
     mainWindow.modePill:ClearAllPoints()
-    mainWindow.modePill:SetPoint("TOPRIGHT", mainWindow, "TOPRIGHT", -32, -14)
+    mainWindow.modePill:SetPoint("TOPRIGHT", mainWindow, "TOPRIGHT", -32, -20)
   end
   if mainWindow.activeTabPill and mainWindow.modePill then
     mainWindow.activeTabPill:ClearAllPoints()
@@ -164,7 +168,7 @@ local function layoutMainWindow()
   end
   if mainWindow.contentArea then
     mainWindow.contentArea:ClearAllPoints()
-    mainWindow.contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", CONTENT_INSET, -102)
+    mainWindow.contentArea:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", CONTENT_INSET, -HEADER_HEIGHT)
     mainWindow.contentArea:SetPoint("BOTTOMRIGHT", mainWindow, "BOTTOMRIGHT", -CONTENT_INSET, 12)
   end
 
@@ -265,8 +269,37 @@ function NS.InitMainWindow()
     GameTooltip:Hide()
   end)
 
+  local headerBand = mainWindow:CreateTexture(nil, "BACKGROUND")
+  headerBand:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 6, -6)
+  headerBand:SetPoint("TOPRIGHT", mainWindow, "TOPRIGHT", -6, -6)
+  headerBand:SetHeight(92)
+  headerBand:SetColorTexture(NS.Colors.bgPanel[1], NS.Colors.bgPanel[2], NS.Colors.bgPanel[3], 0.62)
+  mainWindow.headerBand = headerBand
+
+  local headerGlow = mainWindow:CreateTexture(nil, "BORDER")
+  headerGlow:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 12, -12)
+  headerGlow:SetWidth(220)
+  headerGlow:SetHeight(48)
+  headerGlow:SetColorTexture(NS.Colors.accentSoft[1], NS.Colors.accentSoft[2], NS.Colors.accentSoft[3], 0.22)
+  mainWindow.headerGlow = headerGlow
+
+  local headerDivider = mainWindow:CreateTexture(nil, "ARTWORK")
+  headerDivider:SetHeight(1)
+  headerDivider:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", 16, -92)
+  headerDivider:SetPoint("TOPRIGHT", mainWindow, "TOPRIGHT", -16, -92)
+  headerDivider:SetColorTexture(NS.Colors.borderDefault[1], NS.Colors.borderDefault[2], NS.Colors.borderDefault[3], 0.5)
+  mainWindow.headerDivider = headerDivider
+
+  local eyebrow = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  eyebrow:SetPoint("TOPLEFT", mainWindow, "TOPLEFT", HEADER_INSET, -16)
+  eyebrow:SetText("LEVELING HUD")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(eyebrow, "eyebrow")
+  end
+  mainWindow.eyebrow = eyebrow
+
   local header = mainWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  header:SetText(NS.C.base .. "DingTimer" .. NS.C.r)
+  header:SetText("DingTimer")
   if NS.UI and NS.UI.ApplyTextStyle then
     NS.UI.ApplyTextStyle(header, "title")
   end
@@ -309,6 +342,11 @@ function NS.InitMainWindow()
   if NS.ApplyThemeToFrame then
     NS.ApplyThemeToFrame(contentArea, true)
   end
+  local contentShade = contentArea:CreateTexture(nil, "BACKGROUND")
+  contentShade:SetPoint("TOPLEFT", contentArea, "TOPLEFT", 3, -3)
+  contentShade:SetPoint("BOTTOMRIGHT", contentArea, "BOTTOMRIGHT", -3, 3)
+  contentShade:SetColorTexture(0.02, 0.03, 0.05, 0.38)
+  contentArea._dingShade = contentShade
   mainWindow.contentArea = contentArea
 
   -- Create Tabs
