@@ -1,40 +1,22 @@
 ## Interface: 120001, 50500
 ## Title: DingTimer
-## Notes: Chat XP/hr + Time-to-Level
+## Notes: HUD XP/hr + Time-to-Level
 ## Author: dmedlin87
 ## Version: 1.1.2
 ## SavedVariables: DingTimerDB
 
-# --- Load-order constraints (do NOT reorder without reading these) ---
-# 1. Util.lua       -- must be first; every module calls NS.chat, NS.C, NS.fmtTime, etc.
-# 2. Insights.lua   -- must precede Store.lua; Store calls NS.GetProfileKey and
-#                      NS.TrimSessions, both defined here.
-# 3. Store.lua      -- must precede SessionCoach.lua; Store owns the coach default
-#                      table plus ValidateCoachConfig / EnsureCoachConfig. SessionCoach
-#                      reads those helpers and defines InitCoachState, NoteCoachXP,
-#                      NoteCoachMoney, etc.
-# 4. Core_DingTimer -- must follow SessionCoach.lua; onXPUpdate calls NoteCoachXP /
-#                      NoteCoachMoney which SessionCoach defines.
-# 5. Pvp.lua        -- optional Honor/HK mode built on top of Store/Core helpers
-#                      and available to commands, UI panels, and event wiring.
-# 6. Actions.lua    -- shared user actions used by commands and settings panels.
-# 7. GraphMath.lua  -- must precede UI_XPGraphWindow.lua; the graph panel calls
-#                      NS.AggregateVisibleSegments, NS.BuildAverageSeries, etc.
-# ---------------------------------------------------------------------
+# HUD-first load order:
+# 1. Util.lua         - shared formatting, theme, and UI helpers
+# 2. Store.lua        - SavedVariables init and schema v10 cleanup
+# 3. Core_DingTimer   - rolling XP state, HUD, and heartbeat
+# 4. Actions.lua      - popup-facing setting actions and reset behavior
+# 5. Commands.lua     - reduced slash command surface plus compatibility shims
+# 6. UI_HUDPopup.lua  - compact popup anchored to the HUD or UIParent
+# 7. DingTimer.lua    - event wiring and slash command registration
 Util.lua
-Insights.lua
 Store.lua
-SessionCoach.lua
 Core_DingTimer.lua
-Pvp.lua
 Actions.lua
 Commands.lua
-GraphMath.lua
-UI_MainWindow.lua
-UI_StatsWindow.lua
-UI_XPGraphWindow.lua
-UI_InsightsWindow.lua
-UI_SettingsWindow.lua
-UI_MinimapButton.lua
+UI_HUDPopup.lua
 DingTimer.lua
-

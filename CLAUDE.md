@@ -1,72 +1,79 @@
 # DingTimer
 
-See @AGENTS.md for repository guidance and operating notes.
+See [AGENTS.md](./AGENTS.md) for repo-wide operating rules.
 
-WoW addon (Lua 5.1) for real-time XP/hr tracking, time-to-ding, session coaching, and leveling analytics.
+HUD-first addon notes for contributors and agents.
 
-## Project Layout
+## Active Runtime Shape
 
-```
-DingTimer/          # Addon source (this folder is what gets zipped for release)
-  DingTimer.toc     # Addon manifest + load order
-  DingTimer.lua     # Entry point: event registration, slash command wiring
-  Core_DingTimer.lua # XP/hr rate calculation, session state, floating HUD
-  Store.lua         # SavedVariables init and schema migrations (v3–v8)
-  SessionCoach.lua  # Coach goals, alerts, segment tracking, recap
-  Insights.lua      # Per-character session history and analytics
-  Commands.lua      # Slash command dispatch table (/ding, /dt)
-  GraphMath.lua     # Pure stateless graph math (easily testable)
-  Util.lua          # Formatting, shared UI helpers, theme
-  UI_*.lua          # UI panels (MainWindow, StatsWindow, XPGraphWindow, etc.)
+The shipped addon now loads only these modules through [`DingTimer/DingTimer.toc`](./DingTimer/DingTimer.toc):
+
+- `Util.lua`
+- `Store.lua`
+- `Core_DingTimer.lua`
+- `Actions.lua`
+- `Commands.lua`
+- `UI_HUDPopup.lua`
+- `DingTimer.lua`
+
+Older files such as `UI_MainWindow.lua`, `UI_SettingsWindow.lua`, `UI_XPGraphWindow.lua`, `UI_InsightsWindow.lua`, `UI_MinimapButton.lua`, `SessionCoach.lua`, `Insights.lua`, `Pvp.lua`, and `GraphMath.lua` may still exist in the repo as historical reference, but they are not part of the active addon load path.
+
+## Source Layout
+
+```text
+DingTimer/
+  DingTimer.toc      # Active load order
+  Util.lua           # Formatting, colors, shared UI helpers
+  Store.lua          # SavedVariables init and schema v10 cleanup
+  Core_DingTimer.lua # Rolling XP state, HUD, and heartbeat ticker
+  Actions.lua        # Popup-facing actions and session reset
+  Commands.lua       # Slash command routing and compatibility shims
+  UI_HUDPopup.lua    # Compact popup anchored to HUD or UIParent
+  DingTimer.lua      # Event registration and startup flow
 tests/
-  mocks.lua         # WoW API mock + test framework (it/run_tests/assert_*)
-  test_*.lua        # One file per module
+  mocks.lua
+  test_*.lua
 ```
 
-## Running Tests
+## Current Product Contract
 
-**Windows (preferred):**
+- DingTimer is leveling-only in the active build.
+- The floating HUD is the primary interface.
+- The popup is the only active settings surface.
+- Removed dashboard commands must print `Removed in HUD-first build; use /ding settings`.
+- Runtime reset, level-up, and logout must not write history, coach, or PvP recap data.
+- Legacy `xp`, `pvp`, and `coach` tables in `DingTimerDB` must be preserved if they already exist, but no new records should be added by this build.
+
+## Important Runtime Details
+
+- `Core_DingTimer.lua` owns the 1-second ticker and the floating HUD.
+- `NS.GetSessionSnapshot()` is still derived from rolling XP events and remains the source for HUD text.
+- `Store.lua` now migrates to `schemaVersion = 10` and clears dead window, graph, minimap, and tab state.
+- The popup has no persisted position. It anchors below the HUD when the HUD is visible and centers on `UIParent` otherwise.
+- New installs should land in the HUD-first flow. Existing saved HUD preferences must still win.
+
+## Tests
+
+Preferred validation on Windows:
+
 ```powershell
 .\coverage.ps1
 ```
-Prefers the `lua` / `luarocks` pair on `PATH`, then falls back to `%LOCALAPPDATA%\Programs\Lua\`. Runs all `tests/test_*.lua` with luacov coverage.
 
-**Linux / CI:**
-```bash
-for lua_bin in lua5.1 lua5.4; do
-  for f in tests/test_*.lua; do
-    "$lua_bin" "$f" || exit 1
-  done
-done
+Useful targeted runs:
+
+```powershell
+python .\run_tests.py tests\test_hud_visibility.lua
+python .\run_tests.py tests\test_hud_refresh.lua
+python .\run_tests.py tests\test_hud_popup.lua
+python .\run_tests.py tests\test_commands_compat.lua
+python .\run_tests.py tests\test_store_migration_v10.lua
+python .\run_tests.py tests\test_no_history_recording.lua
 ```
 
-`run_tests.py` is Linux-only (uses `.so` shared libs) — don't use it on Windows.
+## Editing Warnings
 
-## Release
-
-Tag a commit with `v*` to trigger CI. The `test` job runs first; `release` only fires if tests pass. The zip packages `DingTimer/` only (not the repo root).
-
-```bash
-git tag v1.1.2 && git push origin v1.1.2
-```
-
-## Key Gotchas
-
-**WoW target:** Retail WoW and MoP Classic. `## Interface: 120001, 50500` keeps the addon loadable on both clients, the default installer path still points at `World of Warcraft\\_retail_`, and the installer now also accepts the MoP Classic `_classic_` client root or direct `Interface\\AddOns` path. PvP Honor still falls back from legacy globals to the retail currency API.
-
-**Load order matters:** `DingTimer.toc` file order is significant. `Store.lua` must load before `SessionCoach.lua` because Store owns the coach default table plus `GetCoachDefaults`, `ValidateCoachConfig`, and `EnsureCoachConfig`. SessionCoach reads those helpers and defines `InitCoachState`, `NoteCoachXP`, `NoteCoachMoney`, etc. See the comment in the `.toc`.
-
-**Shared namespace:** All modules share a single `NS` table passed as the second vararg (`local ADDON, NS = ...`). Runtime state lives in `NS.state`; persistent state in `DingTimerDB` (SavedVariables).
-
-**Running totals:** `NS.state.windowXP` and `NS.state.windowMoney` are maintained as running sums by `pruneEvents`. Any reset must clear both the events list and the running total atomically — `resetXPState()` does this correctly.
-
-**`GetSessionSnapshot` has a pruning side effect:** It calls `computeXPPerHour` → `pruneEvents`, which removes expired events from `NS.state.events` and decrements `NS.state.windowXP`. This is idempotent for a given `now` value (calling it twice with the same timestamp is safe), but it is not a pure read. `sessionPeakXph` is updated separately in `onXPUpdate`, not here.
-
-**Test styles:** The test suite has two styles — `it()/run_tests()` (preferred) and bare function calls. Both work; new tests should use `it()/run_tests()`.
-
-## Architecture Notes
-
-- `GraphMath.lua` is pure/stateless — all inputs are explicit parameters, making it the easiest module to test
-- UI panels are lazily initialized (created on first tab access) through explicit tab initializers in `UI_MainWindow.lua`
-- The coach heartbeat runs every 1 second via `C_Timer.NewTicker` started at login
-- Schema migrations in `Store.lua` run sequentially (v3 → v9); add new migrations at the end
+- Keep [`DingTimer/DingTimer.toc`](./DingTimer/DingTimer.toc) aligned with the actual active modules.
+- Do not reintroduce references to the removed tabbed dashboard or minimap launcher without updating tests and docs together.
+- If you expand the popup, keep it compact; the product direction is intentionally minimal.
+- If you change command behavior, update README command tables and compatibility notes in the same change.

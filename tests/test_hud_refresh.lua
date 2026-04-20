@@ -4,7 +4,7 @@ local capturedFrame = nil
 local baseCreateFrame = CreateFrame
 CreateFrame = function(frameType, name, parent, template)
   local frame = baseCreateFrame(frameType, name, parent, template)
-  if not name then
+  if not name and not capturedFrame then
     capturedFrame = frame
   end
   return frame
@@ -17,71 +17,51 @@ C_Timer.NewTicker = function(interval, callback)
     callback = callback,
     cancelled = false,
   }
+
   function heartbeatTicker:Cancel()
     self.cancelled = true
   end
+
   function heartbeatTicker:Fire()
     if not self.cancelled and self.callback then
       self.callback()
     end
   end
+
   return heartbeatTicker
 end
 
-local NS = {
-  C = { base = "", r = "" },
-  ApplyThemeToFrame = function() end,
-  FormatNumber = function(n) return tostring(n) end,
-  Round = function(n) return math.floor(n + 0.5) end,
-  fmtTime = function(seconds)
-    if seconds == 60 then
-      return "1m"
-    end
-    if seconds == math.huge then
-      return "inf"
-    end
-    return tostring(math.floor(seconds + 0.5)) .. "s"
-  end,
-  ttlColor = function() return "" end,
-  ttlDeltaText = function() return "" end,
-  chat = function() end,
-}
+local NS = {}
+LoadAddonFile("DingTimer/Util.lua", NS)
+LoadAddonFile("DingTimer/Store.lua", NS)
+LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 
 DingTimerDB = {
   enabled = false,
   float = true,
   floatLocked = true,
   windowSeconds = 60,
-  coach = {
-    goal = "ding",
-  },
+  mode = "full",
 }
 
-
-
-LoadAddonFile("DingTimer/Util.lua", NS)
-LoadAddonFile("DingTimer/Insights.lua", NS)
-LoadAddonFile("DingTimer/Store.lua", NS)
-LoadAddonFile("DingTimer/SessionCoach.lua", NS)
-LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
-
+NS.InitStore()
 SetTime(0)
 SetXP(0, 1000)
 NS.resetXPState()
-NS.StartCoachTicker()
+NS.StartHeartbeatTicker()
 
-assert_true(heartbeatTicker ~= nil, "coach ticker should start")
-assert_eq(heartbeatTicker.interval, 1, "coach ticker should tick every second")
+assert_true(heartbeatTicker ~= nil, "heartbeat ticker should start")
+assert_eq(heartbeatTicker.interval, 1, "heartbeat ticker should tick every second")
 
 SetTime(60)
 SetXP(100, 1000)
 NS.onXPUpdate()
 
 assert_true(capturedFrame ~= nil, "floating HUD frame should be created")
+assert_eq("9m 0s to level", capturedFrame.titleText:GetText(), "HUD should show only TTL text on the top line")
 assertStringMatch("6,000 XP/hr", capturedFrame.subText:GetText(), "HUD should show the rolling XP/hr immediately after a gain")
-assert_eq(100, NS.state.windowXP, "window XP should include the fresh gain")
-assert_true(string.find(capturedFrame.subText:GetText(), "Session 6,000", 1, true) ~= nil, "HUD should show session average")
-assert_true(string.find(capturedFrame.subText:GetText(), "High 6,000", 1, true) == nil, "HUD should not duplicate session average as the goal benchmark")
+assertStringMatch("Session 6,000", capturedFrame.subText:GetText(), "HUD should show the session pace on the second line")
+assert_true(string.find(capturedFrame.titleText:GetText(), "DingTimer", 1, true) == nil, "HUD title should not include the addon name")
 
 SetTime(121)
 heartbeatTicker:Fire()
@@ -89,6 +69,6 @@ heartbeatTicker:Fire()
 assert_eq(0, #NS.state.events, "heartbeat refresh should prune expired XP events")
 assert_eq(0, NS.state.windowXP, "window XP should decay when the rolling window expires")
 assertStringMatch("No XP in 60s", capturedFrame.subText:GetText(), "HUD should show when the rolling window is empty")
-assert_true(string.find(capturedFrame.subText:GetText(), "6,000 XP/hr", 1, true) == nil, "HUD should stop showing stale rolling XP/hr")
+assert_eq("?? to level", capturedFrame.titleText:GetText(), "HUD should fall back to TTL-only text when no pace is available")
 
 print("HUD rolling refresh test passed!")

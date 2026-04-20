@@ -1,11 +1,10 @@
 local _, NS = ...
 
--- ⚡ Localize frequently-used globals to avoid repeated table lookups in hot paths
+local math_abs = math.abs
+local math_floor = math.floor
+local math_huge = math.huge
 local math_max = math.max
 local math_min = math.min
-local math_floor = math.floor
-local math_abs = math.abs
-local math_huge = math.huge
 local string_format = string.format
 
 NS.state = {
@@ -15,20 +14,20 @@ NS.state = {
   lastMax = 0,
   lastTTL = nil,
   sessionXP = 0,
-  sessionPeakXph = 0,
   sessionMoney = 0,
   lastMoney = 0,
-  events = {}, -- {t=GetTime(), xp=delta}
-  moneyEvents = {}, -- {t=GetTime(), money=delta}
+  events = {},
+  moneyEvents = {},
   windowXP = 0,
   windowMoney = 0,
 }
 
-local coachTicker = nil
-
--- ⚡ Per-tick cache: snapshot and coach status are computed once per heartbeat tick
--- and shared across all callers (HUD, stats panel, graph, coach) for the same `now`.
-local tickCache = { now = 0, snapshot = nil, coachStatus = nil }
+local floatFrame = nil
+local heartbeatTicker = nil
+local tickCache = {
+  now = 0,
+  snapshot = nil,
+}
 
 local function getRollingWindowSeconds()
   return tonumber(DingTimerDB and DingTimerDB.windowSeconds) or 600
@@ -49,7 +48,6 @@ local function clearInternalState(now)
   NS.state.lastMax = UnitXPMax("player") or 0
   NS.state.lastTTL = nil
   NS.state.sessionXP = 0
-  NS.state.sessionPeakXph = 0
   NS.state.sessionMoney = 0
   NS.state.lastMoney = GetMoney() or 0
   NS.state.events = {}
@@ -58,31 +56,32 @@ local function clearInternalState(now)
   NS.state.windowMoney = 0
 end
 
-local function notifySubsystems(now)
-  NS.InvalidateTickCache()
-  if NS.InitCoachState then
-    NS.InitCoachState(now)
-  end
-  if NS.RefreshStatsWindow then NS.RefreshStatsWindow() end
-  if NS.RefreshInsightsWindow then NS.RefreshInsightsWindow() end
-  if NS.GraphReset then NS.GraphReset() end
+function NS.InvalidateTickCache()
+  tickCache.now = 0
+  tickCache.snapshot = nil
 end
 
 function NS.resetXPState()
   local now = GetTime()
   clearInternalState(now)
-  notifySubsystems(now)
+  NS.InvalidateTickCache()
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD(now)
+  end
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
+  end
 end
 
 local function pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
   local i = 1
   while evList[i] and (now - evList[i].t) > windowSeconds do
-    -- ⚡ Bolt: Maintain a running total to prevent O(N) calculations downstream
     if sumOwner and sumKey and valueKey and sumOwner[sumKey] then
       sumOwner[sumKey] = sumOwner[sumKey] - evList[i][valueKey]
     end
     i = i + 1
   end
+
   if i > 1 then
     local len = #evList
     local newLen = len - i + 1
@@ -101,24 +100,7 @@ end
 
 function NS.ComputeRollingRatePerHour(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey)
   pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
-  local sum = 0
-  if sumOwner and sumKey and sumOwner[sumKey] then
-    sum = tonumber(sumOwner[sumKey]) or 0
-  else
-    for i = 1, #evList do sum = sum + evList[i][valueKey] end
-  end
 
-  local sessionElapsed = now - (sessionStart or now)
-
-  -- Use the full window size, or session elapsed if we haven't played that long yet
-  local elapsed = math_min(sessionElapsed, windowSeconds)
-  if elapsed <= 0 then elapsed = 1 end
-
-  return (sum / elapsed) * 3600
-end
-
-function NS.ComputeRollingRateDetails(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey)
-  pruneEvents(evList, now, windowSeconds, sumOwner, sumKey, valueKey)
   local sum = 0
   if sumOwner and sumKey and sumOwner[sumKey] then
     sum = tonumber(sumOwner[sumKey]) or 0
@@ -130,19 +112,41 @@ function NS.ComputeRollingRateDetails(evList, now, sessionStart, windowSeconds, 
 
   local sessionElapsed = now - (sessionStart or now)
   local elapsed = math_min(sessionElapsed, windowSeconds)
-  if elapsed <= 0 then elapsed = 1 end
+  if elapsed <= 0 then
+    elapsed = 1
+  end
 
+  return (sum / elapsed) * 3600
+end
+
+function NS.ComputeRollingRateDetails(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey)
   return {
-    rawXph = (sum / elapsed) * 3600,
+    rawXph = NS.ComputeRollingRatePerHour(evList, now, sessionStart, windowSeconds, valueKey, sumOwner, sumKey),
   }
 end
 
 function NS.computeXPPerHour(now, windowSeconds)
-  return NS.ComputeRollingRatePerHour(NS.state.events, now, NS.state.sessionStartTime, windowSeconds, "xp", NS.state, "windowXP")
+  return NS.ComputeRollingRatePerHour(
+    NS.state.events,
+    now,
+    NS.state.sessionStartTime,
+    windowSeconds,
+    "xp",
+    NS.state,
+    "windowXP"
+  )
 end
 
 function NS.computeMoneyPerHour(now, windowSeconds)
-  return NS.ComputeRollingRatePerHour(NS.state.moneyEvents, now, NS.state.sessionStartTime, windowSeconds, "money", NS.state, "windowMoney")
+  return NS.ComputeRollingRatePerHour(
+    NS.state.moneyEvents,
+    now,
+    NS.state.sessionStartTime,
+    windowSeconds,
+    "money",
+    NS.state,
+    "windowMoney"
+  )
 end
 
 function NS.SetRollingWindowSeconds(seconds)
@@ -155,16 +159,18 @@ function NS.SetRollingWindowSeconds(seconds)
   end
 
   DingTimerDB.windowSeconds = math_floor(n)
-  if NS.RefreshStatsWindow then
-    NS.RefreshStatsWindow()
+  NS.InvalidateTickCache()
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD()
+  end
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
   end
   return true
 end
 
 function NS.GetSessionSnapshot(now)
   now = now or GetTime()
-
-  -- ⚡ Return cached snapshot if already computed for this tick
   if tickCache.snapshot and tickCache.now == now then
     return tickCache.snapshot
   end
@@ -178,18 +184,20 @@ function NS.GetSessionSnapshot(now)
   local sessionMoney = NS.state.sessionMoney or 0
   local window = getRollingWindowSeconds()
   local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
-  local moneyRate = NS.ComputeRollingRateDetails(NS.state.moneyEvents, now, sessionStart, window, "money", NS.state, "windowMoney")
-  local rawCurrentXph = xpRate.rawXph
-  local currentXph = rawCurrentXph
+  local moneyRate = NS.ComputeRollingRateDetails(
+    NS.state.moneyEvents,
+    now,
+    sessionStart,
+    window,
+    "money",
+    NS.state,
+    "windowMoney"
+  )
+  local currentXph = xpRate.rawXph
   local sessionXph = (sessionXP / sessionElapsed) * 3600
-  local rawMoneyPerHour = moneyRate.rawXph
-  local moneyPerHour = rawMoneyPerHour
+  local moneyPerHour = moneyRate.rawXph
   local remainingXP = math_max(0, maxXP - xp)
   local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
-  local zone = "Unknown"
-  if GetZoneText then
-    zone = GetZoneText() or zone
-  end
 
   local snapshot = {
     now = now,
@@ -202,91 +210,103 @@ function NS.GetSessionSnapshot(now)
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
     currentXph = currentXph,
-    rawCurrentXph = rawCurrentXph,
-    sessionPeakXph = NS.state.sessionPeakXph or 0,
+    rawCurrentXph = currentXph,
     sessionXph = sessionXph,
     moneyPerHour = moneyPerHour,
-    rawMoneyPerHour = rawMoneyPerHour,
+    rawMoneyPerHour = moneyPerHour,
     ttl = ttl,
     rollingWindow = window,
-    zone = zone,
-    coachGoal = (DingTimerDB and DingTimerDB.coach and DingTimerDB.coach.goal) or "ding",
   }
 
   tickCache.now = now
   tickCache.snapshot = snapshot
-  NS._tickCoachNow = 0  -- invalidate coach cache when snapshot changes
-  NS._tickCoachStatus = nil
   return snapshot
 end
 
-function NS.InvalidateTickCache()
-  tickCache.now = 0
-  tickCache.snapshot = nil
-  NS._tickCoachNow = 0
-  NS._tickCoachStatus = nil
-end
-
-function NS.RunCoachHeartbeat(now)
-  now = now or GetTime()
-  if (not (NS.IsPvpMode and NS.IsPvpMode())) and NS.MaybeRunCoach then
-    NS.MaybeRunCoach(now)
-  end
-  if NS.RunPvpHeartbeat then
-    NS.RunPvpHeartbeat(now)
-  end
+function NS.RunHeartbeat(now)
   if NS.RefreshFloatingHUD then
-    NS.RefreshFloatingHUD(now)
+    NS.RefreshFloatingHUD(now or GetTime())
   end
 end
 
-function NS.StartCoachTicker()
-  if coachTicker then
+function NS.StartHeartbeatTicker()
+  if heartbeatTicker then
     return
   end
-  coachTicker = C_Timer.NewTicker(1, function()
-    NS.RunCoachHeartbeat(GetTime())
+  heartbeatTicker = C_Timer.NewTicker(1, function()
+    NS.RunHeartbeat(GetTime())
   end)
 end
 
--- Floating text
-local floatFrame
-function NS.ensureFloat()
-  if floatFrame then return end
+function NS.StartCoachTicker()
+  NS.StartHeartbeatTicker()
+end
 
-  -- No global name to avoid potential clashes or EditMode taint
+function NS.RunCoachHeartbeat(now)
+  NS.RunHeartbeat(now)
+end
+
+function NS.GetFloatFrame()
+  return floatFrame
+end
+
+function NS.ensureFloat()
+  if floatFrame then
+    return
+  end
+
   floatFrame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
-  floatFrame:SetSize(320, 58)
+  floatFrame:SetSize(292, 52)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)
   floatFrame:EnableMouse(true)
   floatFrame:RegisterForDrag("LeftButton")
+  floatFrame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   floatFrame:SetClampedToScreen(true)
-
-  -- UI Polish: Add a subtle backdrop for better readability
-  NS.ApplyThemeToFrame(floatFrame, true)
+  if NS.ApplyThemeToFrame then
+    NS.ApplyThemeToFrame(floatFrame, true)
+  end
 
   floatFrame:SetScript("OnDragStart", function(self)
-    if DingTimerDB.floatLocked then return end
+    if DingTimerDB.floatLocked then
+      return
+    end
     self:StartMoving()
   end)
-  
+
   floatFrame:SetScript("OnDragStop", function(self)
+    if DingTimerDB.floatLocked then
+      return
+    end
     self:StopMovingOrSizing()
     local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-    DingTimerDB.floatPosition = { point = point, relativePoint = relativePoint, xOfs = xOfs, yOfs = yOfs }
+    DingTimerDB.floatPosition = {
+      point = point,
+      relativePoint = relativePoint,
+      xOfs = xOfs,
+      yOfs = yOfs,
+    }
+  end)
+
+  floatFrame:SetScript("OnClick", function(self, button)
+    if button == "RightButton" and NS.ToggleHUDPopup then
+      NS.ToggleHUDPopup(self)
+      return
+    end
+    if button == "LeftButton" and DingTimerDB.floatLocked and NS.ToggleHUDPopup then
+      NS.ToggleHUDPopup(self)
+    end
   end)
 
   floatFrame:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
     if DingTimerDB.floatLocked then
-      GameTooltip:AddLine("HUD is Locked", 0.8, 0.2, 0.2)
-      GameTooltip:AddLine("Unlock via Settings or /ding float unlock", 0.7, 0.7, 0.7, true)
+      GameTooltip:AddLine("Left-click to toggle settings", 1, 1, 1)
     else
-      GameTooltip:AddLine("Drag to move", 1, 1, 1)
-      GameTooltip:AddLine("Lock via Settings or /ding float lock", 0.7, 0.7, 0.7, true)
+      GameTooltip:AddLine("Left-drag to move the HUD", 1, 1, 1)
     end
+    GameTooltip:AddLine("Right-click to toggle settings", 1, 1, 1)
     GameTooltip:Show()
   end)
 
@@ -297,22 +317,23 @@ function NS.ensureFloat()
   if DingTimerDB.floatPosition then
     local pos = DingTimerDB.floatPosition
     floatFrame:ClearAllPoints()
-    floatFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs, pos.yOfs)
-  else
-    floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
+    floatFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs or 0, pos.yOfs or 0)
   end
 
-  -- UI Polish: Use a better font and layout
-  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-  title:SetPoint("TOP", 0, -10)
+  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  title:SetPoint("TOP", floatFrame, "TOP", 0, -10)
   title:SetJustifyH("CENTER")
-  title:SetText("DingTimer")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(title, "value")
+  end
   floatFrame.titleText = title
 
   local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  sub:SetPoint("TOP", title, "BOTTOM", 0, -4)
+  sub:SetPoint("TOP", title, "BOTTOM", 0, -3)
   sub:SetJustifyH("CENTER")
-  sub:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(sub, "subtle")
+  end
   floatFrame.subText = sub
 
   floatFrame:Hide()
@@ -322,57 +343,39 @@ function NS.setFloatVisible(on)
   if on then
     NS.ensureFloat()
     local visibilityDriver = (DingTimerDB and DingTimerDB.floatShowInCombat) and "show" or "[combat] hide; show"
-    ---@diagnostic disable-next-line: redundant-parameter
     RegisterStateDriver(floatFrame, "visibility", visibilityDriver)
+    if not InCombatLockdown() or (DingTimerDB and DingTimerDB.floatShowInCombat) then
+      floatFrame:Show()
+    end
     if NS.RefreshFloatingHUD then
       NS.RefreshFloatingHUD()
     end
-  else
-    if floatFrame then
-      ---@diagnostic disable-next-line: redundant-parameter
-      UnregisterStateDriver(floatFrame, "visibility")
-      if not InCombatLockdown() then
-        floatFrame:Hide()
-      end
+  elseif floatFrame then
+    UnregisterStateDriver(floatFrame, "visibility")
+    if not InCombatLockdown() then
+      floatFrame:Hide()
     end
+  end
+
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
   end
 end
 
 function NS.RefreshFloatingHUD(now)
-  if not DingTimerDB or not DingTimerDB.float then return end
-  NS.ensureFloat()
-
-  now = now or GetTime()
-  if NS.IsPvpMode and NS.IsPvpMode() then
-    local snapshot = NS.GetPvpSnapshot and NS.GetPvpSnapshot(now) or nil
-    if not snapshot then
-      return
-    end
-
-    local headerLabel = snapshot.goalHeadline or "to goal"
-    local headerValue = snapshot.ttgText or "Unavailable"
-    local paceParts = {}
-
-    if snapshot.currentHonorPerHour and snapshot.currentHonorPerHour > 0 then
-      paceParts[#paceParts + 1] = NS.FormatNumber(NS.Round(snapshot.currentHonorPerHour)) .. " Honor/hr"
-    else
-      paceParts[#paceParts + 1] = "No Honor in " .. NS.fmtTime(snapshot.rollingWindow or 0)
-    end
-
-    paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionHonor or 0))
-
-    floatFrame.titleText:SetText(NS.C.base .. headerValue .. NS.C.r .. " " .. headerLabel)
-    floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
+  if not DingTimerDB or not DingTimerDB.float then
     return
   end
 
-  local snapshot = NS.GetSessionSnapshot and NS.GetSessionSnapshot(now) or nil
-  local coach = NS.GetCoachStatus and NS.GetCoachStatus(now) or nil
+  NS.ensureFloat()
+  now = now or GetTime()
+
+  local snapshot = NS.GetSessionSnapshot(now)
   if not snapshot then
     return
   end
 
-  local header = NS.C.base .. NS.fmtTime(snapshot.ttl) .. NS.C.r .. " to level"
+  local header = NS.fmtTime(snapshot.ttl) .. " to level"
   local paceParts = {}
 
   if snapshot.currentXph and snapshot.currentXph > 0 then
@@ -381,17 +384,7 @@ function NS.RefreshFloatingHUD(now)
     paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
   end
 
-  if snapshot.sessionXph and snapshot.sessionXph > 0 then
-    paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph))
-  end
-
-  if coach and coach.goal and coach.goal.targetXph and coach.goal.targetXph > 0 then
-    local goalLabel = coach.goal.shortLabel or "Goal"
-    if not snapshot.sessionXph
-      or math_abs((coach.goal.targetXph or 0) - (snapshot.sessionXph or 0)) > 0.5 then
-      paceParts[#paceParts + 1] = goalLabel .. " " .. NS.FormatNumber(NS.Round(coach.goal.targetXph))
-    end
-  end
+  paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph or 0))
 
   floatFrame.titleText:SetText(header)
   floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
@@ -402,7 +395,6 @@ function NS.onXPUpdate()
   local xp = UnitXP("player") or 0
   local maxXP = UnitXPMax("player") or 0
 
-  -- Handle level-up rollovers
   local delta = xp - (NS.state.lastXP or 0)
   if delta < 0 then
     delta = (NS.state.lastMax or 0) - (NS.state.lastXP or 0) + xp
@@ -411,55 +403,51 @@ function NS.onXPUpdate()
   NS.state.lastXP = xp
   NS.state.lastMax = maxXP
 
-  if NS.IsPvpMode and NS.IsPvpMode() then
-    NS.InvalidateTickCache()
-    return
-  end
-
-  -- 🛡️ Sentinel: Prune unbounded XP events to prevent memory exhaustion DoS when UI is hidden
   local windowSeconds = getRollingWindowSeconds()
   pruneEvents(NS.state.events, now, windowSeconds, NS.state, "windowXP", "xp")
 
   if delta > 0 then
-    NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
-    -- ⚡ Bolt: Direct indexing is ~1.25x faster than table.insert
     local events = NS.state.events
+    NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     events[#events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
-    if NS.NoteCoachXP then NS.NoteCoachXP(delta, now) end
-    if NS.GraphFeedXP then NS.GraphFeedXP(delta, now) end
   end
+
   NS.InvalidateTickCache()
 
   local snapshot = NS.GetSessionSnapshot(now)
-  if not snapshot then
-    return
-  end
-  local xph = snapshot.currentXph or 0
-  NS.state.sessionPeakXph = math_max(NS.state.sessionPeakXph or 0, xph or 0)
-  local ttl = snapshot.ttl or math_huge
-
-  local tcol = NS.ttlColor(ttl, NS.state.lastTTL)
-  local trend = NS.ttlDeltaText(ttl, NS.state.lastTTL)
-  
   if DingTimerDB.enabled and delta >= getMinXPDeltaToPrint() then
     local header = NS.C.base .. "[DING]" .. NS.C.r .. " "
+    local ttl = snapshot.ttl or math_huge
+    local trendColor = NS.ttlColor and NS.ttlColor(ttl, NS.state.lastTTL) or ""
+    local trendText = NS.ttlDeltaText and NS.ttlDeltaText(ttl, NS.state.lastTTL) or ""
 
     if (DingTimerDB.mode or "full") == "ttl" then
-      local msg = header .. NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. " to level" .. tcol .. trend .. NS.C.r
-      NS.chat(msg)
+      NS.chat(header .. NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. " to level" .. trendColor .. trendText .. NS.C.r)
     else
-      local msg = header
-        .. "+" .. NS.C.base .. delta .. NS.C.r .. " XP  "
-        .. NS.C.base .. string_format("%.0f", xph) .. NS.C.r .. " XP/hr  "
-        .. "TTL " .. NS.C.base .. NS.fmtTime(ttl) .. NS.C.r .. tcol .. trend .. NS.C.r
-
-      NS.chat(msg)
+      NS.chat(
+        header
+          .. "+"
+          .. NS.C.base
+          .. delta
+          .. NS.C.r
+          .. " XP  "
+          .. NS.C.base
+          .. string_format("%.0f", snapshot.currentXph or 0)
+          .. NS.C.r
+          .. " XP/hr  TTL "
+          .. NS.C.base
+          .. NS.fmtTime(ttl)
+          .. NS.C.r
+          .. trendColor
+          .. trendText
+          .. NS.C.r
+      )
     end
   end
 
-  NS.state.lastTTL = ttl
-  NS.RunCoachHeartbeat(now)
+  NS.state.lastTTL = snapshot.ttl or NS.state.lastTTL
+  NS.RunHeartbeat(now)
 end
 
 function NS.onMoneyUpdate()
@@ -468,27 +456,18 @@ function NS.onMoneyUpdate()
   local delta = currentMoney - (NS.state.lastMoney or 0)
   NS.state.lastMoney = currentMoney
 
-  if NS.IsPvpMode and NS.IsPvpMode() then
-    NS.InvalidateTickCache()
-    return
-  end
-  
   if delta ~= 0 then
     NS.state.sessionMoney = (NS.state.sessionMoney or 0) + delta
-    if NS.NoteCoachMoney then
-      NS.NoteCoachMoney(delta, now)
-    end
   end
-  
-  -- 🛡️ Sentinel: Prune unbounded money events to prevent memory exhaustion DoS when UI is hidden
+
   local windowSeconds = getRollingWindowSeconds()
   pruneEvents(NS.state.moneyEvents, now, windowSeconds, NS.state, "windowMoney", "money")
 
   if delta > 0 then
-    -- ⚡ Bolt: Direct indexing is ~1.25x faster than table.insert
     local moneyEvents = NS.state.moneyEvents
     moneyEvents[#moneyEvents + 1] = { t = now, money = delta }
     NS.state.windowMoney = (NS.state.windowMoney or 0) + delta
   end
+
   NS.InvalidateTickCache()
 end

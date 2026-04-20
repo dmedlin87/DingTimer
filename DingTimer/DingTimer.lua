@@ -9,59 +9,31 @@ end
 
 safeRegisterEvent(frame, "ADDON_LOADED")
 safeRegisterEvent(frame, "PLAYER_LOGIN")
-safeRegisterEvent(frame, "PLAYER_ENTERING_WORLD")
 safeRegisterEvent(frame, "PLAYER_XP_UPDATE")
 safeRegisterEvent(frame, "PLAYER_LEVEL_UP")
 safeRegisterEvent(frame, "PLAYER_REGEN_ENABLED")
 safeRegisterEvent(frame, "PLAYER_MONEY")
 safeRegisterEvent(frame, "PLAYER_LOGOUT")
-safeRegisterEvent(frame, "PLAYER_PVP_KILLS_CHANGED")
-safeRegisterEvent(frame, "HONOR_XP_UPDATE")
-safeRegisterEvent(frame, "UPDATE_BATTLEFIELD_SCORE")
-safeRegisterEvent(frame, "CHAT_MSG_COMBAT_HONOR_GAIN")
-safeRegisterEvent(frame, "CURRENCY_DISPLAY_UPDATE")
-safeRegisterEvent(frame, "ZONE_CHANGED")
-safeRegisterEvent(frame, "ZONE_CHANGED_NEW_AREA")
 
 local function showStartupMessages()
   NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " tracking started. (/ding help)")
   if DingTimerDB.enabled then
     NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " chat output enabled.")
   else
-    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " chat output disabled. (UI still tracks)")
+    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " chat output disabled.")
   end
 end
 
 local function onPlayerLogin()
   NS.resetXPState()
-  NS.StartCoachTicker()
-  if NS.RestorePvpResumeIfAvailable then
-    NS.RestorePvpResumeIfAvailable(GetTime())
-  end
-
+  NS.StartHeartbeatTicker()
   if not InCombatLockdown() then
     NS.setFloatVisible(DingTimerDB.float)
   end
-
-  if DingTimerDB.mainWindowVisible and NS.ShowMainWindow then
-    NS.ShowMainWindow(DingTimerDB.lastOpenTab or 1)
-  end
-
-  if NS.InitMinimapButton then
-    NS.InitMinimapButton()
-  end
-
   showStartupMessages()
-  if NS.DeliverPendingCoachSummary then
-    NS.DeliverPendingCoachSummary()
-  end
 end
 
 local function onLevelUp(level)
-  if NS.IsPvpMode and NS.IsPvpMode() then
-    return
-  end
-
   local now = GetTime()
   local timeTaken = now - (NS.state.sessionStartTime or now)
   local moneyNet = NS.state.sessionMoney or 0
@@ -72,35 +44,33 @@ local function onLevelUp(level)
     moneyStr = "|cff00ff00+|r" .. moneyStr
   end
 
-  local header = string.format(
-    "%s[DING]%s %sLEVEL UP%s %s(Level %s)%s",
-    NS.C.base,
-    NS.C.r,
-    NS.C.val,
-    NS.C.r,
-    NS.C.base,
-    tostring(level or "??"),
-    NS.C.r
+  NS.chat(
+    string.format(
+      "%s[DING]%s %sLEVEL UP%s %s(Level %s)%s",
+      NS.C.base,
+      NS.C.r,
+      NS.C.val,
+      NS.C.r,
+      NS.C.base,
+      tostring(level or "??"),
+      NS.C.r
+    )
   )
-  local stats = string.format(
-    "  %sTime in level:%s %s%s%s  |  %sNet Money:%s %s",
-    NS.C.mid,
-    NS.C.r,
-    NS.C.val,
-    timeStr,
-    NS.C.r,
-    NS.C.mid,
-    NS.C.r,
-    moneyStr
+  NS.chat(
+    string.format(
+      "  %sTime in level:%s %s%s%s  |  %sNet Money:%s %s",
+      NS.C.mid,
+      NS.C.r,
+      NS.C.val,
+      timeStr,
+      NS.C.r,
+      NS.C.mid,
+      NS.C.r,
+      moneyStr
+    )
   )
-
-  NS.chat(header)
-  NS.chat(stats)
   if PlaySound and DingTimerDB.dingSoundEnabled ~= false then
     PlaySound(12891, "Master")
-  end
-  if NS.RecordSession then
-    NS.RecordSession("LEVEL_UP")
   end
   NS.resetXPState()
 end
@@ -116,13 +86,6 @@ frame:SetScript("OnEvent", function(_, event, ...)
 
     if event == "PLAYER_LOGIN" then
       onPlayerLogin()
-      return
-    end
-
-    if event == "PLAYER_ENTERING_WORLD" then
-      if NS.HandlePvpWorldStateChange then
-        NS.HandlePvpWorldStateChange(GetTime())
-      end
       return
     end
 
@@ -143,58 +106,16 @@ frame:SetScript("OnEvent", function(_, event, ...)
       return
     end
 
-    if event == "PLAYER_LOGOUT" then
-      if NS.IsPvpMode and NS.IsPvpMode() then
-        if NS.PersistPvpResume then
-          NS.PersistPvpResume(GetTime())
-        end
-      elseif NS.RecordSession then
-        NS.RecordSession("LOGOUT")
-      end
-      return
-    end
-
     if event == "PLAYER_REGEN_ENABLED" then
       NS.setFloatVisible(DingTimerDB.float)
-      if NS.FlushPvpNotifications then
-        NS.FlushPvpNotifications(GetTime())
-      end
       return
     end
 
-    if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
-      if (not (NS.IsPvpMode and NS.IsPvpMode())) and NS.HandleZoneChange then
-        NS.HandleZoneChange(GetZoneText and GetZoneText() or "Unknown", GetTime())
-      end
-      if NS.HandlePvpWorldStateChange then
-        NS.HandlePvpWorldStateChange(GetTime())
-      end
-      if NS.RefreshStatsWindow then
-        NS.RefreshStatsWindow()
-      end
-      if NS.RefreshInsightsWindow then
-        NS.RefreshInsightsWindow()
-      end
+    if event == "PLAYER_LOGOUT" then
       return
-    end
-
-    if event == "CURRENCY_DISPLAY_UPDATE" then
-      if NS.HandlePvpEvent
-        and (not NS.IsRelevantPvpCurrencyEvent or NS.IsRelevantPvpCurrencyEvent(arg1)) then
-        NS.HandlePvpEvent(event, GetTime())
-      end
-      return
-    end
-
-    if event == "PLAYER_PVP_KILLS_CHANGED"
-      or event == "HONOR_XP_UPDATE"
-      or event == "UPDATE_BATTLEFIELD_SCORE"
-      or event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
-      if NS.HandlePvpEvent then
-        NS.HandlePvpEvent(event, GetTime())
-      end
     end
   end)
+
   if not ok then
     DEFAULT_CHAT_FRAME:AddMessage("|cffff4040[DingTimer] Error:|r " .. tostring(err))
   end

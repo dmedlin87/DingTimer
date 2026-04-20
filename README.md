@@ -9,388 +9,156 @@
 ╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝
 ```
 
-Real-time XP tracking, leveling analytics, and time-to-ding for World of Warcraft
-
-![Version](https://img.shields.io/badge/version-1.1.2-blue?style=flat-square)
-![WoW](https://img.shields.io/badge/WoW-Interface%20120001-orange?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Lua](https://img.shields.io/badge/Lua-5.1-purple?style=flat-square)
-
----
+HUD-first XP tracking and time-to-level for World of Warcraft.
 
 ## Project Docs
 
-- [ROADMAP](./ROADMAP.md) - current scope and documented follow-ups
-- [AGENTS](./AGENTS.md) - repo operating notes for automation and contributors
-- [CLAUDE](./CLAUDE.md) - agent handoff notes and module-level guidance
-- [CONTRIBUTING](./CONTRIBUTING.md) - how to test and submit changes
-- [SECURITY](./SECURITY.md) - how to report security concerns
-- [CHANGELOG](./CHANGELOG.md) - release history
-- [CODE OF CONDUCT](./CODE_OF_CONDUCT.md) - community standards
+- [ROADMAP](./ROADMAP.md)
+- [AGENTS](./AGENTS.md)
+- [CLAUDE](./CLAUDE.md)
+- [CONTRIBUTING](./CONTRIBUTING.md)
+- [SECURITY](./SECURITY.md)
+- [CHANGELOG](./CHANGELOG.md)
 
----
+## What DingTimer Is Now
 
-## What is DingTimer?
+DingTimer is now a compact leveling HUD addon.
 
-DingTimer is a **leveling efficiency addon** that answers the eternal question every grinder has asked: *"How long until I ding?"*
-
-No more alt-tabbing to calculators. No more rough guesses. DingTimer tracks your XP gains in real time, calculates your XP/hr using a rolling time window, and tells you exactly how long that last level is going to take — all from inside the game.
-
-**It also tracks your gold, Honor, and HKs.** Gold per hour matters while leveling, and Honor/HKs matter when you flip into PvP mode.
-
----
+The addon centers on one floating HUD and one tiny settings popup. The old tabbed dashboard, minimap launcher, graph view, history view, PvP mode, and coach-heavy surfaces are not part of the active build anymore.
 
 ## Features
 
-- **XP Per Hour** — Rolling-window calculation that adapts to your current pace, not your average from an hour ago
-- **Time To Level (TTL)** — Live countdown to your next ding, updated every second
-- **Money Per Hour** — Track your gold income alongside your XP gains
-- **Honor + HK Tracking** — Dedicated PvP mode for Honor/hr, HK/hr, session Honor, session HKs, and time-to-cap or custom Honor goals
-- **Session Coach** — Goal presets, pace-drop alerts, idle nudges, best-segment callouts, and end-of-run recap
-- **Analysis Graph** — Dedicated graph view with visible/session/fixed scale modes, summary cards, goal comparisons, and recent segment rows
-- **History View** — Per-character leveling and PvP history with best/median rates, trend tracking, recap storage, and recent-session breakdowns
-- **Floating HUD** — A cleaner two-line HUD that swaps between leveling TTL and PvP TTG based on the active mode
-- **Live Panel** — A refreshed home view for progress, status, notices, and quick actions in both leveling and PvP modes
-- **Settings Hub** — Grouped controls for output, HUD, coach, graph, PvP, and data maintenance
-- **Minimap Button** — Left-click for Live, right-click for Analysis, middle-click for Settings, drag to reposition
-- **Level-Up Announcements** — Celebrates every ding with your time in level and gold earned
-- **Persistent Sessions** — Settings, main window/HUD placement, and per-character session history saved between sessions
-
----
+- Floating HUD with live `TTL`, rolling `XP/hr`, and session pace
+- Tiny popup for HUD visibility, lock state, combat visibility, chat mode, window presets, and reset
+- Rolling-window XP tracking instead of stale session-wide pace
+- Optional chat output in `full` or `ttl` mode
+- Level-up announcement with time spent in level and net money
+- Persistent HUD position and core settings in `DingTimerDB`
 
 ## Installation
 
-1. Download the latest release
+1. Download the latest release.
+2. Extract the `DingTimer` folder into:
 
-   Releases publish exactly two assets: `DingTimer-vX.Y.Z.zip` and `addon-manifest.json`.
-2. Extract the `DingTimer` folder into your addons directory:
-
-   ```text
-   <WoW client>\Interface\AddOns\DingTimer\
-   ```
-
-   The bundled PowerShell installer defaults to the Retail client path and also supports MoP Classic under `_classic_`. You can pass either the client root such as `C:\Program Files (x86)\World of Warcraft\_classic_` or the full AddOns path such as `C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns`. The `-Flavor` switch accepts `retail`, `classic`, `mop`, `mop_classic`, `classic_era`, and `ptr`.
-
-3. Launch WoW and enable **DingTimer** in the AddOns menu on the character select screen
-4. Log in — DingTimer activates automatically
-
-> The minimap button will appear on login. Left-click it to open the Live tab.
-
-## Releasing
-
-Push a semantic-version tag with a leading `v` to publish an installer-ready GitHub Release.
-
-```bash
-git tag v1.1.2
-git push origin v1.1.2
+```text
+<WoW client>\Interface\AddOns\DingTimer\
 ```
 
-The release workflow will:
+3. Enable **DingTimer** on the character select AddOns screen.
+4. Log in.
 
-- run the Lua test matrix
-- build `DingTimer-vX.Y.Z.zip` from the `DingTimer/` folder with `DingTimer/` at the zip root
-- compute the zip SHA-256
-- generate `addon-manifest.json` with version `X.Y.Z`
-- attach both assets to the GitHub Release
-
----
+The bundled PowerShell installer still supports both Retail and MoP Classic style client roots. You can pass either the client root or the direct `Interface\AddOns` path.
 
 ## Quick Start
 
-| You want to...        | Do this                                            |
-| --------------------- | -------------------------------------------------- |
-| Open Live             | Left-click the minimap button or `/ding live`      |
-| Open Settings         | Middle-click the minimap button or `/ding settings`|
-| Open Analysis         | Right-click the minimap button or `/ding graph`    |
-| Open History          | `/ding history` or `/ding insights`                |
-| Toggle PvP mode       | `/ding pvp`                                        |
-| Set a coach goal      | `/ding goal ding` or `/ding goal 30m`              |
-| Record a checkpoint   | `/ding split`                                      |
-| Show the latest recap | `/ding recap`                                      |
-
----
+- HUD is on by default for new installs.
+- Right-click the HUD to open the popup.
+- Left-drag moves the HUD when unlocked.
+- Left-click toggles the popup when the HUD is locked.
+- `/ding settings` opens the popup even if the HUD is hidden.
 
 ## Slash Commands
 
 All commands work with either `/ding` or `/dt`.
 
-### Core
-
-| Command                 | What it does                                    |
-| ----------------------- | ----------------------------------------------- |
-| `/ding`                 | Show the help menu                              |
-| `/ding help`            | Show the help menu                              |
-| `/ding ui`              | Open the Live tab                               |
-| `/ding live`            | Same as above                                   |
-| `/ding stats`           | Same as above                                   |
-| `/ding settings`        | Open the Settings tab                           |
-| `/ding history`         | Open the History tab                            |
-| `/ding insights`        | Open the History tab                            |
-| `/ding reset`           | Reset current session data                      |
-| `/ding goal <preset>`   | Set the coach goal: `off`, `ding`, `30m`, `60m` |
-| `/ding split`           | Record a manual checkpoint                      |
-| `/ding recap`           | Print the latest session recap                  |
-| `/ding on`              | Enable chat output                              |
-| `/ding off`             | Disable chat output                             |
-
-### PvP
-
-| Command                       | What it does                                          |
-| ----------------------------- | ----------------------------------------------------- |
-| `/ding pvp`                   | Toggle PvP mode                                       |
-| `/ding pvp on`                | Enable PvP mode                                       |
-| `/ding pvp off`               | Return to leveling mode                               |
-| `/ding pvp goal cap`          | Track time to the Honor cap                           |
-| `/ding pvp goal off`          | Disable PvP goal tracking                             |
-| `/ding pvp goal <honorTotal>` | Set a custom absolute Honor goal                      |
-| `/ding pvp auto on`           | Auto-switch into PvP mode inside battlegrounds        |
-| `/ding pvp auto off`          | Disable battleground auto-switching                   |
-| `/ding pvp recap`             | Print the latest PvP recap                            |
-
-### Output Mode
-
-| Command           | What it does                                          |
-| ----------------- | ----------------------------------------------------- |
-| `/ding mode full` | Chat prints `+XP`, `XP/hr`, and `TTL` on every gain   |
-| `/ding mode ttl`  | Chat prints TTL only                                  |
-
-### Rolling Window
-
-| Command                   | What it does                                                                                     |
-| ------------------------- | -------------------------------------------------------------------------------------------------|
-| `/ding window <seconds>`  | Set the rolling window size for XP/hr calculation without resetting the session (minimum: 30s)   |
-
-> **Example:** `/ding window 300` uses the last 5 minutes to calculate your XP/hr. Shorter windows react faster to pace changes; longer windows smooth out gaps.
-
-### Float Commands
-
-| Command              | What it does                |
-| -------------------- | --------------------------- |
-| `/ding float on`     | Show the floating HUD       |
-| `/ding float off`    | Hide the floating HUD       |
-| `/ding float lock`   | Lock the HUD in place       |
+| Command | What it does |
+| --- | --- |
+| `/ding` | Show help |
+| `/ding help` | Show help |
+| `/ding settings` | Open the HUD popup |
+| `/ding on` | Enable chat output |
+| `/ding off` | Disable chat output |
+| `/ding mode full` | Print gain, `XP/hr`, and `TTL` to chat |
+| `/ding mode ttl` | Print only `TTL` to chat |
+| `/ding window <seconds>` | Set the rolling window, from `30` to `86400` seconds |
+| `/ding float on` | Show the HUD |
+| `/ding float off` | Hide the HUD |
+| `/ding float lock` | Lock the HUD in place |
 | `/ding float unlock` | Allow the HUD to be dragged |
+| `/ding reset` | Reset the current session |
 
-> The floating frame hides automatically during combat and reappears when combat ends.
+### Compatibility Note
 
-### Graph Commands
-
-| Command                       | What it does                                            |
-| ----------------------------- | ------------------------------------------------------- |
-| `/ding graph`                 | Open the Analysis tab                                   |
-| `/ding graph on`              | Open the Analysis tab                                   |
-| `/ding graph off`             | Close the main window if the Analysis tab is active     |
-| `/ding graph zoom <level>`    | Set the time window: `3m`, `5m`, `15m`, `30m`, or `60m` |
-| `/ding graph scale <mode>`    | Set the Y-axis mode: `visible`, `session`, or `fixed`   |
-| `/ding graph fit`             | Snap the graph back to visible-data scaling             |
-| `/ding graph max <xp/hr>`     | Set the fixed Y-axis cap and switch to fixed mode       |
-
-### Insights Commands
-
-| Command                     | What it does                                          |
-| --------------------------- | ----------------------------------------------------- |
-| `/ding insights`            | Toggle the Session Insights window                    |
-| `/ding insights clear`      | Clear insights history for your current character     |
-| `/ding insights keep <n>`   | Keep between 5 and 100 sessions (default: 30)         |
-
----
-
-## UI Breakdown
-
-### Minimap Button
-
-The minimap button lives on the edge of your minimap and is your primary launcher.
-
-- **Left-click** — Open the Live tab
-- **Right-click** — Open the Analysis tab
-- **Middle-click** — Open the Settings tab
-- **Drag** — Slide it anywhere around the minimap rim
-
-You can hide it entirely from the Settings tab if you prefer slash commands.
-
----
-
-### Live Panel
-
-A denser live dashboard showing your entire session at a glance.
-
-- Progress header with current level XP, percent complete, and remaining XP
-- Eight live metric cards: session time, session XP, current XP/hr, session average, TTL, pace delta, session money, and money/hr
-- Quick-action buttons for Graph, Insights, Settings, and Reset
-
-When PvP mode is active, the same panel swaps to Honor progress, Honor/hr, session Honor, session HKs, HK/hr, goal state, and active battleground status.
-
-All values update every second. The window is draggable and remembers its position.
-
----
-
-### Floating HUD
-
-A minimal HUD that sits above your character showing:
+Older dashboard commands such as `live`, `graph`, `history`, `insights`, `goal`, `split`, `recap`, and `pvp` are now compatibility shims. They print:
 
 ```text
-[2h 14m] to level
-47,230 XP/hr  |  Session 42,801
+Removed in HUD-first build; use /ding settings
 ```
 
-Designed to stay out of your way. Hides in combat. Drag it anywhere when unlocked.
+## HUD Behavior
 
-When PvP mode is active, the HUD swaps to your current Honor goal or cap ETA plus Honor/hr and session Honor.
-
----
-
-### XP Graph Tab
-
-A dedicated graph tab inside the main window, updated every second while visible.
-
-**Bar colors:**
-
-- **Green** — XP/hr is higher than the previous segment (you're speeding up)
-- **Red** — XP/hr is lower than the previous segment (you're slowing down)
-- **Gray** — No XP was gained in that segment
-
-**The gold line** across the chart is your session-wide average XP/hr up to each point in time — a useful baseline to see whether your current pace beats your overall average.
-
-**Scale modes:**
-
-- **Visible** — Fits the graph to the biggest bar currently on screen
-- **Session** — Fits the graph to the biggest retained bar in the last 60 minutes
-- **Fixed** — Uses the max XP/hr cap you set with `/ding graph max <xp/hr>`
-
-**Header cards** show your current pace, session average, visible/session peak, and the active scale mode.
-
-**Hover over any bar** to see a tooltip with:
-
-- The time range for that segment
-- XP gained in that segment
-- XP/hr for that segment
-- Session average up to that point
-
-**Zoom levels:** `3m` · `5m` · `15m` · `30m` · `60m`
-
-> DingTimer retains up to 60 minutes of graph data. Switching zoom levels never loses history.
-
----
-
-### Session Insights Window
-
-A dedicated analysis window for long-term improvement over multiple leveling sessions.
-
-The History tab also has a PvP view for session-level Honor/HK analysis and recap review.
-
-- Tracks history per character profile (`realm:name:class`)
-- Shows median XP/hr, best XP/hr, average time in level, and trend percent
-- Includes a mini trend chart built from your most recent sessions
-- Lists the latest 10 sessions with level range, duration, XP/hr, money, zone, and trigger reason
-- Historical XP/hr, Money/hr, Honor/hr, and HK/hr are computed from each session's actual recorded duration
-- Supports history controls via `/ding insights clear` and `/ding insights keep <n>`
-
----
-
-### Settings Tab
-
-A larger control hub for all major options:
-
-- Quick-open buttons for History, keep-retention presets, graph scaling, and session maintenance
-- Visibility toggles for chat output, floating HUD, and minimap button
-- Output controls for chat mode and rolling-window presets
-- Graph controls for scale mode, fixed max, and zoom presets
-- PvP controls for mode toggling, Honor goals, battleground auto-switching, and local recap/milestone notices
-- Session reset with confirmation
-
----
-
-## How XP/hr is Calculated
-
-DingTimer uses a **rolling time window** rather than a session average. Here's why that matters:
-
-- **Session average:** If you grinded 100k XP/hr for an hour, then went AFK for 30 minutes, your session average would show ~67k. Misleading.
-- **Rolling window:** Only events within the last N seconds count. Your rate reflects what you're actually doing *right now*.
-
-**The math:**
+The floating HUD has two lines:
 
 ```text
-1. Collect all XP gain events within the last [window] seconds
-2. Sum the XP from those events
-3. Elapsed = min(time since session start, window size)
-4. XP/hr = (sum / elapsed) × 3600
+9m 0s to level
+6,000 XP/hr  |  Session 6,000
 ```
 
-The default window is **10 minutes (600 seconds)**. Use `/ding window <seconds>` to tune it.
+- Top line: current `TTL`
+- Bottom line: rolling `XP/hr` and session pace
+- When the rolling window is empty, the HUD shows `No XP in <window>`
 
-Historical session summaries and recap rates use the actual recorded session duration as well. DingTimer does not smooth or normalize those stored rates.
+The HUD hides automatically in combat unless `Show in combat` is enabled in the popup.
 
----
+## Popup Controls
 
-## Level-Up Announcements
+The popup contains only these controls:
 
-Every ding triggers a chat message with your session summary:
+- `HUD on/off`
+- `Lock`
+- `Show in combat`
+- `Chat on/off`
+- `Chat mode` with `Full` and `TTL`
+- `Window` presets: `1m`, `5m`, `10m`, `15m`
+- `Reset session`
+
+There is no separate popup position. It anchors to the HUD while the HUD is visible, and it centers on `UIParent` when opened without the HUD.
+
+## How XP/hr Is Calculated
+
+DingTimer uses a rolling window instead of a long session average:
 
 ```text
-[DingTimer] ★ LEVEL UP! ★  (Level 72)
-  Time in level: 43m 17s
-  Money earned:  12g 44s 3c
+1. Collect XP gains inside the current window
+2. Sum the XP in that window
+3. Use min(session elapsed, window size) as the elapsed time
+4. XP/hr = (sum / elapsed) * 3600
 ```
 
-After the announcement, your session data resets automatically so your XP/hr reflects the new level.
+Default window: `10 minutes`
 
----
+This keeps the HUD responsive to what you are doing now instead of what you were doing half an hour ago.
 
 ## Saved Variables
 
-DingTimer stores all data in the account-wide `DingTimerDB` SavedVariable. Session history is bucketed per character profile inside that database. This includes:
+`DingTimerDB` stores:
 
-- All settings and toggle states
-- Main window and floating HUD positions
-- Historical sessions per character profile (last 30 kept by default)
-- Graph presentation settings (zoom, scale mode, fixed max)
-- Minimap button angle
+- HUD visibility, lock state, combat visibility, and position
+- Rolling window setting
+- Chat output enablement and mode
+- Release metadata
 
-Deleting `DingTimerDB` from your SavedVariables folder resets everything to defaults.
+Legacy history, PvP, and coach data are preserved in `DingTimerDB` for rollback safety if they already exist, but the HUD-first build does not update those records anymore.
 
----
+## Running Tests
 
-## Compatibility
-
-| Package target           | Status                    |
-| ------------------------ | ------------------------- |
-| `## Interface: 120001`   | Supported by this package |
-| Other clients            | Unverified                |
-
----
-
-## Contributing
-
-Bug reports, feature requests, and pull requests are welcome.
-
-1. Fork the repo
-2. Create a branch: `git checkout -b my-feature`
-3. Commit your changes: `git commit -m 'Add some feature'`
-4. Push: `git push origin my-feature`
-5. Open a pull request
-
-Please include a description of what changed and why.
-
----
-
-## Coverage
-
-Run Lua coverage from repo root:
+Windows:
 
 ```powershell
 .\coverage.ps1
 ```
 
-The script prefers the `lua` / `luarocks` pair on `PATH` and falls back to the LocalAppData Lua install if needed. It generates `luacov.report.out` and `luacov.stats.out` in the project root.
+Or run a single Lua test:
 
----
+```powershell
+python .\run_tests.py tests\test_hud_popup.lua
+```
 
-## License
+## Releasing
 
-MIT — do whatever you want with it, just don't blame me if your /played skyrockets because you got addicted to optimizing your XP/hr.
+Tag a commit with a leading `v` to publish a GitHub Release:
 
----
-
-*May your queues be short, your pulls be clean, and your XP/hr be ever upward.*
-
-[Report a Bug](https://github.com/dmedlin87/DingTimer/issues) · [Request a Feature](https://github.com/dmedlin87/DingTimer/issues)
+```bash
+git tag v1.1.2
+git push origin v1.1.2
+```

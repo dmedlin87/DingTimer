@@ -1,74 +1,74 @@
 local _, NS = ...
 
-local function refreshCoachViews()
-  if NS.RefreshStatsWindow then
-    NS.RefreshStatsWindow()
+local function refreshSurfaces()
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD()
   end
-  if NS.RefreshSettingsPanel then
-    NS.RefreshSettingsPanel()
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
   end
 end
 
-function NS.SetCoachGoal(goal)
-  if not NS.EnsureCoachConfig then
-    return false, "coach is unavailable."
-  end
-  if goal ~= "off" and goal ~= "ding" and goal ~= "30m" and goal ~= "60m" then
-    return false, "Invalid goal. Use: off, ding, 30m, 60m"
-  end
-
-  local config = NS.EnsureCoachConfig()
-  config.goal = goal
-  refreshCoachViews()
-  return true, goal
+function NS.SetChatOutputEnabled(enabled)
+  DingTimerDB.enabled = enabled == true
+  refreshSurfaces()
+  return DingTimerDB.enabled
 end
 
-function NS.SetKeepSessions(count)
-  local n = tonumber(count)
-  if not n then
-    return false, "Please provide a number (e.g., /ding insights keep 30)."
+function NS.SetOutputMode(mode)
+  if mode ~= "full" and mode ~= "ttl" then
+    return false, "Unknown mode. Use 'full' or 'ttl'."
   end
-  if n < 5 or n > 100 then
-    return false, "insights keep must be between 5 and 100."
-  end
-
-  DingTimerDB.xp = DingTimerDB.xp or {}
-  DingTimerDB.xp.keepSessions = math.floor(n)
-  if NS.GetProfileStore and NS.TrimSessions then
-    NS.TrimSessions(NS.GetProfileStore(true), DingTimerDB.xp.keepSessions)
-  end
-  if NS.RefreshInsightsWindow then
-    NS.RefreshInsightsWindow()
-  end
-  if NS.RefreshSettingsPanel then
-    NS.RefreshSettingsPanel()
-  end
-  return true, DingTimerDB.xp.keepSessions
+  DingTimerDB.mode = mode
+  refreshSurfaces()
+  return true, mode
 end
 
-function NS.ClearCurrentProfileHistory()
-  if NS.ClearProfileSessions then
-    NS.ClearProfileSessions()
+function NS.SetFloatEnabled(enabled)
+  DingTimerDB.float = enabled == true
+  if NS.setFloatVisible then
+    NS.setFloatVisible(DingTimerDB.float)
   end
-  if NS.RefreshSettingsPanel then
-    NS.RefreshSettingsPanel()
+  refreshSurfaces()
+  return DingTimerDB.float
+end
+
+function NS.SetFloatLocked(locked)
+  DingTimerDB.floatLocked = locked == true
+  refreshSurfaces()
+  return DingTimerDB.floatLocked
+end
+
+function NS.SetFloatShowInCombat(showInCombat)
+  DingTimerDB.floatShowInCombat = showInCombat == true
+  if DingTimerDB.float and NS.setFloatVisible then
+    NS.setFloatVisible(true)
   end
-  return true
+  refreshSurfaces()
+  return DingTimerDB.floatShowInCombat
+end
+
+function NS.OpenSettingsPopup()
+  if NS.ShowHUDPopup then
+    return NS.ShowHUDPopup()
+  end
+  return false
+end
+
+function NS.ToggleSettingsPopup(anchorFrame)
+  if NS.ToggleHUDPopup then
+    return NS.ToggleHUDPopup(anchorFrame)
+  end
+  return false
 end
 
 function NS.ResetSession(reason)
-  if NS.IsPvpMode and NS.IsPvpMode() then
-    if NS.ResetPvpSession then
-      NS.ResetPvpSession(reason or "MANUAL_RESET")
-    end
-  else
-    if NS.RecordSession then
-      NS.RecordSession(reason or "MANUAL_RESET")
-    end
-    if NS.resetXPState then
-      NS.resetXPState()
-    end
+  if NS.resetXPState then
+    NS.resetXPState(reason or "MANUAL_RESET")
   end
-  refreshCoachViews()
+  if NS.chat then
+    NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " session reset.")
+  end
+  refreshSurfaces()
   return true
 end
