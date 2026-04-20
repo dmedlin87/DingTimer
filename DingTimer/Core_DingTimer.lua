@@ -12,6 +12,7 @@ NS.state = {
   levelStart = 0,
   lastXP = 0,
   lastMax = 0,
+  lastXPGain = nil,
   lastTTL = nil,
   sessionXP = 0,
   sessionMoney = 0,
@@ -46,6 +47,7 @@ local function clearInternalState(now)
   NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
   NS.state.lastXP = UnitXP("player") or 0
   NS.state.lastMax = UnitXPMax("player") or 0
+  NS.state.lastXPGain = nil
   NS.state.lastTTL = nil
   NS.state.sessionXP = 0
   NS.state.sessionMoney = 0
@@ -182,6 +184,7 @@ function NS.GetSessionSnapshot(now)
   local sessionElapsed = math_max(1, now - sessionStart)
   local sessionXP = NS.state.sessionXP or 0
   local sessionMoney = NS.state.sessionMoney or 0
+  local lastXPGain = NS.state.lastXPGain
   local window = getRollingWindowSeconds()
   local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
   local moneyRate = NS.ComputeRollingRateDetails(
@@ -209,6 +212,7 @@ function NS.GetSessionSnapshot(now)
     sessionElapsed = sessionElapsed,
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
+    lastXPGain = lastXPGain,
     currentXph = currentXph,
     rawCurrentXph = currentXph,
     sessionXph = sessionXph,
@@ -384,7 +388,11 @@ function NS.RefreshFloatingHUD(now)
     paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
   end
 
-  paceParts[#paceParts + 1] = "Session " .. NS.FormatNumber(NS.Round(snapshot.sessionXph or 0))
+  if snapshot.lastXPGain and snapshot.lastXPGain > 0 then
+    paceParts[#paceParts + 1] = "Last +" .. NS.FormatNumber(snapshot.lastXPGain)
+  end
+
+  paceParts[#paceParts + 1] = "Need " .. NS.FormatNumber(snapshot.remainingXP or 0)
 
   floatFrame.titleText:SetText(header)
   floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
@@ -409,6 +417,7 @@ function NS.onXPUpdate()
   if delta > 0 then
     local events = NS.state.events
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
+    NS.state.lastXPGain = delta
     events[#events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
   end

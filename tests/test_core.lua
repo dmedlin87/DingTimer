@@ -23,6 +23,7 @@ print("Running Core_DingTimer tests...")
 NS.resetXPState()
 assert_eq(NS.state.sessionXP, 0, "Initial sessionXP should be 0")
 assert_eq(#NS.state.events, 0, "Initial events should be empty")
+assert_eq(nil, NS.state.lastXPGain, "Initial lastXPGain should be nil")
 
 -- Test 2: XP Update
 SetTime(100)
@@ -31,6 +32,7 @@ NS.onXPUpdate()
 assert_eq(NS.state.sessionXP, 100, "sessionXP should be 100")
 assert_eq(#NS.state.events, 1, "Should have 1 event")
 assert_eq(NS.state.events[1].xp, 100, "Event XP should be 100")
+assert_eq(100, NS.state.lastXPGain, "lastXPGain should record the latest positive gain")
 
 -- Test 3: XP/hr Calculation
 -- 100 XP in 100 seconds (if session started at 0)
@@ -65,14 +67,18 @@ NS.onXPUpdate() -- +100 XP after 10s
 local snapshot = NS.GetSessionSnapshot(811)
 assert_near(snapshot.currentXph, 36000, 0.1, "current pace should keep the immediate spike")
 assert_near(snapshot.ttl, 60, 0.1, "TTL should be derived from the same raw pace")
+assert_eq(100, snapshot.lastXPGain, "snapshot should expose the most recent gain")
+assert_eq(600, snapshot.remainingXP, "snapshot should expose the current XP needed to level")
 
 -- Test 5: Level Up (XP Rollover)
 SetXP(300, 1000)
 NS.resetXPState() -- start at t=801, XP=300, max=1000
+assert_eq(nil, NS.state.lastXPGain, "resetXPState should clear lastXPGain")
 SetTime(900)
 SetXP(50, 1000) -- Leveled up! 700 XP from old level + 50 XP from new level = 750 delta
 NS.onXPUpdate()
 assert_eq(NS.state.sessionXP, 750, "sessionXP should handle rollover")
+assert_eq(750, NS.state.lastXPGain, "lastXPGain should keep the full rollover delta")
 
 -- Test 6: Money/hr
 NS.resetXPState() -- t=900, money=0

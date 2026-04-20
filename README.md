@@ -28,9 +28,9 @@ The addon centers on one floating HUD and one tiny settings popup. The old tabbe
 
 ## Features
 
-- Floating HUD with live `TTL`, rolling `XP/hr`, and session pace
+- Floating HUD with live `TTL`, rolling `XP/hr`, last gain, and XP needed to level
 - Tiny popup for HUD visibility, lock state, combat visibility, chat mode, window presets, and reset
-- Rolling-window XP tracking instead of stale session-wide pace
+- Rolling-window XP tracking instead of stale long-session pace
 - Optional chat output in `full` or `ttl` mode
 - Level-up announcement with time spent in level and net money
 - Persistent HUD position and core settings in `DingTimerDB`
@@ -91,11 +91,11 @@ The floating HUD has two lines:
 
 ```text
 9m 0s to level
-6,000 XP/hr  |  Session 6,000
+6,000 XP/hr  |  Last +10  |  Need 100
 ```
 
 - Top line: current `TTL`
-- Bottom line: rolling `XP/hr` and session pace
+- Bottom line: rolling `XP/hr`, the most recent XP gain, and XP still needed
 - When the rolling window is empty, the HUD shows `No XP in <window>`
 
 The HUD hides automatically in combat unless `Show in combat` is enabled in the popup.
