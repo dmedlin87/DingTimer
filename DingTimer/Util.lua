@@ -165,8 +165,8 @@ function NS.UI.CreateSectionBlock(parent, x, y, width, height, title, descriptio
   section.subtitle = sub
 
   local content = CreateFrame("Frame", nil, section)
-  content:SetPoint("TOPLEFT", section, "TOPLEFT", 12, -38)
-  content:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -12, 12)
+  content:SetPoint("TOPLEFT", section, "TOPLEFT", 14, -48)
+  content:SetPoint("BOTTOMRIGHT", section, "BOTTOMRIGHT", -14, 14)
   section.content = content
   return section, header, sub
 end
@@ -411,6 +411,16 @@ function NS.UI.CreateValueLabel(parent, x, y)
   fs:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
   fs:SetText("--")
   NS.UI.ApplyTextStyle(fs, "value")
+  return fs
+end
+
+function NS.UI.CreateBodyLabel(parent, width, style)
+  local fontObject = (style == "subtle") and "GameFontDisableSmall" or "GameFontHighlightSmall"
+  local fs = parent:CreateFontString(nil, "OVERLAY", fontObject)
+  fs:SetWidth(width or 220)
+  fs:SetJustifyH("LEFT")
+  fs:SetText("")
+  NS.UI.ApplyTextStyle(fs, style or "body")
   return fs
 end
 

@@ -108,6 +108,59 @@ local function createEditBox(parent, x, y, width, callback, tooltipText)
   return box
 end
 
+local function createBodyLabel(parent, width, style)
+  if NS.UI and NS.UI.CreateBodyLabel then
+    return NS.UI.CreateBodyLabel(parent, width, style)
+  end
+
+  local fontObject = (style == "subtle") and "GameFontDisableSmall" or "GameFontHighlightSmall"
+  local label = parent:CreateFontString(nil, "OVERLAY", fontObject)
+  label:SetWidth(width or 220)
+  label:SetJustifyH("LEFT")
+  label:SetText("")
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(label, style or "body")
+  end
+  return label
+end
+
+local function createInlineValueLabel(parent, anchor, width, xOffset, yOffset, style)
+  local label = createBodyLabel(parent, width, style or "subtle")
+  label:ClearAllPoints()
+  label:SetPoint("TOPLEFT", anchor, "TOPRIGHT", xOffset or 10, yOffset or -4)
+  return label
+end
+
+local function createGrid(parent, options)
+  if NS.UI and NS.UI.CreateGridLayout then
+    return NS.UI.CreateGridLayout(parent, options)
+  end
+
+  return {
+    parent = parent,
+    cellWidth = options.cellWidth or 120,
+    rowHeight = options.rowHeight or 24,
+    columnGap = options.columnGap or 8,
+    rowGap = options.rowGap or 8,
+    originX = options.originX or 0,
+    originY = options.originY or 0,
+    Place = function(self, frame, column, row, xOffset, yOffset)
+      if not frame then
+        return frame
+      end
+      frame:ClearAllPoints()
+      frame:SetPoint(
+        "TOPLEFT",
+        self.parent,
+        "TOPLEFT",
+        self.originX + ((column - 1) * (self.cellWidth + self.columnGap)) + (xOffset or 0),
+        self.originY - ((row - 1) * (self.rowHeight + self.rowGap)) + (yOffset or 0)
+      )
+      return frame
+    end,
+  }
+end
+
 local function cycleValue(current, ordered)
   local currentIndex = 1
   for i = 1, #ordered do
@@ -131,49 +184,41 @@ function NS.InitSettingsPanel(parent)
   settingsFrame = CreateFrame("Frame", "DingTimerSettingsPanel", parent)
   settingsFrame:SetAllPoints(parent)
   settingsFrame.controls = {}
-  settingsFrame.summaryCards = {}
 
   local _, scrollChild = NS.UI.CreateScrollFrame(settingsFrame, 704, 736)
 
-  if NS.UI and NS.UI.CreateMetricCard then
-    settingsFrame.summaryCards.output = NS.UI.CreateMetricCard(scrollChild, 160, 60, 16, -18, "Output")
-    settingsFrame.summaryCards.hud = NS.UI.CreateMetricCard(scrollChild, 160, 60, 186, -18, "HUD")
-    settingsFrame.summaryCards.graph = NS.UI.CreateMetricCard(scrollChild, 160, 60, 356, -18, "Graph")
-    settingsFrame.summaryCards.pvp = NS.UI.CreateMetricCard(scrollChild, 160, 60, 526, -18, "PvP")
-  end
-
   local outputSection, hudSection, coachSection, graphSection, dataSection, pvpSection
   if NS.UI.CreateSectionBlock then
-    outputSection = NS.UI.CreateSectionBlock(scrollChild, 16, -96, 324, 152, "Output", "Chat behavior and rolling window controls.")
-    hudSection = NS.UI.CreateSectionBlock(scrollChild, 360, -96, 324, 170, "HUD", "On-screen visibility and launcher behavior.")
-    coachSection = NS.UI.CreateSectionBlock(scrollChild, 16, -282, 324, 210, "Coach", "Goal presets, alert behavior, and recap access.")
-    graphSection = NS.UI.CreateSectionBlock(scrollChild, 360, -282, 324, 210, "Graph", "Analysis scaling and zoom behavior.")
-    dataSection = NS.UI.CreateSectionBlock(scrollChild, 16, -506, 324, 152, "Data", "Run maintenance, history retention, and quick navigation.")
-    pvpSection = NS.UI.CreateSectionBlock(scrollChild, 360, -506, 324, 268, "PvP", "Honor mode, battleground auto-switching, and local-only notices.")
+    outputSection = NS.UI.CreateSectionBlock(scrollChild, 16, -18, 324, 144, "Output", "Chat output and rolling window.")
+    hudSection = NS.UI.CreateSectionBlock(scrollChild, 360, -18, 324, 164, "HUD", "Floating tracker and launcher visibility.")
+    coachSection = NS.UI.CreateSectionBlock(scrollChild, 16, -176, 324, 178, "Coach", "Goal preset, alerts, and recap.")
+    graphSection = NS.UI.CreateSectionBlock(scrollChild, 360, -176, 324, 194, "Graph", "Scale mode, fixed cap, and zoom.")
+    dataSection = NS.UI.CreateSectionBlock(scrollChild, 16, -370, 324, 132, "Data", "Quick navigation and history retention.")
+    pvpSection = NS.UI.CreateSectionBlock(scrollChild, 360, -384, 324, 214, "PvP", "Mode toggle, Honor goal, and battleground notices.")
   else
     outputSection = CreateFrame("Frame", nil, scrollChild)
-    outputSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -96)
-    outputSection:SetSize(324, 152)
+    outputSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -18)
+    outputSection:SetSize(324, 144)
     outputSection.content = outputSection
     hudSection = CreateFrame("Frame", nil, scrollChild)
-    hudSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -96)
-    hudSection:SetSize(324, 170)
+    hudSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -18)
+    hudSection:SetSize(324, 164)
     hudSection.content = hudSection
     coachSection = CreateFrame("Frame", nil, scrollChild)
-    coachSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -282)
-    coachSection:SetSize(324, 210)
+    coachSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -176)
+    coachSection:SetSize(324, 178)
     coachSection.content = coachSection
     graphSection = CreateFrame("Frame", nil, scrollChild)
-    graphSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -282)
-    graphSection:SetSize(324, 210)
+    graphSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -176)
+    graphSection:SetSize(324, 194)
     graphSection.content = graphSection
     dataSection = CreateFrame("Frame", nil, scrollChild)
-    dataSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -506)
-    dataSection:SetSize(324, 152)
+    dataSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 16, -370)
+    dataSection:SetSize(324, 132)
     dataSection.content = dataSection
     pvpSection = CreateFrame("Frame", nil, scrollChild)
-    pvpSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -506)
-    pvpSection:SetSize(324, 268)
+    pvpSection:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 360, -384)
+    pvpSection:SetSize(324, 214)
     pvpSection.content = pvpSection
   end
 
@@ -186,22 +231,22 @@ function NS.InitSettingsPanel(parent)
     pvp = pvpSection,
   }
 
-  local outputGrid = NS.UI.CreateGridLayout(outputSection.content, {
+  local outputGrid = createGrid(outputSection.content, {
     columns = 6, cellWidth = 42, rowHeight = 26, columnGap = 8, rowGap = 10,
   })
-  local hudGrid = NS.UI.CreateGridLayout(hudSection.content, {
+  local hudGrid = createGrid(hudSection.content, {
     columns = 1, cellWidth = 280, rowHeight = 24, rowGap = 8,
   })
-  local coachGrid = NS.UI.CreateGridLayout(coachSection.content, {
+  local coachGrid = createGrid(coachSection.content, {
     columns = 6, cellWidth = 42, rowHeight = 26, columnGap = 8, rowGap = 10,
   })
-  local graphGrid = NS.UI.CreateGridLayout(graphSection.content, {
+  local graphGrid = createGrid(graphSection.content, {
     columns = 6, cellWidth = 42, rowHeight = 24, columnGap = 8, rowGap = 10,
   })
-  local dataGrid = NS.UI.CreateGridLayout(dataSection.content, {
+  local dataGrid = createGrid(dataSection.content, {
     columns = 6, cellWidth = 42, rowHeight = 26, columnGap = 8, rowGap = 10,
   })
-  local pvpGrid = NS.UI.CreateGridLayout(pvpSection.content, {
+  local pvpGrid = createGrid(pvpSection.content, {
     columns = 6, cellWidth = 42, rowHeight = 24, columnGap = 8, rowGap = 10,
   })
 
@@ -213,9 +258,7 @@ function NS.InitSettingsPanel(parent)
     DingTimerDB.mode = cycleValue(DingTimerDB.mode or "full", MODE_ORDER)
   end)
   outputGrid:Place(settingsFrame.controls.modeButton, 1, 2)
-  settingsFrame.controls.modeValue = NS.UI.CreateValueLabel(scrollChild, 142, -159)
-  settingsFrame.controls.modeValue:ClearAllPoints()
-  settingsFrame.controls.modeValue:SetPoint("TOPLEFT", settingsFrame.controls.modeButton, "TOPRIGHT", 10, -5)
+  settingsFrame.controls.modeValue = createInlineValueLabel(outputSection.content, settingsFrame.controls.modeButton, 168, 10, -5, "body")
   settingsFrame.controls.window1m = createButton(outputSection.content, 0, 0, 44, "1m", function() NS.SetRollingWindowSeconds(60) end)
   settingsFrame.controls.window5m = createButton(outputSection.content, 0, 0, 44, "5m", function() NS.SetRollingWindowSeconds(300) end)
   settingsFrame.controls.window10m = createButton(outputSection.content, 0, 0, 52, "10m", function() NS.SetRollingWindowSeconds(600) end)
@@ -224,9 +267,7 @@ function NS.InitSettingsPanel(parent)
   outputGrid:Place(settingsFrame.controls.window5m, 2, 3, 10)
   outputGrid:Place(settingsFrame.controls.window10m, 3, 3, 20)
   outputGrid:Place(settingsFrame.controls.windowButton, 5, 3, 8)
-  settingsFrame.controls.windowValue = NS.UI.CreateValueLabel(scrollChild, 242, -193)
-  settingsFrame.controls.windowValue:ClearAllPoints()
-  settingsFrame.controls.windowValue:SetPoint("TOPLEFT", settingsFrame.controls.windowButton, "TOPRIGHT", 10, -5)
+  settingsFrame.controls.windowValue = createInlineValueLabel(outputSection.content, settingsFrame.controls.windowButton, 116, 10, -5, "body")
 
   settingsFrame.controls.float = createCheckbox(hudSection.content, 0, 0, "Show floating HUD", function(checked)
     DingTimerDB.float = checked
@@ -263,9 +304,7 @@ function NS.InitSettingsPanel(parent)
     end
   end)
   coachGrid:Place(settingsFrame.controls.cycleGoalButton, 1, 1)
-  settingsFrame.controls.goalValue = NS.UI.CreateValueLabel(scrollChild, 142, -283)
-  settingsFrame.controls.goalValue:ClearAllPoints()
-  settingsFrame.controls.goalValue:SetPoint("TOPLEFT", settingsFrame.controls.cycleGoalButton, "TOPRIGHT", 10, -5)
+  settingsFrame.controls.goalValue = createInlineValueLabel(coachSection.content, settingsFrame.controls.cycleGoalButton, 160, 10, -5, "body")
   settingsFrame.controls.alertsEnabled = createCheckbox(coachSection.content, 0, 0, "Enable coach alerts", function(checked)
     ensureCoachConfig().alertsEnabled = checked
   end, "Store idle, pace-drop, and best-segment alerts during the session.")
@@ -280,14 +319,7 @@ function NS.InitSettingsPanel(parent)
     end
   end)
   coachGrid:Place(settingsFrame.controls.recapButton, 1, 4)
-  settingsFrame.controls.coachInfo = coachSection.content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.coachInfo:SetPoint("TOPLEFT", settingsFrame.controls.recapButton, "TOPRIGHT", 8, -6)
-  settingsFrame.controls.coachInfo:SetWidth(200)
-  settingsFrame.controls.coachInfo:SetJustifyH("LEFT")
-  settingsFrame.controls.coachInfo:SetText("")
-  if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(settingsFrame.controls.coachInfo, "subtle")
-  end
+  settingsFrame.controls.coachInfo = createInlineValueLabel(coachSection.content, settingsFrame.controls.recapButton, 196, 8, -6, "subtle")
 
   settingsFrame.controls.cycleScaleButton = createButton(graphSection.content, 0, 0, 116, "Cycle Scale", function()
     if NS.CycleGraphScaleMode then
@@ -348,12 +380,9 @@ function NS.InitSettingsPanel(parent)
     end
   end)
   pvpGrid:Place(settingsFrame.controls.goalOffButton, 5, 1, 10)
-  settingsFrame.controls.pvpGoalLabel = pvpSection.content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  settingsFrame.controls.pvpGoalLabel:SetPoint("TOPLEFT", pvpSection.content, "TOPLEFT", 0, -38)
+  settingsFrame.controls.pvpGoalLabel = createBodyLabel(pvpSection.content, 284, "subtle")
+  settingsFrame.controls.pvpGoalLabel:SetPoint("TOPLEFT", pvpSection.content, "TOPLEFT", 0, -34)
   settingsFrame.controls.pvpGoalLabel:SetText("Custom Honor goal")
-  if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(settingsFrame.controls.pvpGoalLabel, "subtle")
-  end
   settingsFrame.controls.pvpGoal = createEditBox(pvpSection.content, 0, 0, 120, function(text)
     if NS.SetPvpGoal then
       local ok, result = NS.SetPvpGoal(text)
@@ -383,14 +412,8 @@ function NS.InitSettingsPanel(parent)
     end
   end, "Print a local recap after battleground exit once the grace window closes.")
   pvpGrid:Place(settingsFrame.controls.pvpRecap, 1, 6)
-  settingsFrame.controls.pvpInfo = pvpSection.content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", pvpSection.content, "TOPLEFT", 0, -174)
-  settingsFrame.controls.pvpInfo:SetWidth(284)
-  settingsFrame.controls.pvpInfo:SetJustifyH("LEFT")
-  settingsFrame.controls.pvpInfo:SetText("")
-  if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(settingsFrame.controls.pvpInfo, "subtle")
-  end
+  settingsFrame.controls.pvpInfo = createBodyLabel(pvpSection.content, 284, "subtle")
+  settingsFrame.controls.pvpInfo:SetPoint("TOPLEFT", pvpSection.content, "TOPLEFT", 0, -148)
 
   settingsFrame.controls.gotoLive = createButton(dataSection.content, 0, 0, 72, "Live", function()
     if NS.ShowMainWindow then
@@ -428,13 +451,8 @@ function NS.InitSettingsPanel(parent)
     end
   end)
   dataGrid:Place(settingsFrame.controls.keep50Button, 5, 2, 4)
-  settingsFrame.controls.keepValue = dataSection.content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", dataSection.content, "TOPLEFT", 0, -70)
-  settingsFrame.controls.keepValue:SetWidth(284)
-  settingsFrame.controls.keepValue:SetText("")
-  if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(settingsFrame.controls.keepValue, "subtle")
-  end
+  settingsFrame.controls.keepValue = createBodyLabel(dataSection.content, 284, "subtle")
+  settingsFrame.controls.keepValue:SetPoint("TOPLEFT", dataSection.content, "TOPLEFT", 0, -60)
 
   NS.CreateConfirmButton(settingsFrame, 16, 14, 140, "Reset Session", "Confirm Reset", function()
     if NS.ResetSession then
@@ -451,7 +469,7 @@ function NS.InitSettingsPanel(parent)
 
   local footer = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   footer:SetPoint("BOTTOMRIGHT", -16, 12)
-  footer:SetText("Settings hub")
+  footer:SetText("Settings")
   if NS.UI and NS.UI.ApplyTextStyle then
     NS.UI.ApplyTextStyle(footer, "subtle")
   end
@@ -476,12 +494,12 @@ function NS.InitSettingsPanel(parent)
     self.controls.pvpGoal:SetText(customGoalText)
 
     local modeText = (DingTimerDB.mode == "ttl") and "TTL only" or "Full output"
-    self.controls.modeValue:SetText("Mode: " .. modeText)
-    self.controls.windowValue:SetText("Window: " .. NS.fmtTime(DingTimerDB.windowSeconds or 600))
+    self.controls.modeValue:SetText(modeText)
+    self.controls.windowValue:SetText(NS.fmtTime(DingTimerDB.windowSeconds or 600))
 
-    self.controls.goalValue:SetText("Goal: " .. tostring(coach.goal))
+    self.controls.goalValue:SetText("Goal " .. tostring(coach.goal))
     self.controls.coachInfo:SetText(string.format(
-      "Idle after %ss  |  Pace drop threshold %s%%  |  Alert cooldown %ss",
+      "Idle %ss  |  Pace drop %s%%  |  Cooldown %ss",
       tostring(coach.idleSeconds),
       tostring(coach.paceDropPct),
       tostring(coach.alertCooldownSeconds)
@@ -492,37 +510,12 @@ function NS.InitSettingsPanel(parent)
     self.controls.graphMaxValue:SetText("Fixed max: " .. NS.FormatNumber(DingTimerDB.graphFixedMaxXPH or 100000))
     self.controls.graphZoomValue:SetText("Zoom: " .. tostring(math.floor((tonumber(DingTimerDB.graphWindowSeconds) or 300) / 60)) .. "m")
     self.controls.pvpInfo:SetText(string.format(
-      "Mode: %s  |  Goal: %s  |  History: %d PvP sessions\nUse '/ding pvp goal <honor>' to set a custom absolute Honor goal.",
+      "Mode: %s  |  Goal: %s  |  History: %d sessions\n/ding pvp goal <honor> sets a custom target.",
       (NS.IsPvpMode and NS.IsPvpMode()) and "PvP" or "Leveling",
       (NS.GetPvpGoalLabel and NS.GetPvpGoalLabel()) or "Cap",
       tonumber(pvp.keepSessions) or 30
     ))
-    self.controls.keepValue:SetText("History retention: " .. tostring((DingTimerDB.xp and DingTimerDB.xp.keepSessions) or 30) .. " runs")
-
-    if self.summaryCards and NS.UI and NS.UI.SetMetricCard then
-      NS.UI.SetMetricCard(
-        self.summaryCards.output,
-        modeText,
-        "Window " .. NS.fmtTime(DingTimerDB.windowSeconds or 600)
-      )
-      NS.UI.SetMetricCard(
-        self.summaryCards.hud,
-        DingTimerDB.float and "Shown" or "Hidden",
-        (DingTimerDB.floatLocked and "Locked" or "Unlocked")
-          .. "  |  "
-          .. ((DingTimerDB.minimapHidden and "Minimap hidden") or "Minimap shown")
-      )
-      NS.UI.SetMetricCard(
-        self.summaryCards.graph,
-        NS.GetGraphScaleModeLabel(scaleMode, true),
-        "Zoom " .. tostring(math.floor((tonumber(DingTimerDB.graphWindowSeconds) or 300) / 60)) .. "m"
-      )
-      NS.UI.SetMetricCard(
-        self.summaryCards.pvp,
-        (NS.IsPvpMode and NS.IsPvpMode()) and "PvP" or "Leveling",
-        "Goal " .. ((NS.GetPvpGoalLabel and NS.GetPvpGoalLabel()) or "Cap")
-      )
-    end
+    self.controls.keepValue:SetText("Keep " .. tostring((DingTimerDB.xp and DingTimerDB.xp.keepSessions) or 30) .. " runs per character")
   end
 
   settingsFrame:SetScript("OnShow", function(self)
