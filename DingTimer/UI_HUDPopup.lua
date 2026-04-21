@@ -1,10 +1,19 @@
 local _, NS = ...
 
 ---@class DingTimerHUDPopup
+---@field ClearAllPoints fun(self: DingTimerHUDPopup)
+---@field SetPoint fun(self: DingTimerHUDPopup, point: string, relativeTo: any, relativePoint: string, xOfs: number, yOfs: number)
+---@field SetSize fun(self: DingTimerHUDPopup, width: number, height: number)
+---@field EnableMouse fun(self: DingTimerHUDPopup, enabled: boolean)
+---@field SetClampedToScreen fun(self: DingTimerHUDPopup, clamped: boolean)
+---@field SetScript fun(self: DingTimerHUDPopup, scriptName: string, handler: function)
+---@field GetName fun(self: DingTimerHUDPopup): string
 ---@field Refresh fun(self: DingTimerHUDPopup)
 ---@field Show fun(self: DingTimerHUDPopup)
 ---@field Hide fun(self: DingTimerHUDPopup)
 ---@field IsShown fun(self: DingTimerHUDPopup): boolean
+---@field controls table
+---@field labels table
 
 ---@type DingTimerHUDPopup?
 local popupFrame = nil
@@ -82,11 +91,20 @@ function NS.InitHUDPopup()
   end
 
   popupFrame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate")
+  ---@cast popupFrame DingTimerHUDPopup
   popupFrame:SetSize(248, 204)
   popupFrame:EnableMouse(true)
   popupFrame:SetClampedToScreen(true)
   if NS.ApplyThemeToFrame then
     NS.ApplyThemeToFrame(popupFrame, true)
+    -- The compact HUD popup does not have a header, so the shared
+    -- top accent/glow reads as a stray teal block here.
+    if popupFrame._dingAccent and popupFrame._dingAccent.Hide then
+      popupFrame._dingAccent:Hide()
+    end
+    if popupFrame._dingGlow and popupFrame._dingGlow.Hide then
+      popupFrame._dingGlow:Hide()
+    end
   end
 
   popupFrame.controls = {}

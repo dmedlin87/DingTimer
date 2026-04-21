@@ -1,10 +1,15 @@
 dofile("tests/mocks.lua")
 
+---@class TestEventFrame
+---@field GetScript fun(self: TestEventFrame, scriptName: string): function?
+
+---@type TestEventFrame?
 local eventFrame = nil
 local baseCreateFrame = CreateFrame
 CreateFrame = function(frameType, name, parent, template)
   local frame = baseCreateFrame(frameType, name, parent, template)
   if not name and not eventFrame then
+    ---@cast frame TestEventFrame
     eventFrame = frame
   end
   return frame
@@ -36,11 +41,14 @@ InCombatLockdown = function()
 end
 
 assert_true(eventFrame ~= nil, "event frame should be created")
-local onEvent = eventFrame:GetScript("OnEvent")
+local frame = eventFrame
+---@cast frame TestEventFrame
+local onEvent = frame:GetScript("OnEvent")
 assert_true(onEvent ~= nil, "event frame should register an OnEvent handler")
 
-onEvent(eventFrame, "ADDON_LOADED", "DingTimer")
-onEvent(eventFrame, "PLAYER_LOGIN")
+---@cast onEvent fun(self: TestEventFrame, event: string, ...: any)
+onEvent(frame, "ADDON_LOADED", "DingTimer")
+onEvent(frame, "PLAYER_LOGIN")
 
 local floatFrame = NS.GetFloatFrame()
 assert_true(floatFrame ~= nil, "HUD frame should exist after login")

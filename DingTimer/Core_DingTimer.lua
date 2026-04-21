@@ -11,11 +11,32 @@ local string_format = string.format
 ---@class DingTimerTextRegion
 ---@field SetText fun(self: DingTimerTextRegion, text: string)
 
+---@class DingTimerTexture
+---@field SetWidth fun(self: DingTimerTexture, width: number)
+---@field GetWidth fun(self: DingTimerTexture): number
+---@field SetAlpha fun(self: DingTimerTexture, alpha: number)
+---@field GetAlpha fun(self: DingTimerTexture): number
+---@field Show fun(self: DingTimerTexture)
+---@field Hide fun(self: DingTimerTexture)
+---@field IsShown fun(self: DingTimerTexture): boolean
+---@field ClearAllPoints fun(self: DingTimerTexture)
+---@field SetPoint fun(self: DingTimerTexture, point: string, relativeTo: any, relativePoint: string, xOfs: number, yOfs: number)
+
 ---@class DingTimerFloatFrame
 ---@field Show fun(self: DingTimerFloatFrame)
 ---@field Hide fun(self: DingTimerFloatFrame)
 ---@field titleText DingTimerTextRegion?
 ---@field subText DingTimerTextRegion?
+---@field progressBar Frame?
+---@field progressFill DingTimerTexture?
+---@field progressSheen DingTimerTexture?
+---@field progressPulse DingTimerTexture?
+---@field progressSpark DingTimerTexture?
+---@field progressBarWidth number?
+---@field _displayedProgress number?
+---@field _targetProgress number?
+---@field _progressAnim table?
+---@field _gainPulse table?
 
 NS.state = {
   sessionStartTime = 0,
@@ -41,6 +62,14 @@ local tickCache = {
   snapshot = nil,
 }
 
+local HUD_WIDTH = 308
+local HUD_HEIGHT = 66
+local HUD_BAR_WIDTH = 276
+local HUD_BAR_HEIGHT = 14
+local HUD_PROGRESS_ANIM_DURATION = 0.28
+local HUD_GAIN_PULSE_DURATION = 0.65
+local HUD_PROGRESS_EPSILON = 0.0005
+
 local function anchorFloatToDefault(frame)
   if not frame then
     return
@@ -48,6 +77,213 @@ local function anchorFloatToDefault(frame)
 
   frame:ClearAllPoints()
   frame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
+end
+
+local function clampProgress(value)
+  value = tonumber(value) or 0
+  if value < 0 then
+    return 0
+  end
+  if value > 1 then
+    return 1
+  end
+  return value
+end
+
+local function easeOutCubic(value)
+  local t = math_min(1, math_max(0, value or 0))
+  local inv = 1 - t
+  return 1 - (inv * inv * inv)
+end
+
+local function updateFloatBarVisual(frame, progress, pulseAlpha)
+  if not frame or not frame.progressBar or not frame.progressFill then
+    return
+  end
+
+  local fill = frame.progressFill
+  local sheen = frame.progressSheen
+  local pulse = frame.progressPulse
+  local spark = frame.progressSpark
+  local barWidth = frame.progressBarWidth or HUD_BAR_WIDTH
+
+  progress = clampProgress(progress)
+  pulseAlpha = tonumber(pulseAlpha) or 0
+
+  local fillWidth = math_floor((barWidth * progress) + 0.5)
+  if progress > 0 and fillWidth < 2 then
+    fillWidth = 2
+  end
+
+  if fillWidth > 0 then
+    fill:SetWidth(fillWidth)
+    fill:Show()
+    fill:SetColorTexture(0.16, 0.78, 0.92, 0.76 + (pulseAlpha * 0.09))
+
+    if sheen then
+      sheen:SetWidth(fillWidth)
+      sheen:SetColorTexture(0.94, 0.99, 1.0, 0.10 + (pulseAlpha * 0.12))
+      sheen:Show()
+    end
+  else
+    fill:SetWidth(0)
+    fill:Hide()
+    if sheen then
+      sheen:SetWidth(0)
+      sheen:Hide()
+    end
+  end
+
+  if pulse and fillWidth > 0 and pulseAlpha > 0 then
+    pulse:SetWidth(math_min(barWidth, fillWidth + 18))
+    pulse:SetAlpha(0.05 + (pulseAlpha * 0.26))
+    pulse:Show()
+  elseif pulse then
+    pulse:SetWidth(fillWidth)
+    pulse:SetAlpha(0)
+    pulse:Hide()
+  end
+
+  if spark and fillWidth > 0 then
+    spark:ClearAllPoints()
+    spark:SetPoint("CENTER", frame.progressBar, "LEFT", fillWidth, 0)
+    spark:SetAlpha(0.10 + (pulseAlpha * 0.6))
+    spark:Show()
+  elseif spark then
+    spark:SetAlpha(0)
+    spark:Hide()
+  end
+end
+
+local function animateFloatOnUpdate(self, elapsed)
+  local displayed = self._displayedProgress or 0
+  local pulseAlpha = 0
+
+  if self._progressAnim then
+    local animation = self._progressAnim
+    animation.elapsed = (animation.elapsed or 0) + elapsed
+
+    local t = 1
+    if (animation.duration or 0) > 0 then
+      t = math_min(animation.elapsed / animation.duration, 1)
+    end
+
+    displayed = animation.start + ((animation.target - animation.start) * easeOutCubic(t))
+    self._displayedProgress = displayed
+
+    if t >= 1 then
+      displayed = animation.target
+      self._displayedProgress = displayed
+      self._progressAnim = nil
+    end
+  else
+    displayed = self._targetProgress or displayed
+    self._displayedProgress = displayed
+  end
+
+  if self._gainPulse then
+    local pulse = self._gainPulse
+    pulse.elapsed = (pulse.elapsed or 0) + elapsed
+
+    local t = 1
+    if (pulse.duration or 0) > 0 then
+      t = math_min(pulse.elapsed / pulse.duration, 1)
+    end
+
+    local fade = 1 - t
+    pulseAlpha = fade * fade
+
+    if t >= 1 then
+      self._gainPulse = nil
+      pulseAlpha = 0
+    end
+  end
+
+  updateFloatBarVisual(self, displayed, pulseAlpha)
+
+  if not self._progressAnim and not self._gainPulse then
+    self:SetScript("OnUpdate", nil)
+  end
+end
+
+local function ensureFloatAnimation(frame)
+  if not frame then
+    return
+  end
+
+  local current = frame.GetScript and frame:GetScript("OnUpdate") or nil
+  if current ~= animateFloatOnUpdate then
+    frame:SetScript("OnUpdate", animateFloatOnUpdate)
+  end
+end
+
+local function setFloatProgress(frame, progress, animate)
+  if not frame or not frame.progressBar then
+    return
+  end
+
+  progress = clampProgress(progress)
+
+  if frame._displayedProgress == nil or frame._targetProgress == nil then
+    frame._displayedProgress = progress
+    frame._targetProgress = progress
+    frame._progressAnim = nil
+    updateFloatBarVisual(frame, progress, 0)
+    return
+  end
+
+  if math_abs(progress - (frame._targetProgress or 0)) < HUD_PROGRESS_EPSILON then
+    if not frame._progressAnim then
+      frame._displayedProgress = progress
+      frame._targetProgress = progress
+      updateFloatBarVisual(frame, progress, frame._gainPulse and 1 or 0)
+    end
+    return
+  end
+
+  frame._targetProgress = progress
+
+  if not animate or progress < (frame._displayedProgress or 0) then
+    frame._displayedProgress = progress
+    frame._progressAnim = nil
+    updateFloatBarVisual(frame, progress, frame._gainPulse and 1 or 0)
+    return
+  end
+
+  frame._progressAnim = {
+    start = frame._displayedProgress or progress,
+    target = progress,
+    elapsed = 0,
+    duration = HUD_PROGRESS_ANIM_DURATION,
+  }
+  updateFloatBarVisual(frame, frame._displayedProgress or progress, frame._gainPulse and 1 or 0)
+  ensureFloatAnimation(frame)
+end
+
+local function triggerFloatGainPulse(progress)
+  local frame = floatFrame
+  if not frame or not frame.progressBar or not (frame.IsShown and frame:IsShown()) then
+    return
+  end
+
+  progress = clampProgress(progress)
+
+  if frame._displayedProgress == nil then
+    frame._displayedProgress = progress
+    frame._targetProgress = progress
+  elseif progress < frame._displayedProgress then
+    frame._displayedProgress = progress
+    frame._targetProgress = progress
+    frame._progressAnim = nil
+  end
+
+  frame._gainPulse = {
+    elapsed = 0,
+    duration = HUD_GAIN_PULSE_DURATION,
+  }
+
+  updateFloatBarVisual(frame, frame._displayedProgress or progress, 1)
+  ensureFloatAnimation(frame)
 end
 
 local function getRollingWindowSeconds()
@@ -287,7 +523,7 @@ function NS.ensureFloat()
   end
 
   floatFrame = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
-  floatFrame:SetSize(292, 52)
+  floatFrame:SetSize(HUD_WIDTH, HUD_HEIGHT)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)
   floatFrame:EnableMouse(true)
@@ -296,6 +532,9 @@ function NS.ensureFloat()
   floatFrame:SetClampedToScreen(true)
   if NS.ApplyThemeToFrame then
     NS.ApplyThemeToFrame(floatFrame, true)
+  end
+  if floatFrame._dingAccent then
+    floatFrame._dingAccent:Hide()
   end
 
   floatFrame:SetScript("OnDragStart", function(self)
@@ -345,6 +584,13 @@ function NS.ensureFloat()
     GameTooltip:Hide()
   end)
 
+  floatFrame:SetScript("OnHide", function(self)
+    self._gainPulse = nil
+    self._progressAnim = nil
+    self:SetScript("OnUpdate", nil)
+    updateFloatBarVisual(self, self._targetProgress or self._displayedProgress or 0, 0)
+  end)
+
   if DingTimerDB.floatPosition then
     local pos = DingTimerDB.floatPosition
     floatFrame:ClearAllPoints()
@@ -353,21 +599,102 @@ function NS.ensureFloat()
     anchorFloatToDefault(floatFrame)
   end
 
+  local bar = CreateFrame("Frame", nil, floatFrame)
+  bar:SetSize(HUD_BAR_WIDTH, HUD_BAR_HEIGHT)
+  bar:SetPoint("TOP", floatFrame, "TOP", 0, -26)
+  floatFrame.progressBar = bar
+  floatFrame.progressBarWidth = HUD_BAR_WIDTH
+
+  local barShadow = bar:CreateTexture(nil, "BACKGROUND")
+  barShadow:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
+  barShadow:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
+  barShadow:SetColorTexture(0, 0, 0, 0.35)
+
+  local track = bar:CreateTexture(nil, "BACKGROUND")
+  track:SetAllPoints(bar)
+  track:SetColorTexture(0.03, 0.05, 0.08, 0.92)
+
+  local trackEdge = bar:CreateTexture(nil, "BORDER")
+  trackEdge:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
+  trackEdge:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 1, 1)
+  trackEdge:SetHeight(1)
+  trackEdge:SetColorTexture(0.34, 0.44, 0.52, 0.55)
+
+  local trackGlow = bar:CreateTexture(nil, "BORDER")
+  trackGlow:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+  trackGlow:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+  trackGlow:SetColorTexture(0.12, 0.24, 0.32, 0.22)
+
+  local fill = bar:CreateTexture(nil, "ARTWORK")
+  fill:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+  fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+  fill:SetWidth(0)
+  fill:SetColorTexture(0.16, 0.78, 0.92, 0.76)
+  fill:Hide()
+  floatFrame.progressFill = fill
+
+  local sheen = bar:CreateTexture(nil, "OVERLAY")
+  sheen:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, -1)
+  sheen:SetWidth(0)
+  sheen:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.42)))
+  sheen:SetColorTexture(0.94, 0.99, 1.0, 0.10)
+  sheen:Hide()
+  floatFrame.progressSheen = sheen
+
+  local fillShade = bar:CreateTexture(nil, "OVERLAY")
+  fillShade:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+  fillShade:SetWidth(HUD_BAR_WIDTH)
+  fillShade:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.4)))
+  fillShade:SetColorTexture(0.03, 0.08, 0.12, 0.18)
+
+  local pulse = bar:CreateTexture(nil, "OVERLAY")
+  pulse:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+  pulse:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+  pulse:SetWidth(0)
+  pulse:SetTexture("Interface\\Buttons\\WHITE8X8")
+  pulse:SetBlendMode("ADD")
+  pulse:SetVertexColor(0.78, 0.96, 1, 1)
+  pulse:SetAlpha(0)
+  pulse:Hide()
+  floatFrame.progressPulse = pulse
+
+  local spark = bar:CreateTexture(nil, "OVERLAY")
+  spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+  spark:SetBlendMode("ADD")
+  spark:SetSize(14, HUD_BAR_HEIGHT + 6)
+  spark:SetAlpha(0)
+  spark:Hide()
+  floatFrame.progressSpark = spark
+
   local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  title:SetPoint("TOP", floatFrame, "TOP", 0, -10)
-  title:SetJustifyH("CENTER")
+  title:SetPoint("TOP", floatFrame, "TOP", 0, -8)
+  if title.SetWidth then
+    title:SetWidth(HUD_BAR_WIDTH + 10)
+  end
   if NS.UI and NS.UI.ApplyTextStyle then
     NS.UI.ApplyTextStyle(title, "value")
   end
+  if title.SetTextColor then
+    title:SetTextColor(0.95, 0.98, 1.0)
+  end
+  title:SetJustifyH("CENTER")
   floatFrame.titleText = title
 
   local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  sub:SetPoint("TOP", title, "BOTTOM", 0, -3)
-  sub:SetJustifyH("CENTER")
+  sub:SetPoint("TOP", bar, "BOTTOM", 0, -8)
+  if sub.SetWidth then
+    sub:SetWidth(HUD_BAR_WIDTH + 16)
+  end
   if NS.UI and NS.UI.ApplyTextStyle then
     NS.UI.ApplyTextStyle(sub, "subtle")
   end
+  if sub.SetTextColor then
+    sub:SetTextColor(0.82, 0.88, 0.92)
+  end
+  sub:SetJustifyH("CENTER")
   floatFrame.subText = sub
+
+  updateFloatBarVisual(floatFrame, 0, 0)
 
   floatFrame:Hide()
 end
@@ -432,6 +759,8 @@ function NS.RefreshFloatingHUD(now)
     return
   end
 
+  setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
+
   local header = NS.fmtTime(snapshot.ttl) .. " to level"
   local paceParts = {}
 
@@ -483,6 +812,7 @@ function NS.onXPUpdate()
     NS.state.lastXPGain = delta
     events[#events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
+    triggerFloatGainPulse((maxXP > 0) and (xp / maxXP) or 0)
   end
 
   NS.InvalidateTickCache()

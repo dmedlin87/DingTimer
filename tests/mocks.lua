@@ -174,21 +174,45 @@ local function newFontString()
   return fs
 end
 
-local function newTexture()
-  local tx = {}
-  tx.SetTexture = function() end
-  tx.SetSize = function() end
-  tx.SetPoint = function() end
-  tx.ClearAllPoints = function() end
-  tx.SetAllPoints = function() end
-  tx.SetColorTexture = function() end
-  tx.SetVertexColor = function() end
-  tx.SetAlpha = function() end
-  tx.SetHeight = function() end
-  tx.SetWidth = function() end
-  tx.SetTexCoord = function() end
-  tx.Hide = function() end
-  tx.Show = function() end
+local function newTexture(parent)
+  local tx = {
+    _parent = parent,
+    _shown = true,
+    _alpha = 1,
+    _width = 0,
+    _height = 0,
+    _point = { "CENTER", parent, "CENTER", 0, 0 },
+  }
+  tx.GetParent = function(self) return self._parent end
+  tx.SetTexture = function(self, texture) self._texture = texture end
+  tx.GetTexture = function(self) return self._texture end
+  tx.SetSize = function(self, width, height)
+    self._width = width or self._width
+    self._height = height or self._height
+  end
+  tx.SetPoint = function(self, point, relativeTo, relativePoint, xOfs, yOfs)
+    self._point = { point, relativeTo, relativePoint, xOfs or 0, yOfs or 0 }
+  end
+  tx.GetPoint = function(self)
+    return self._point[1], self._point[2], self._point[3], self._point[4], self._point[5]
+  end
+  tx.ClearAllPoints = function(self)
+    self._point = { "CENTER", self._parent, "CENTER", 0, 0 }
+  end
+  tx.SetAllPoints = function(self, relativeTo) self._allPoints = relativeTo or true end
+  tx.SetColorTexture = function(self, r, g, b, a) self._color = { r, g, b, a } end
+  tx.SetVertexColor = function(self, r, g, b, a) self._vertexColor = { r, g, b, a } end
+  tx.SetAlpha = function(self, alpha) self._alpha = alpha end
+  tx.GetAlpha = function(self) return self._alpha or 1 end
+  tx.SetHeight = function(self, height) self._height = height end
+  tx.GetHeight = function(self) return self._height end
+  tx.SetWidth = function(self, width) self._width = width end
+  tx.GetWidth = function(self) return self._width end
+  tx.SetBlendMode = function(self, mode) self._blendMode = mode end
+  tx.SetTexCoord = function(self, ...) self._texCoord = { ... } end
+  tx.Hide = function(self) self._shown = false end
+  tx.Show = function(self) self._shown = true end
+  tx.IsShown = function(self) return self._shown end
   return tx
 end
 
@@ -203,9 +227,10 @@ local function newLine()
   return ln
 end
 
-local function newFrame(name)
+local function newFrame(name, parent)
   local frame = {
     _name = name,
+    _parent = parent,
     _shown = false,
     _scripts = {},
     _width = 320,
@@ -215,6 +240,7 @@ local function newFrame(name)
   }
 
   frame.GetName = function(self) return self._name end
+  frame.GetParent = function(self) return self._parent end
   frame.SetSize = function(self, w, h) self._width = w; self._height = h end
   frame.SetWidth = function(self, w) self._width = w end
   frame.SetHeight = function(self, h) self._height = h end
@@ -286,14 +312,21 @@ local function newFrame(name)
   frame.IsShown = function(self)
     return self._shown
   end
+  frame.SetShown = function(self, shown)
+    if shown then
+      self:Show()
+    else
+      self:Hide()
+    end
+  end
   frame.CreateFontString = function() return newFontString() end
-  frame.CreateTexture = function() return newTexture() end
+  frame.CreateTexture = function(self) return newTexture(self) end
   frame.CreateLine = function() return newLine() end
   return frame
 end
 
-function CreateFrame(_, name)
-  local frame = newFrame(name)
+function CreateFrame(_, name, parent)
+  local frame = newFrame(name, parent)
   if type(name) == "string" and name ~= "" then
     _G[name] = frame
   end
