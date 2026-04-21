@@ -69,6 +69,7 @@ assert_near(snapshot.currentXph, 36000, 0.1, "current pace should keep the immed
 assert_near(snapshot.ttl, 60, 0.1, "TTL should be derived from the same raw pace")
 assert_eq(100, snapshot.lastXPGain, "snapshot should expose the most recent gain")
 assert_eq(600, snapshot.remainingXP, "snapshot should expose the current XP needed to level")
+assert_eq(6, snapshot.gainsToLevel, "snapshot should estimate gains remaining based on the most recent gain")
 
 -- Test 5: Level Up (XP Rollover)
 SetXP(300, 1000)

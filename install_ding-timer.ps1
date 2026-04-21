@@ -8,7 +8,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("retail", "classic", "mop", "mop_classic", "classic_era", "ptr")]
-    [string]$Flavor = "retail",
+    [string]$Flavor = "mop",
 
     [Parameter(Mandatory = $false)]
     [switch]$PauseOnExit

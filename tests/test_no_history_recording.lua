@@ -1,10 +1,15 @@
 dofile("tests/mocks.lua")
 
+---@class TestEventFrame
+---@field GetScript fun(self: TestEventFrame, scriptName: string): function?
+
+---@type TestEventFrame?
 local eventFrame = nil
 local baseCreateFrame = CreateFrame
 CreateFrame = function(frameType, name, parent, template)
   local frame = baseCreateFrame(frameType, name, parent, template)
   if not name and not eventFrame then
+    ---@cast frame TestEventFrame
     eventFrame = frame
   end
   return frame
@@ -51,15 +56,19 @@ it("reset remains a pure runtime reset without writing history", function()
 end)
 
 it("level-up and logout no longer append history records", function()
+  local frame = eventFrame
   assert_true(eventFrame ~= nil, "event frame should be created")
+  ---@cast frame TestEventFrame
 
-  local onEvent = eventFrame:GetScript("OnEvent")
+  local onEvent = frame:GetScript("OnEvent")
+  assert_true(onEvent ~= nil, "event frame should register an OnEvent handler")
   SetTime(40)
   SetXP(300, 1000)
   NS.onXPUpdate()
 
-  onEvent(eventFrame, "PLAYER_LEVEL_UP", 2)
-  onEvent(eventFrame, "PLAYER_LOGOUT")
+  ---@cast onEvent fun(self: TestEventFrame, event: string, ...: any)
+  onEvent(frame, "PLAYER_LEVEL_UP", 2)
+  onEvent(frame, "PLAYER_LOGOUT")
 
   assert_eq(0, recordCalls, "level-up and logout should not write history in the HUD-first build")
 end)

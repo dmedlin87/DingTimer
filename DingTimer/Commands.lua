@@ -19,7 +19,7 @@ local function showHelp()
   NS.chat("  " .. NS.C.val .. "/ding on|off" .. NS.C.r .. " - Toggle chat output")
   NS.chat("  " .. NS.C.val .. "/ding mode full|ttl" .. NS.C.r .. " - Change chat output mode")
   NS.chat("  " .. NS.C.val .. "/ding window <seconds>" .. NS.C.r .. " - Set the rolling window")
-  NS.chat("  " .. NS.C.val .. "/ding float on|off|lock|unlock" .. NS.C.r .. " - Manage the HUD")
+  NS.chat("  " .. NS.C.val .. "/ding float on|off|lock|unlock|reset" .. NS.C.r .. " - Manage the HUD")
   NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session")
   NS.chat("  Advanced dashboard commands from prior versions now redirect to /ding settings.")
 end
@@ -92,7 +92,14 @@ ROOT_COMMANDS.float = function(arg)
     chat("floatLocked = " .. arg)
     return
   end
-  chat("Unknown float command. Use 'on', 'off', 'lock', or 'unlock'.")
+  if arg == "reset" then
+    if NS.ResetFloatHUD then
+      NS.ResetFloatHUD()
+    end
+    chat("float reset to center and enabled.")
+    return
+  end
+  chat("Unknown float command. Use 'on', 'off', 'lock', 'unlock', or 'reset'.")
 end
 
 ROOT_COMMANDS.reset = function()

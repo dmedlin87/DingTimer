@@ -49,6 +49,14 @@ The addon centers on one floating HUD and one tiny settings popup. The old tabbe
 
 The bundled PowerShell installer still supports both Retail and MoP Classic style client roots. You can pass either the client root or the direct `Interface\AddOns` path.
 
+Examples:
+
+```powershell
+.\install_ding-timer.ps1
+.\install_ding-timer.ps1 -Flavor retail
+.\install_ding-timer.ps1 -WowPath "C:\Program Files (x86)\World of Warcraft\_classic_"
+```
+
 ## Quick Start
 
 - HUD is on by default for new installs.
@@ -75,6 +83,7 @@ All commands work with either `/ding` or `/dt`.
 | `/ding float off` | Hide the HUD |
 | `/ding float lock` | Lock the HUD in place |
 | `/ding float unlock` | Allow the HUD to be dragged |
+| `/ding float reset` | Re-center and show the HUD |
 | `/ding reset` | Reset the current session |
 
 ### Compatibility Note
@@ -95,7 +104,7 @@ The floating HUD has two lines:
 ```
 
 - Top line: current `TTL`
-- Bottom line: rolling `XP/hr`, the most recent XP gain, and XP still needed
+- Bottom line: rolling `XP/hr`, the most recent XP gain with an estimated number of same-size gains left in parentheses, and XP still needed
 - When the rolling window is empty, the HUD shows `No XP in <window>`
 
 The HUD hides automatically in combat unless `Show in combat` is enabled in the popup.

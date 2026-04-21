@@ -31,6 +31,31 @@ it("opens the popup from /ding settings without any main-window dependency", fun
   assert_true(DingTimerMainWindow == nil, "HUD-first build should not create the legacy main window")
 end)
 
+it("recenters and enables the HUD from /ding float reset", function()
+  DingTimerDB.float = false
+  DingTimerDB.floatPosition = {
+    point = "TOPLEFT",
+    relativePoint = "TOPLEFT",
+    xOfs = -9999,
+    yOfs = 9999,
+  }
+
+  SlashCmdList.DINGTIMER("float reset")
+
+  assert_true(DingTimerDB.float, "float reset should enable the HUD")
+  assert_eq(nil, DingTimerDB.floatPosition, "float reset should clear the stored HUD position")
+
+  local floatFrame = NS.GetFloatFrame()
+  assert_true(floatFrame ~= nil, "float reset should ensure the HUD frame exists")
+  local point, relativeTo, relativePoint, xOfs, yOfs = floatFrame:GetPoint()
+  assert_eq("CENTER", point, "float reset should recenter the HUD")
+  assert_eq(UIParent, relativeTo, "float reset should anchor to UIParent")
+  assert_eq("CENTER", relativePoint, "float reset should use the default relative point")
+  assert_eq(0, xOfs, "float reset should restore the default x offset")
+  assert_eq(220, yOfs, "float reset should restore the default y offset")
+  assert_true(floatFrame:IsShown(), "float reset should reveal the HUD")
+end)
+
 it("prints the compatibility message for removed dashboard commands", function()
   local removed = {
     "live",

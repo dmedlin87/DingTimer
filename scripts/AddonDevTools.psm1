@@ -313,6 +313,35 @@ function Get-ProjectPtrWowPath {
     return $configured
 }
 
+function Get-ProjectWowPathForFlavor {
+    param(
+        [Parameter(Mandatory)]
+        [AddonProject]$Project,
+
+        [Parameter(Mandatory)]
+        [string]$Flavor
+    )
+
+    $normalizedFlavor = Normalize-WowFlavor -Flavor $Flavor
+    if ($normalizedFlavor -eq "ptr") {
+        return Get-ProjectPtrWowPath -Project $Project
+    }
+
+    $defaultWowPath = Get-ProjectDefaultWowPath -Project $Project
+    if ($normalizedFlavor -eq "retail") {
+        return $defaultWowPath
+    }
+
+    $resolvedDefaultPath = [System.IO.Path]::GetFullPath($defaultWowPath)
+    $trimmedDefaultPath = $resolvedDefaultPath.TrimEnd('\', '/')
+    $parentPath = Split-Path -Parent $trimmedDefaultPath
+    if ([string]::IsNullOrWhiteSpace($parentPath)) {
+        return $defaultWowPath
+    }
+
+    return Join-Path $parentPath (Get-FlavorDirectoryName -Flavor $normalizedFlavor)
+}
+
 function Get-ProjectTargetSupport {
     param(
         [Parameter(Mandatory)]
@@ -1333,7 +1362,7 @@ function Invoke-AddonAction {
 
         [string]$WowPath,
 
-        [string]$Flavor = "retail",
+        [string]$Flavor = "mop",
 
         [switch]$PauseOnExit,
 
@@ -1356,12 +1385,7 @@ function Invoke-AddonAction {
         Assert-AddonProjectStructure -Project $project -Action $normalizedAction
 
         if (-not $PSBoundParameters.ContainsKey("WowPath")) {
-            if ($normalizedFlavor -eq "ptr") {
-                $WowPath = Get-ProjectPtrWowPath -Project $project
-            }
-            else {
-                $WowPath = Get-ProjectDefaultWowPath -Project $project
-            }
+            $WowPath = Get-ProjectWowPathForFlavor -Project $project -Flavor $normalizedFlavor
         }
 
         $addonName = Get-ProjectDisplayName -Project $project
@@ -1689,7 +1713,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("retail", "classic", "mop", "mop_classic", "classic_era", "ptr")]
-    [string]$Flavor = "retail",
+    [string]$Flavor = "mop",
 
     [Parameter(Mandatory = $false)]
     [switch]$PauseOnExit

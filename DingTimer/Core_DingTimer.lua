@@ -1,11 +1,21 @@
 local _, NS = ...
 
 local math_abs = math.abs
+local math_ceil = math.ceil
 local math_floor = math.floor
 local math_huge = math.huge
 local math_max = math.max
 local math_min = math.min
 local string_format = string.format
+
+---@class DingTimerTextRegion
+---@field SetText fun(self: DingTimerTextRegion, text: string)
+
+---@class DingTimerFloatFrame
+---@field Show fun(self: DingTimerFloatFrame)
+---@field Hide fun(self: DingTimerFloatFrame)
+---@field titleText DingTimerTextRegion?
+---@field subText DingTimerTextRegion?
 
 NS.state = {
   sessionStartTime = 0,
@@ -23,12 +33,22 @@ NS.state = {
   windowMoney = 0,
 }
 
+---@type DingTimerFloatFrame?
 local floatFrame = nil
 local heartbeatTicker = nil
 local tickCache = {
   now = 0,
   snapshot = nil,
 }
+
+local function anchorFloatToDefault(frame)
+  if not frame then
+    return
+  end
+
+  frame:ClearAllPoints()
+  frame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
+end
 
 local function getRollingWindowSeconds()
   return tonumber(DingTimerDB and DingTimerDB.windowSeconds) or 600
@@ -201,6 +221,12 @@ function NS.GetSessionSnapshot(now)
   local moneyPerHour = moneyRate.rawXph
   local remainingXP = math_max(0, maxXP - xp)
   local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
+  local gainsToLevel = nil
+  if lastXPGain and lastXPGain > 0 and remainingXP > 0 then
+    gainsToLevel = math_ceil(remainingXP / lastXPGain)
+  elseif remainingXP == 0 then
+    gainsToLevel = 0
+  end
 
   local snapshot = {
     now = now,
@@ -213,6 +239,7 @@ function NS.GetSessionSnapshot(now)
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
     lastXPGain = lastXPGain,
+    gainsToLevel = gainsToLevel,
     currentXph = currentXph,
     rawCurrentXph = currentXph,
     sessionXph = sessionXph,
@@ -259,7 +286,7 @@ function NS.ensureFloat()
     return
   end
 
-  floatFrame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  floatFrame = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
   floatFrame:SetSize(292, 52)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)
@@ -322,6 +349,8 @@ function NS.ensureFloat()
     local pos = DingTimerDB.floatPosition
     floatFrame:ClearAllPoints()
     floatFrame:SetPoint(pos.point, UIParent, pos.relativePoint or pos.point, pos.xOfs or 0, pos.yOfs or 0)
+  else
+    anchorFloatToDefault(floatFrame)
   end
 
   local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -343,22 +372,42 @@ function NS.ensureFloat()
   floatFrame:Hide()
 end
 
+function NS.ResetFloatPosition()
+  NS.ensureFloat()
+  if not floatFrame then
+    return false
+  end
+
+  DingTimerDB.floatPosition = nil
+  anchorFloatToDefault(floatFrame)
+  return true
+end
+
+local function shouldShowFloat()
+  if not DingTimerDB or not DingTimerDB.float then
+    return false
+  end
+
+  if InCombatLockdown() and not DingTimerDB.floatShowInCombat then
+    return false
+  end
+
+  return true
+end
+
 function NS.setFloatVisible(on)
-  if on then
+  if on and shouldShowFloat() then
     NS.ensureFloat()
-    local visibilityDriver = (DingTimerDB and DingTimerDB.floatShowInCombat) and "show" or "[combat] hide; show"
-    RegisterStateDriver(floatFrame, "visibility", visibilityDriver)
-    if not InCombatLockdown() or (DingTimerDB and DingTimerDB.floatShowInCombat) then
-      floatFrame:Show()
+    local frame = floatFrame
+    if not frame then
+      return
     end
+    frame:Show()
     if NS.RefreshFloatingHUD then
       NS.RefreshFloatingHUD()
     end
   elseif floatFrame then
-    UnregisterStateDriver(floatFrame, "visibility")
-    if not InCombatLockdown() then
-      floatFrame:Hide()
-    end
+    floatFrame:Hide()
   end
 
   if NS.RefreshHUDPopup then
@@ -372,6 +421,10 @@ function NS.RefreshFloatingHUD(now)
   end
 
   NS.ensureFloat()
+  local frame = floatFrame
+  if not frame then
+    return
+  end
   now = now or GetTime()
 
   local snapshot = NS.GetSessionSnapshot(now)
@@ -389,13 +442,23 @@ function NS.RefreshFloatingHUD(now)
   end
 
   if snapshot.lastXPGain and snapshot.lastXPGain > 0 then
-    paceParts[#paceParts + 1] = "Last +" .. NS.FormatNumber(snapshot.lastXPGain)
+    local lastGainText = "Last +" .. NS.FormatNumber(snapshot.lastXPGain)
+    if snapshot.gainsToLevel ~= nil then
+      lastGainText = lastGainText .. " (" .. NS.FormatNumber(snapshot.gainsToLevel) .. ")"
+    end
+    paceParts[#paceParts + 1] = lastGainText
   end
 
   paceParts[#paceParts + 1] = "Need " .. NS.FormatNumber(snapshot.remainingXP or 0)
 
-  floatFrame.titleText:SetText(header)
-  floatFrame.subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
+  local titleText = frame.titleText
+  local subText = frame.subText
+  if not titleText or not subText then
+    return
+  end
+
+  titleText:SetText(header)
+  subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
 end
 
 function NS.onXPUpdate()
@@ -425,6 +488,10 @@ function NS.onXPUpdate()
   NS.InvalidateTickCache()
 
   local snapshot = NS.GetSessionSnapshot(now)
+  if not snapshot then
+    NS.RunHeartbeat(now)
+    return
+  end
   if DingTimerDB.enabled and delta >= getMinXPDeltaToPrint() then
     local header = NS.C.base .. "[DING]" .. NS.C.r .. " "
     local ttl = snapshot.ttl or math_huge

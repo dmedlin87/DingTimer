@@ -48,6 +48,18 @@ function NS.SetFloatShowInCombat(showInCombat)
   return DingTimerDB.floatShowInCombat
 end
 
+function NS.ResetFloatHUD()
+  DingTimerDB.float = true
+  if NS.ResetFloatPosition then
+    NS.ResetFloatPosition()
+  end
+  if NS.setFloatVisible then
+    NS.setFloatVisible(true)
+  end
+  refreshSurfaces()
+  return true
+end
+
 function NS.OpenSettingsPopup()
   if NS.ShowHUDPopup then
     return NS.ShowHUDPopup()

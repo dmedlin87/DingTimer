@@ -1,20 +1,5 @@
 dofile("tests/mocks.lua")
 
----@class RegisteredDriverCall
----@field frame any
----@field state string
----@field value string
-
----@type RegisteredDriverCall?
-local registeredDriver = nil
-RegisterStateDriver = function(frame, state, value)
-  registeredDriver = {
-    frame = frame,
-    state = state,
-    value = value,
-  }
-end
-
 local NS = {
   C = { base = "", r = "" },
   ApplyThemeToFrame = function() end,
@@ -49,21 +34,27 @@ DingTimerDB = {
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 
 NS.setFloatVisible(true)
-assert_true(registeredDriver ~= nil, "RegisterStateDriver should be called")
-local firstDriver = registeredDriver
-if not firstDriver then
-  error("RegisterStateDriver should be called")
-end
-assert_eq(firstDriver.state, "visibility", "HUD should register the visibility state driver")
-assert_eq(firstDriver.value, "[combat] hide; show", "HUD should hide during combat by default")
+local floatFrame = NS.GetFloatFrame()
+assert_true(floatFrame ~= nil, "HUD should create a floating frame when shown")
+assert_true(floatFrame:IsShown(), "HUD should show out of combat by default")
 
 DingTimerDB.floatShowInCombat = true
 NS.setFloatVisible(true)
-assert_true(registeredDriver ~= nil, "RegisterStateDriver should be called")
-local secondDriver = registeredDriver
-if not secondDriver then
-  error("RegisterStateDriver should be called")
+assert_true(floatFrame:IsShown(), "HUD should stay visible when combat visibility is enabled")
+
+local baseInCombatLockdown = InCombatLockdown
+InCombatLockdown = function()
+  return true
 end
-assert_eq(secondDriver.value, "show", "HUD should stay visible during combat when enabled")
+
+DingTimerDB.floatShowInCombat = false
+NS.setFloatVisible(true)
+assert_false(floatFrame:IsShown(), "HUD should hide in combat when combat visibility is disabled")
+
+DingTimerDB.floatShowInCombat = true
+NS.setFloatVisible(true)
+assert_true(floatFrame:IsShown(), "HUD should show in combat when combat visibility is enabled")
+
+InCombatLockdown = baseInCombatLockdown
 
 print("HUD visibility toggle test passed!")

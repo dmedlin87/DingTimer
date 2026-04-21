@@ -11,6 +11,7 @@ safeRegisterEvent(frame, "ADDON_LOADED")
 safeRegisterEvent(frame, "PLAYER_LOGIN")
 safeRegisterEvent(frame, "PLAYER_XP_UPDATE")
 safeRegisterEvent(frame, "PLAYER_LEVEL_UP")
+safeRegisterEvent(frame, "PLAYER_REGEN_DISABLED")
 safeRegisterEvent(frame, "PLAYER_REGEN_ENABLED")
 safeRegisterEvent(frame, "PLAYER_MONEY")
 safeRegisterEvent(frame, "PLAYER_LOGOUT")
@@ -27,7 +28,7 @@ end
 local function onPlayerLogin()
   NS.resetXPState()
   NS.StartHeartbeatTicker()
-  if not InCombatLockdown() then
+  if NS.setFloatVisible then
     NS.setFloatVisible(DingTimerDB.float)
   end
   showStartupMessages()
@@ -107,6 +108,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
     end
 
     if event == "PLAYER_REGEN_ENABLED" then
+      NS.setFloatVisible(DingTimerDB.float)
+      return
+    end
+
+    if event == "PLAYER_REGEN_DISABLED" then
       NS.setFloatVisible(DingTimerDB.float)
       return
     end

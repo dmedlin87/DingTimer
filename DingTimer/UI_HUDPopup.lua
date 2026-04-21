@@ -1,5 +1,12 @@
 local _, NS = ...
 
+---@class DingTimerHUDPopup
+---@field Refresh fun(self: DingTimerHUDPopup)
+---@field Show fun(self: DingTimerHUDPopup)
+---@field Hide fun(self: DingTimerHUDPopup)
+---@field IsShown fun(self: DingTimerHUDPopup): boolean
+
+---@type DingTimerHUDPopup?
 local popupFrame = nil
 
 local function createCheckbox(parent, x, y, label, callback)
@@ -179,8 +186,12 @@ function NS.ShowHUDPopup()
   if not popupFrame then
     NS.InitHUDPopup()
   end
-  popupFrame:Refresh()
-  popupFrame:Show()
+  local frame = popupFrame
+  if not frame then
+    return false
+  end
+  frame:Refresh()
+  frame:Show()
   return true
 end
 

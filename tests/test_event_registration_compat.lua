@@ -41,16 +41,20 @@ local registered = eventFrame and eventFrame._registeredEvents or {}
 assert_true(#registered > 0, "core events should still be registered")
 
 local sawLogin = false
+local sawRegenDisabled = false
 local sawRemovedHonor = false
 for i = 1, #registered do
   if registered[i] == "PLAYER_LOGIN" then
     sawLogin = true
+  elseif registered[i] == "PLAYER_REGEN_DISABLED" then
+    sawRegenDisabled = true
   elseif registered[i] == "HONOR_XP_UPDATE" then
     sawRemovedHonor = true
   end
 end
 
 assert_true(sawLogin, "client-safe registration should keep core login handling active")
+assert_true(sawRegenDisabled, "HUD visibility should watch combat entry without secure state drivers")
 assert_false(sawRemovedHonor, "HUD-first build should not register removed PvP events")
 
 print("Event registration compatibility test passed!")
