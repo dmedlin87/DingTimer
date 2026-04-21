@@ -32,11 +32,17 @@ local string_format = string.format
 ---@field progressSheen DingTimerTexture?
 ---@field progressPulse DingTimerTexture?
 ---@field progressSpark DingTimerTexture?
+---@field progressCap DingTimerTexture?
+---@field _hudGlow DingTimerTexture?
+---@field _hudTopLine DingTimerTexture?
+---@field _hudBottomLine DingTimerTexture?
+---@field _hudLeftRail DingTimerTexture?
 ---@field progressBarWidth number?
 ---@field _displayedProgress number?
 ---@field _targetProgress number?
 ---@field _progressAnim table?
 ---@field _gainPulse table?
+---@field _hovered boolean?
 
 NS.state = {
   sessionStartTime = 0,
@@ -69,6 +75,49 @@ local HUD_BAR_HEIGHT = 14
 local HUD_PROGRESS_ANIM_DURATION = 0.28
 local HUD_GAIN_PULSE_DURATION = 0.65
 local HUD_PROGRESS_EPSILON = 0.0005
+local HUD_SUB_TEXT_MAX_CHARS = 64
+
+local function formatHUDNumber(value, compact)
+  local n = tonumber(value) or 0
+  if not compact or math_abs(n) < 100000 then
+    return NS.FormatNumber(n)
+  end
+
+  local sign = ""
+  if n < 0 then
+    sign = "-"
+    n = math_abs(n)
+  end
+
+  if n >= 1000000000 then
+    return sign .. string_format("%.1fB", n / 1000000000)
+  end
+  if n >= 1000000 then
+    return sign .. string_format("%.1fM", n / 1000000)
+  end
+  return sign .. string_format("%.0fK", n / 1000)
+end
+
+local function buildHUDPaceText(snapshot, compact)
+  local paceParts = {}
+
+  if snapshot.currentXph and snapshot.currentXph > 0 then
+    paceParts[#paceParts + 1] = formatHUDNumber(NS.Round(snapshot.currentXph), compact) .. " XP/hr"
+  else
+    paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
+  end
+
+  if snapshot.lastXPGain and snapshot.lastXPGain > 0 then
+    local lastGainText = "Last +" .. formatHUDNumber(snapshot.lastXPGain, compact)
+    if snapshot.gainsToLevel ~= nil then
+      lastGainText = lastGainText .. " (" .. formatHUDNumber(snapshot.gainsToLevel, compact) .. ")"
+    end
+    paceParts[#paceParts + 1] = lastGainText
+  end
+
+  paceParts[#paceParts + 1] = "Need " .. formatHUDNumber(snapshot.remainingXP or 0, compact)
+  return table.concat(paceParts, "  |  ")
+end
 
 local function anchorFloatToDefault(frame)
   if not frame then
@@ -105,14 +154,29 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   local sheen = frame.progressSheen
   local pulse = frame.progressPulse
   local spark = frame.progressSpark
+  local cap = frame.progressCap
   local barWidth = frame.progressBarWidth or HUD_BAR_WIDTH
 
   progress = clampProgress(progress)
   pulseAlpha = tonumber(pulseAlpha) or 0
+  local hoverAlpha = frame._hovered and 1 or 0
 
   local fillWidth = math_floor((barWidth * progress) + 0.5)
   if progress > 0 and fillWidth < 2 then
     fillWidth = 2
+  end
+
+  if frame._hudGlow then
+    frame._hudGlow:SetAlpha(0.12 + (pulseAlpha * 0.24) + (hoverAlpha * 0.12))
+  end
+  if frame._hudTopLine then
+    frame._hudTopLine:SetColorTexture(0.38, 0.88, 1.0, 0.42 + (pulseAlpha * 0.26) + (hoverAlpha * 0.16))
+  end
+  if frame._hudBottomLine then
+    frame._hudBottomLine:SetColorTexture(0.05, 0.12, 0.16, 0.58 + (hoverAlpha * 0.14))
+  end
+  if frame._hudLeftRail then
+    frame._hudLeftRail:SetColorTexture(0.24, 0.78, 0.92, 0.52 + (pulseAlpha * 0.22) + (hoverAlpha * 0.16))
   end
 
   if fillWidth > 0 then
@@ -147,11 +211,21 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   if spark and fillWidth > 0 then
     spark:ClearAllPoints()
     spark:SetPoint("CENTER", frame.progressBar, "LEFT", fillWidth, 0)
-    spark:SetAlpha(0.10 + (pulseAlpha * 0.6))
+    spark:SetAlpha(0.12 + (pulseAlpha * 0.58) + (hoverAlpha * 0.08))
     spark:Show()
   elseif spark then
     spark:SetAlpha(0)
     spark:Hide()
+  end
+
+  if cap and fillWidth > 0 then
+    cap:ClearAllPoints()
+    cap:SetPoint("CENTER", frame.progressBar, "LEFT", fillWidth, 0)
+    cap:SetAlpha(0.46 + (pulseAlpha * 0.2) + (hoverAlpha * 0.12))
+    cap:Show()
+  elseif cap then
+    cap:SetAlpha(0)
+    cap:Hide()
   end
 end
 
@@ -536,6 +610,37 @@ function NS.ensureFloat()
   if floatFrame._dingAccent then
     floatFrame._dingAccent:Hide()
   end
+  if floatFrame.SetBackdropBorderColor then
+    floatFrame:SetBackdropBorderColor(0.18, 0.58, 0.72, 0.88)
+  end
+
+  local hudGlow = floatFrame:CreateTexture(nil, "BACKGROUND")
+  hudGlow:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", -4, 4)
+  hudGlow:SetPoint("BOTTOMRIGHT", floatFrame, "BOTTOMRIGHT", 4, -4)
+  hudGlow:SetColorTexture(0.08, 0.28, 0.36, 1)
+  hudGlow:SetAlpha(0.12)
+  floatFrame._hudGlow = hudGlow
+
+  local topLine = floatFrame:CreateTexture(nil, "BORDER")
+  topLine:SetHeight(1)
+  topLine:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", 12, -6)
+  topLine:SetPoint("TOPRIGHT", floatFrame, "TOPRIGHT", -12, -6)
+  topLine:SetColorTexture(0.38, 0.88, 1.0, 0.42)
+  floatFrame._hudTopLine = topLine
+
+  local bottomLine = floatFrame:CreateTexture(nil, "BORDER")
+  bottomLine:SetHeight(1)
+  bottomLine:SetPoint("BOTTOMLEFT", floatFrame, "BOTTOMLEFT", 12, 6)
+  bottomLine:SetPoint("BOTTOMRIGHT", floatFrame, "BOTTOMRIGHT", -12, 6)
+  bottomLine:SetColorTexture(0.05, 0.12, 0.16, 0.58)
+  floatFrame._hudBottomLine = bottomLine
+
+  local leftRail = floatFrame:CreateTexture(nil, "ARTWORK")
+  leftRail:SetWidth(3)
+  leftRail:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", 7, -12)
+  leftRail:SetPoint("BOTTOMLEFT", floatFrame, "BOTTOMLEFT", 7, 12)
+  leftRail:SetColorTexture(0.24, 0.78, 0.92, 0.52)
+  floatFrame._hudLeftRail = leftRail
 
   floatFrame:SetScript("OnDragStart", function(self)
     if DingTimerDB.floatLocked then
@@ -569,6 +674,8 @@ function NS.ensureFloat()
   end)
 
   floatFrame:SetScript("OnEnter", function(self)
+    self._hovered = true
+    updateFloatBarVisual(self, self._targetProgress or self._displayedProgress or 0, self._gainPulse and 1 or 0)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:AddLine(NS.C.base .. "DingTimer" .. NS.C.r)
     if DingTimerDB.floatLocked then
@@ -580,7 +687,9 @@ function NS.ensureFloat()
     GameTooltip:Show()
   end)
 
-  floatFrame:SetScript("OnLeave", function()
+  floatFrame:SetScript("OnLeave", function(self)
+    self._hovered = false
+    updateFloatBarVisual(self, self._targetProgress or self._displayedProgress or 0, 0)
     GameTooltip:Hide()
   end)
 
@@ -625,6 +734,14 @@ function NS.ensureFloat()
   trackGlow:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
   trackGlow:SetColorTexture(0.12, 0.24, 0.32, 0.22)
 
+  for i = 1, 3 do
+    local tick = bar:CreateTexture(nil, "BORDER")
+    tick:SetWidth(1)
+    tick:SetHeight(HUD_BAR_HEIGHT - 4)
+    tick:SetPoint("CENTER", bar, "LEFT", math_floor((HUD_BAR_WIDTH * i / 4) + 0.5), 0)
+    tick:SetColorTexture(0.52, 0.74, 0.82, 0.16)
+  end
+
   local fill = bar:CreateTexture(nil, "ARTWORK")
   fill:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
   fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
@@ -665,6 +782,15 @@ function NS.ensureFloat()
   spark:SetAlpha(0)
   spark:Hide()
   floatFrame.progressSpark = spark
+
+  local cap = bar:CreateTexture(nil, "OVERLAY")
+  cap:SetSize(2, HUD_BAR_HEIGHT + 2)
+  cap:SetTexture("Interface\\Buttons\\WHITE8X8")
+  cap:SetBlendMode("ADD")
+  cap:SetVertexColor(0.86, 0.98, 1.0, 1)
+  cap:SetAlpha(0)
+  cap:Hide()
+  floatFrame.progressCap = cap
 
   local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   title:SetPoint("TOP", floatFrame, "TOP", 0, -8)
@@ -735,6 +861,11 @@ function NS.setFloatVisible(on)
     end
   elseif floatFrame then
     floatFrame:Hide()
+    if on and DingTimerDB and DingTimerDB.float and InCombatLockdown() and not DingTimerDB.floatShowInCombat then
+      if NS.HideHUDPopup then
+        NS.HideHUDPopup()
+      end
+    end
   end
 
   if NS.RefreshHUDPopup then
@@ -762,23 +893,10 @@ function NS.RefreshFloatingHUD(now)
   setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
 
   local header = NS.fmtTime(snapshot.ttl) .. " to level"
-  local paceParts = {}
-
-  if snapshot.currentXph and snapshot.currentXph > 0 then
-    paceParts[#paceParts + 1] = NS.FormatNumber(NS.Round(snapshot.currentXph)) .. " XP/hr"
-  else
-    paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
+  local paceText = buildHUDPaceText(snapshot, false)
+  if string.len(paceText) > HUD_SUB_TEXT_MAX_CHARS then
+    paceText = buildHUDPaceText(snapshot, true)
   end
-
-  if snapshot.lastXPGain and snapshot.lastXPGain > 0 then
-    local lastGainText = "Last +" .. NS.FormatNumber(snapshot.lastXPGain)
-    if snapshot.gainsToLevel ~= nil then
-      lastGainText = lastGainText .. " (" .. NS.FormatNumber(snapshot.gainsToLevel) .. ")"
-    end
-    paceParts[#paceParts + 1] = lastGainText
-  end
-
-  paceParts[#paceParts + 1] = "Need " .. NS.FormatNumber(snapshot.remainingXP or 0)
 
   local titleText = frame.titleText
   local subText = frame.subText
@@ -787,7 +905,7 @@ function NS.RefreshFloatingHUD(now)
   end
 
   titleText:SetText(header)
-  subText:SetText("|cffc6d2db" .. table.concat(paceParts, "  |  ") .. "|r")
+  subText:SetText("|cffc6d2db" .. paceText .. "|r")
 end
 
 function NS.onXPUpdate()

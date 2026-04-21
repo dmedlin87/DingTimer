@@ -54,6 +54,25 @@ it("anchors to the HUD when visible and to UIParent when opened without the HUD"
   assert_eq(centerRelativeTo, UIParent, "popup should anchor to UIParent when the HUD is hidden")
 end)
 
+it("hides the popup with the HUD when combat visibility hides the HUD", function()
+  NS.SetFloatEnabled(true)
+  DingTimerDB.floatShowInCombat = false
+  NS.ShowHUDPopup()
+  assert_true(NS.IsHUDPopupShown(), "precondition: popup should be visible")
+
+  local baseInCombatLockdown = InCombatLockdown
+  InCombatLockdown = function()
+    return true
+  end
+
+  NS.setFloatVisible(true)
+  assert_false(floatFrame:IsShown(), "HUD should hide when combat starts")
+  assert_false(NS.IsHUDPopupShown(), "popup should not remain centered during combat hiding")
+
+  InCombatLockdown = baseInCombatLockdown
+  NS.setFloatVisible(true)
+end)
+
 it("updates DB values and HUD text immediately from popup controls", function()
   NS.SetFloatEnabled(true)
   SetTime(0)
@@ -75,6 +94,19 @@ it("updates DB values and HUD text immediately from popup controls", function()
   popup.controls.floatShowInCombat:SetChecked(true)
   popup.controls.floatShowInCombat:GetScript("OnClick")(popup.controls.floatShowInCombat)
   assert_true(DingTimerDB.floatShowInCombat, "combat visibility checkbox should update the DB")
+end)
+
+it("requires confirmation before resetting the session from the popup", function()
+  NS.SetFloatEnabled(true)
+  NS.state.sessionXP = 123
+
+  popup.controls.reset:GetScript("OnClick")(popup.controls.reset)
+  assert_eq(123, NS.state.sessionXP, "first reset click should only arm confirmation")
+  assertStringMatch("Confirm reset", popup.controls.reset:GetText(), "first reset click should change the button label")
+
+  popup.controls.reset:GetScript("OnClick")(popup.controls.reset)
+  assert_eq(0, NS.state.sessionXP, "second reset click should reset the session")
+  assert_eq("Reset session", popup.controls.reset:GetText(), "confirmed reset should restore the idle label")
 end)
 
 run_tests()

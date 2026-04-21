@@ -71,6 +71,44 @@ local function createButton(parent, x, y, width, label, callback)
   return btn
 end
 
+local function createConfirmButton(parent, x, y, width, idleLabel, confirmLabel, callback)
+  local state = 0
+  local timer = nil
+  local btn = createButton(parent, x, y, width, idleLabel)
+
+  local function resetToIdle()
+    state = 0
+    if timer then
+      timer:Cancel()
+    end
+    timer = nil
+    btn:SetText(idleLabel)
+  end
+
+  btn.ResetConfirmation = resetToIdle
+
+  btn:SetScript("OnClick", function()
+    if state == 0 then
+      state = 1
+      btn:SetText(confirmLabel)
+      if C_Timer and C_Timer.NewTimer then
+        timer = C_Timer.NewTimer(3, resetToIdle)
+      end
+      return
+    end
+
+    resetToIdle()
+    if callback then
+      callback()
+    end
+    if popupFrame and popupFrame.Refresh then
+      popupFrame:Refresh()
+    end
+  end)
+
+  return btn
+end
+
 local function refreshAnchor()
   if not popupFrame then
     return
@@ -157,7 +195,7 @@ function NS.InitHUDPopup()
     NS.SetRollingWindowSeconds(900)
   end)
 
-  popupFrame.controls.reset = createButton(popupFrame, 14, -174, 228, "Reset session", function()
+  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -174, 228, "Reset session", "|cffff4040Confirm reset|r", function()
     if NS.ResetSession then
       NS.ResetSession("MANUAL_RESET")
     end
@@ -185,6 +223,12 @@ function NS.InitHUDPopup()
 
   popupFrame:SetScript("OnShow", function(self)
     self:Refresh()
+  end)
+
+  popupFrame:SetScript("OnHide", function(self)
+    if self.controls and self.controls.reset and self.controls.reset.ResetConfirmation then
+      self.controls.reset:ResetConfirmation()
+    end
   end)
 
   tinsert(UISpecialFrames, popupFrame:GetName())

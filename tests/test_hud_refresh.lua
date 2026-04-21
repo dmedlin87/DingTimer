@@ -127,4 +127,15 @@ assertStringMatch("Need 900", frame.subText:GetText(), "HUD should keep the rema
 assert_eq("?? to level", frame.titleText:GetText(), "HUD should fall back to TTL-only text when no pace is available")
 assert_eq(expectedFillWidth, frame.progressFill:GetWidth(), "HUD XP bar should keep the player's actual level progress after the rolling window expires")
 
+SetTime(200)
+SetXP(100000000, 1000000000)
+NS.resetXPState()
+SetTime(210)
+SetXP(200000000, 1000000000)
+NS.onXPUpdate()
+
+assertStringMatch("36.0B XP/hr", frame.subText:GetText(), "HUD should compact very large XP/hr values")
+assertStringMatch("Last +100.0M (8)", frame.subText:GetText(), "HUD should compact very large last-gain text")
+assertStringMatch("Need 800.0M", frame.subText:GetText(), "HUD should compact very large remaining-XP text")
+
 print("HUD rolling refresh test passed!")
