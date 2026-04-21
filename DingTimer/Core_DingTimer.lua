@@ -34,9 +34,7 @@ local string_format = string.format
 ---@field progressSpark DingTimerTexture?
 ---@field progressCap DingTimerTexture?
 ---@field _hudGlow DingTimerTexture?
----@field _hudTopLine DingTimerTexture?
 ---@field _hudBottomLine DingTimerTexture?
----@field _hudLeftRail DingTimerTexture?
 ---@field progressBarWidth number?
 ---@field _displayedProgress number?
 ---@field _targetProgress number?
@@ -71,7 +69,7 @@ local tickCache = {
 local HUD_WIDTH = 308
 local HUD_HEIGHT = 66
 local HUD_BAR_WIDTH = 276
-local HUD_BAR_HEIGHT = 14
+local HUD_BAR_HEIGHT = 9
 local HUD_PROGRESS_ANIM_DURATION = 0.28
 local HUD_GAIN_PULSE_DURATION = 0.65
 local HUD_PROGRESS_EPSILON = 0.0005
@@ -169,14 +167,8 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   if frame._hudGlow then
     frame._hudGlow:SetAlpha(0.12 + (pulseAlpha * 0.24) + (hoverAlpha * 0.12))
   end
-  if frame._hudTopLine then
-    frame._hudTopLine:SetColorTexture(0.38, 0.88, 1.0, 0.42 + (pulseAlpha * 0.26) + (hoverAlpha * 0.16))
-  end
   if frame._hudBottomLine then
     frame._hudBottomLine:SetColorTexture(0.05, 0.12, 0.16, 0.58 + (hoverAlpha * 0.14))
-  end
-  if frame._hudLeftRail then
-    frame._hudLeftRail:SetColorTexture(0.24, 0.78, 0.92, 0.52 + (pulseAlpha * 0.22) + (hoverAlpha * 0.16))
   end
 
   if fillWidth > 0 then
@@ -610,6 +602,9 @@ function NS.ensureFloat()
   if floatFrame._dingAccent then
     floatFrame._dingAccent:Hide()
   end
+  if floatFrame._dingGlow then
+    floatFrame._dingGlow:Hide()
+  end
   if floatFrame.SetBackdropBorderColor then
     floatFrame:SetBackdropBorderColor(0.18, 0.58, 0.72, 0.88)
   end
@@ -621,26 +616,12 @@ function NS.ensureFloat()
   hudGlow:SetAlpha(0.12)
   floatFrame._hudGlow = hudGlow
 
-  local topLine = floatFrame:CreateTexture(nil, "BORDER")
-  topLine:SetHeight(1)
-  topLine:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", 12, -6)
-  topLine:SetPoint("TOPRIGHT", floatFrame, "TOPRIGHT", -12, -6)
-  topLine:SetColorTexture(0.38, 0.88, 1.0, 0.42)
-  floatFrame._hudTopLine = topLine
-
   local bottomLine = floatFrame:CreateTexture(nil, "BORDER")
   bottomLine:SetHeight(1)
   bottomLine:SetPoint("BOTTOMLEFT", floatFrame, "BOTTOMLEFT", 12, 6)
   bottomLine:SetPoint("BOTTOMRIGHT", floatFrame, "BOTTOMRIGHT", -12, 6)
   bottomLine:SetColorTexture(0.05, 0.12, 0.16, 0.58)
   floatFrame._hudBottomLine = bottomLine
-
-  local leftRail = floatFrame:CreateTexture(nil, "ARTWORK")
-  leftRail:SetWidth(3)
-  leftRail:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", 7, -12)
-  leftRail:SetPoint("BOTTOMLEFT", floatFrame, "BOTTOMLEFT", 7, 12)
-  leftRail:SetColorTexture(0.24, 0.78, 0.92, 0.52)
-  floatFrame._hudLeftRail = leftRail
 
   floatFrame:SetScript("OnDragStart", function(self)
     if DingTimerDB.floatLocked then
@@ -710,7 +691,7 @@ function NS.ensureFloat()
 
   local bar = CreateFrame("Frame", nil, floatFrame)
   bar:SetSize(HUD_BAR_WIDTH, HUD_BAR_HEIGHT)
-  bar:SetPoint("TOP", floatFrame, "TOP", 0, -26)
+  bar:SetPoint("BOTTOM", floatFrame, "BOTTOM", 0, 11)
   floatFrame.progressBar = bar
   floatFrame.progressBarWidth = HUD_BAR_WIDTH
 
@@ -807,7 +788,7 @@ function NS.ensureFloat()
   floatFrame.titleText = title
 
   local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  sub:SetPoint("TOP", bar, "BOTTOM", 0, -8)
+  sub:SetPoint("BOTTOM", bar, "TOP", 0, 4)
   if sub.SetWidth then
     sub:SetWidth(HUD_BAR_WIDTH + 16)
   end
