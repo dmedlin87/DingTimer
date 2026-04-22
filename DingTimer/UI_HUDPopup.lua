@@ -1,6 +1,6 @@
 local _, NS = ...
 
----@class DingTimerHUDPopup
+---@class DingTimerHUDPopup: Frame
 ---@field ClearAllPoints fun(self: DingTimerHUDPopup)
 ---@field SetPoint fun(self: DingTimerHUDPopup, point: string, relativeTo: any, relativePoint: string, xOfs: number, yOfs: number)
 ---@field SetSize fun(self: DingTimerHUDPopup, width: number, height: number)
@@ -12,6 +12,8 @@ local _, NS = ...
 ---@field Show fun(self: DingTimerHUDPopup)
 ---@field Hide fun(self: DingTimerHUDPopup)
 ---@field IsShown fun(self: DingTimerHUDPopup): boolean
+---@field _dingAccent Texture?
+---@field _dingGlow Texture?
 ---@field controls table
 ---@field labels table
 
@@ -128,8 +130,8 @@ function NS.InitHUDPopup()
     return popupFrame
   end
 
-  popupFrame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate")
-  ---@cast popupFrame DingTimerHUDPopup
+  local frame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate") --[[@as DingTimerHUDPopup]]
+  popupFrame = frame
   popupFrame:SetSize(248, 204)
   popupFrame:EnableMouse(true)
   popupFrame:SetClampedToScreen(true)

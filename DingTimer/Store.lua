@@ -62,6 +62,43 @@ local function normalizeOutputMode(mode)
   return "full"
 end
 
+local VALID_ANCHOR_POINTS = {
+  TOPLEFT = true,
+  TOP = true,
+  TOPRIGHT = true,
+  LEFT = true,
+  CENTER = true,
+  RIGHT = true,
+  BOTTOMLEFT = true,
+  BOTTOM = true,
+  BOTTOMRIGHT = true,
+}
+
+local function normalizeFloatPosition(position)
+  if type(position) ~= "table" then
+    return nil
+  end
+
+  local point = position.point
+  local relativePoint = position.relativePoint or point
+  if not VALID_ANCHOR_POINTS[point] or not VALID_ANCHOR_POINTS[relativePoint] then
+    return nil
+  end
+
+  local xOfs = tonumber(position.xOfs) or 0
+  local yOfs = tonumber(position.yOfs) or 0
+  if (NS.IsInvalidNumber and (NS.IsInvalidNumber(xOfs) or NS.IsInvalidNumber(yOfs))) then
+    return nil
+  end
+
+  return {
+    point = point,
+    relativePoint = relativePoint,
+    xOfs = xOfs,
+    yOfs = yOfs,
+  }
+end
+
 local function clearDeadSurfaceState(db)
   db.activeMode = nil
   db.graphVisible = nil
@@ -115,11 +152,11 @@ function NS.InitStore()
   else
     db.floatLocked = db.floatLocked == true
   end
-  if type(db.floatPosition) ~= "table" then
-    db.floatPosition = nil
-  end
+  db.floatPosition = normalizeFloatPosition(db.floatPosition)
 
-  db.meta = db.meta or {}
+  if type(db.meta) ~= "table" then
+    db.meta = {}
+  end
   db.meta.addonVersion = ADDON_VERSION
   db.meta.createdAt = db.meta.createdAt or now
   db.meta.lastSeenAt = now
