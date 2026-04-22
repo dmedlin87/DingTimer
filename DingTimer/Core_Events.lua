@@ -23,6 +23,7 @@ function NS.onXPUpdate()
     local events = NS.state.events
     NS.state.sessionXP = (NS.state.sessionXP or 0) + delta
     NS.state.lastXPGain = delta
+    NS.state.lastXPAt = now
     events[#events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
     if NS.TriggerFloatGainPulse then

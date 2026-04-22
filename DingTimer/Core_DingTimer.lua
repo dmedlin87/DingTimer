@@ -12,6 +12,7 @@ NS.state = {
   lastXP = 0,
   lastMax = 0,
   lastXPGain = nil,
+  lastXPAt = nil,
   lastTTL = nil,
   sessionXP = 0,
   sessionMoney = 0,
@@ -46,6 +47,7 @@ local function clearInternalState(now)
   NS.state.lastXP = UnitXP("player") or 0
   NS.state.lastMax = UnitXPMax("player") or 0
   NS.state.lastXPGain = nil
+  NS.state.lastXPAt = nil
   NS.state.lastTTL = nil
   NS.state.sessionXP = 0
   NS.state.sessionMoney = 0
@@ -183,6 +185,11 @@ function NS.GetSessionSnapshot(now)
   local sessionXP = NS.state.sessionXP or 0
   local sessionMoney = NS.state.sessionMoney or 0
   local lastXPGain = NS.state.lastXPGain
+  local lastXPAt = NS.state.lastXPAt
+  local secondsSinceLastXP = nil
+  if lastXPAt then
+    secondsSinceLastXP = math_max(0, now - lastXPAt)
+  end
   local window = NS.GetRollingWindowSeconds()
   local xpRate = NS.ComputeRollingRateDetails(NS.state.events, now, sessionStart, window, "xp", NS.state, "windowXP")
   local moneyRate = NS.ComputeRollingRateDetails(
@@ -217,6 +224,8 @@ function NS.GetSessionSnapshot(now)
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
     lastXPGain = lastXPGain,
+    lastXPAt = lastXPAt,
+    secondsSinceLastXP = secondsSinceLastXP,
     gainsToLevel = gainsToLevel,
     currentXph = currentXph,
     rawCurrentXph = currentXph,

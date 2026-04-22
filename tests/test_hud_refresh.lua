@@ -104,6 +104,11 @@ onUpdate(frame, 1)
 assert_true(frame:GetScript("OnUpdate") == nil, "HUD should stop animating once the pulse finishes")
 assert_false(frame.progressPulse:IsShown(), "HUD pulse should hide after the animation completes")
 
+SetTime(95)
+ticker:Fire()
+
+assertStringMatch("6,000 XP/hr (idle 35s)", frame.subText:GetText(), "HUD should mark retained rolling rates as idle instead of looking frozen")
+
 SetTime(121)
 ticker:Fire()
 

@@ -104,7 +104,7 @@ The floating HUD has two text lines plus an XP bar strip:
 ```
 
 - Top line: current `TTL`
-- Bottom line: rolling `XP/hr`, the most recent XP gain with an estimated number of same-size gains left in parentheses, and XP still needed
+- Bottom line: rolling `XP/hr`, idle age when the rate is from older retained XP, the most recent XP gain with an estimated number of same-size gains left in parentheses, and XP still needed
 - XP bar: current level progress, with a short glow pulse when XP is gained
 - When the rolling window is empty, the HUD shows `No XP in <window>`
 
@@ -136,6 +136,8 @@ DingTimer uses a rolling window instead of a long session average:
 ```
 
 Default window: `10 minutes`
+
+When retained XP is still inside the rolling window but no fresh XP has arrived for 30+ seconds, the HUD adds an `idle <time>` label so the fixed-window average is not mistaken for a currently active pace.
 
 This keeps the HUD responsive to what you are doing now instead of what you were doing half an hour ago.
 
