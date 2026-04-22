@@ -16,6 +16,7 @@ NS.chat = function() end
 NS.C = { base = "", r = "" }
 
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/Core_Events.lua", NS)
 
 print("Running Core_DingTimer tests...")
 

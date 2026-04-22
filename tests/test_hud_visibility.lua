@@ -32,6 +32,7 @@ DingTimerDB = {
 }
 
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/Core_HUD.lua", NS)
 
 NS.setFloatVisible(true)
 local floatFrame = NS.GetFloatFrame()

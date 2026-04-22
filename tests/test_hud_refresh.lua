@@ -30,35 +30,12 @@ CreateFrame = function(frameType, name, parent, template)
   return frame
 end
 
----@type TestHeartbeatTicker?
-local heartbeatTicker = nil
----@diagnostic disable-next-line: duplicate-set-field
-C_Timer.NewTicker = function(interval, callback)
-  heartbeatTicker = {
-    interval = interval,
-    callback = callback,
-    cancelled = false,
-    Cancel = function() end,
-    Fire = function() end,
-  }
-
-  function heartbeatTicker:Cancel()
-    self.cancelled = true
-  end
-
-  function heartbeatTicker:Fire()
-    if not self.cancelled and self.callback then
-      self.callback()
-    end
-  end
-
-  return heartbeatTicker
-end
-
 local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/Core_HUD.lua", NS)
+LoadAddonFile("DingTimer/Core_Events.lua", NS)
 
 DingTimerDB = {
   enabled = false,
@@ -75,8 +52,8 @@ NS.resetXPState()
 NS.StartHeartbeatTicker()
 NS.setFloatVisible(true)
 
-local ticker = heartbeatTicker
-assert_true(heartbeatTicker ~= nil, "heartbeat ticker should start")
+local ticker = C_Timer._lastTicker
+assert_true(ticker ~= nil, "heartbeat ticker should start")
 ---@cast ticker TestHeartbeatTicker
 assert_eq(ticker.interval, 1, "heartbeat ticker should tick every second")
 

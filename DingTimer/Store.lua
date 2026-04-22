@@ -119,15 +119,7 @@ local function clearDeadSurfaceState(db)
   db.minimapAngle = nil
 end
 
-function NS.InitStore()
-  local now = GetTime and GetTime() or 0
-  local db = DingTimerDB
-
-  if type(db) ~= "table" then
-    db = copyTable(DEFAULTS)
-    DingTimerDB = db
-  end
-
+local function normalizeActiveSettings(db)
   if db.enabled == nil then
     db.enabled = DEFAULTS.enabled
   else
@@ -153,14 +145,45 @@ function NS.InitStore()
     db.floatLocked = db.floatLocked == true
   end
   db.floatPosition = normalizeFloatPosition(db.floatPosition)
+end
 
+local function updateMetadata(db, now)
   if type(db.meta) ~= "table" then
     db.meta = {}
   end
   db.meta.addonVersion = ADDON_VERSION
-  db.meta.createdAt = db.meta.createdAt or now
+  if not tonumber(db.meta.createdAt) or tonumber(db.meta.createdAt) == 0 then
+    db.meta.createdAt = now
+  end
   db.meta.lastSeenAt = now
+end
 
+local function migrateTo10(db)
   clearDeadSurfaceState(db)
   db.schemaVersion = DEFAULTS.schemaVersion
+end
+
+local function migrateStore(db)
+  local schemaVersion = tonumber(db.schemaVersion) or 0
+  if schemaVersion < 10 then
+    migrateTo10(db)
+  elseif schemaVersion == 10 then
+    migrateTo10(db)
+  else
+    db.schemaVersion = DEFAULTS.schemaVersion
+  end
+end
+
+function NS.InitStore()
+  local now = GetTime and GetTime() or 0
+  local db = DingTimerDB
+
+  if type(db) ~= "table" then
+    db = copyTable(DEFAULTS)
+    DingTimerDB = db
+  end
+
+  normalizeActiveSettings(db)
+  updateMetadata(db, now)
+  migrateStore(db)
 end

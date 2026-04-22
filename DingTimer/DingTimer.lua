@@ -2,19 +2,27 @@ local ADDON, NS = ...
 
 local frame = CreateFrame("Frame")
 
-local function safeRegisterEvent(targetFrame, eventName)
-  local ok = pcall(targetFrame.RegisterEvent, targetFrame, eventName)
-  return ok
+local REQUIRED_EVENTS = {
+  "ADDON_LOADED",
+  "PLAYER_LOGIN",
+  "PLAYER_XP_UPDATE",
+  "PLAYER_LEVEL_UP",
+  "PLAYER_REGEN_DISABLED",
+  "PLAYER_REGEN_ENABLED",
+  "PLAYER_MONEY",
+  "PLAYER_LOGOUT",
+}
+
+local function registerRequiredEvent(targetFrame, eventName)
+  local ok, err = pcall(targetFrame.RegisterEvent, targetFrame, eventName)
+  if not ok then
+    error("Failed to register required event " .. tostring(eventName) .. ": " .. tostring(err), 0)
+  end
 end
 
-safeRegisterEvent(frame, "ADDON_LOADED")
-safeRegisterEvent(frame, "PLAYER_LOGIN")
-safeRegisterEvent(frame, "PLAYER_XP_UPDATE")
-safeRegisterEvent(frame, "PLAYER_LEVEL_UP")
-safeRegisterEvent(frame, "PLAYER_REGEN_DISABLED")
-safeRegisterEvent(frame, "PLAYER_REGEN_ENABLED")
-safeRegisterEvent(frame, "PLAYER_MONEY")
-safeRegisterEvent(frame, "PLAYER_LOGOUT")
+for i = 1, #REQUIRED_EVENTS do
+  registerRequiredEvent(frame, REQUIRED_EVENTS[i])
+end
 
 local function showStartupMessages()
   NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " tracking started. (/ding help)")

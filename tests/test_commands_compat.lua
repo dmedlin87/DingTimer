@@ -4,6 +4,8 @@ local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/Core_HUD.lua", NS)
+LoadAddonFile("DingTimer/Core_Events.lua", NS)
 LoadAddonFile("DingTimer/Actions.lua", NS)
 LoadAddonFile("DingTimer/Commands.lua", NS)
 LoadAddonFile("DingTimer/UI_HUDPopup.lua", NS)

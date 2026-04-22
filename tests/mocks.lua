@@ -347,10 +347,28 @@ function GetMinimapShape()
 end
 
 C_Timer = {
-  NewTicker = function(_, _interval)
-    return {
-      Cancel = function() end
+  _tickers = {},
+  _lastTicker = nil,
+  NewTicker = function(interval, callback)
+    local ticker = {
+      interval = interval,
+      callback = callback,
+      cancelled = false,
     }
+
+    function ticker:Cancel()
+      self.cancelled = true
+    end
+
+    function ticker:Fire()
+      if not self.cancelled and self.callback then
+        self.callback()
+      end
+    end
+
+    table.insert(C_Timer._tickers, ticker)
+    C_Timer._lastTicker = ticker
+    return ticker
   end,
   NewTimer = function(_, callback)
     return {

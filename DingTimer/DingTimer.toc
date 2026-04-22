@@ -8,14 +8,18 @@
 # HUD-first load order:
 # 1. Util.lua         - shared formatting, theme, and UI helpers
 # 2. Store.lua        - SavedVariables init and schema v10 cleanup
-# 3. Core_DingTimer   - rolling XP state, HUD, and heartbeat
-# 4. Actions.lua      - popup-facing setting actions and reset behavior
-# 5. Commands.lua     - reduced slash command surface plus compatibility shims
-# 6. UI_HUDPopup.lua  - compact popup anchored to the HUD or UIParent
-# 7. DingTimer.lua    - event wiring and slash command registration
+# 3. Core_DingTimer   - rolling XP state, snapshot math, and heartbeat
+# 4. Core_HUD.lua     - floating HUD frame, animation, and visibility
+# 5. Core_Events.lua  - XP and money event mutation
+# 6. Actions.lua      - popup-facing setting actions and reset behavior
+# 7. Commands.lua     - reduced slash command surface plus compatibility shims
+# 8. UI_HUDPopup.lua  - compact popup anchored to the HUD or UIParent
+# 9. DingTimer.lua    - event wiring and slash command registration
 Util.lua
 Store.lua
 Core_DingTimer.lua
+Core_HUD.lua
+Core_Events.lua
 Actions.lua
 Commands.lua
 UI_HUDPopup.lua

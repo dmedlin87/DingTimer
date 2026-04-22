@@ -4,6 +4,26 @@ local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/Core_HUD.lua", NS)
+LoadAddonFile("DingTimer/Core_Events.lua", NS)
+
+it("initializes fresh SavedVariables with the active HUD defaults", function()
+  DingTimerDB = nil
+  SetTime(42)
+
+  NS.InitStore()
+
+  assert_true(type(DingTimerDB) == "table", "InitStore should create a SavedVariables table")
+  assert_true(DingTimerDB.enabled, "chat output should default to enabled")
+  assert_true(DingTimerDB.float, "HUD should default to visible")
+  assert_true(DingTimerDB.floatLocked, "HUD should default to locked")
+  assert_false(DingTimerDB.floatShowInCombat, "combat visibility should default to off")
+  assert_eq(600, DingTimerDB.windowSeconds, "rolling window should default to 10 minutes")
+  assert_eq("full", DingTimerDB.mode, "chat output mode should default to full")
+  assert_eq(10, DingTimerDB.schemaVersion, "fresh stores should use the current schema")
+  assert_eq(42, DingTimerDB.meta.createdAt, "fresh metadata should record creation time")
+  assert_eq(42, DingTimerDB.meta.lastSeenAt, "fresh metadata should record last seen time")
+end)
 
 it("sanitizes corrupted SavedVariables during store init and drops dead surface state", function()
   DingTimerDB = {
@@ -36,6 +56,57 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
   assert_eq(10, DingTimerDB.schemaVersion, "schemaVersion should advance to v10")
   assert_true(type(DingTimerDB.meta) == "table", "corrupted addon metadata should be repaired")
   assert_eq("1.1.2", DingTimerDB.meta["addonVersion"], "stored addon metadata should match the current release version")
+end)
+
+it("re-applies schema v10 cleanup idempotently without losing preserved legacy history", function()
+  DingTimerDB = {
+    schemaVersion = 10,
+    enabled = true,
+    float = true,
+    windowSeconds = 600,
+    mode = "full",
+    graphVisible = true,
+    mainWindowVisible = true,
+    xp = {
+      profiles = {
+        default = {
+          sessions = {
+            { id = "xp-keep" },
+          },
+        },
+      },
+    },
+    pvp = {
+      profiles = {
+        default = {
+          sessions = {
+            { id = "pvp-keep" },
+          },
+        },
+      },
+    },
+    coach = {
+      lastRecap = {
+        headline = "Keep recap",
+      },
+    },
+    meta = {
+      createdAt = 12,
+    },
+  }
+
+  SetTime(25)
+  NS.InitStore()
+  NS.InitStore()
+
+  assert_eq(10, DingTimerDB.schemaVersion, "schema should remain at v10 after repeated init")
+  assert_eq(nil, DingTimerDB.graphVisible, "dead graph state should stay cleared")
+  assert_eq(nil, DingTimerDB.mainWindowVisible, "dead main-window state should stay cleared")
+  assert_eq("xp-keep", DingTimerDB.xp.profiles.default.sessions[1].id, "legacy XP history should be preserved")
+  assert_eq("pvp-keep", DingTimerDB.pvp.profiles.default.sessions[1].id, "legacy PvP history should be preserved")
+  assert_eq("Keep recap", DingTimerDB.coach.lastRecap.headline, "legacy coach recap should be preserved")
+  assert_eq(12, DingTimerDB.meta.createdAt, "createdAt should not be overwritten on repeated init")
+  assert_eq(25, DingTimerDB.meta.lastSeenAt, "lastSeenAt should be refreshed on repeated init")
 end)
 
 it("drops invalid persisted HUD positions before HUD startup", function()
