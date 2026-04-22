@@ -6,10 +6,10 @@ local math_max = math.max
 local math_min = math.min
 local string_format = string.format
 
----@class DingTimerTextRegion
+---@class DingTimerTextRegion: FontString
 ---@field SetText fun(self: DingTimerTextRegion, text: string)
 
----@class DingTimerTexture
+---@class DingTimerTexture: Texture
 ---@field SetWidth fun(self: DingTimerTexture, width: number)
 ---@field GetWidth fun(self: DingTimerTexture): number
 ---@field SetAlpha fun(self: DingTimerTexture, alpha: number)
@@ -20,9 +20,11 @@ local string_format = string.format
 ---@field ClearAllPoints fun(self: DingTimerTexture)
 ---@field SetPoint fun(self: DingTimerTexture, point: string, relativeTo: any, relativePoint: string, xOfs: number, yOfs: number)
 
----@class DingTimerFloatFrame
+---@class DingTimerFloatFrame: Button
 ---@field Show fun(self: DingTimerFloatFrame)
 ---@field Hide fun(self: DingTimerFloatFrame)
+---@field IsShown fun(self: DingTimerFloatFrame): boolean
+---@field SetBackdropBorderColor fun(self: DingTimerFloatFrame, r: number, g: number, b: number, a: number)?
 ---@field titleText DingTimerTextRegion?
 ---@field subText DingTimerTextRegion?
 ---@field progressBar Frame?
@@ -31,6 +33,8 @@ local string_format = string.format
 ---@field progressPulse DingTimerTexture?
 ---@field progressSpark DingTimerTexture?
 ---@field progressCap DingTimerTexture?
+---@field _dingAccent DingTimerTexture?
+---@field _dingGlow DingTimerTexture?
 ---@field _hudGlow DingTimerTexture?
 ---@field _hudBottomLine DingTimerTexture?
 ---@field progressBarWidth number?
@@ -343,7 +347,8 @@ function NS.ensureFloat()
     return
   end
 
-  floatFrame = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+  local frame = CreateFrame("Button", nil, UIParent, "BackdropTemplate") --[[@as DingTimerFloatFrame]]
+  floatFrame = frame
   floatFrame:SetSize(HUD_WIDTH, HUD_HEIGHT)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)

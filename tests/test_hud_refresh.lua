@@ -3,6 +3,14 @@ dofile("tests/mocks.lua")
 ---@class TestFontRegion
 ---@field GetText fun(self: TestFontRegion): string
 
+---@class TestTextureRegion
+---@field IsShown fun(self: TestTextureRegion): boolean
+---@field GetAlpha fun(self: TestTextureRegion): number
+
+---@class TestFrameRegion
+---@field GetPoint fun(self: TestFrameRegion): string, any, string, number, number
+---@field GetWidth fun(self: TestFrameRegion): number
+
 ---@class TestHeartbeatTicker
 ---@field interval number
 ---@field callback fun()?
@@ -13,10 +21,13 @@ dofile("tests/mocks.lua")
 ---@class TestHUDFrame
 ---@field titleText TestFontRegion
 ---@field subText TestFontRegion
----@field progressBar table
----@field progressFill table
----@field progressPulse table
----@field progressSpark table
+---@field progressBar TestFrameRegion
+---@field progressFill TestFrameRegion
+---@field progressPulse TestTextureRegion
+---@field progressSpark TestTextureRegion
+---@field _dingGlow TestTextureRegion?
+---@field _dingAccent TestTextureRegion?
+---@field GetScript fun(self: TestHUDFrame, scriptName: string): function?
 
 ---@type TestHUDFrame?
 local capturedFrame = nil
