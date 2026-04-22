@@ -4,7 +4,7 @@ local ROOT_COMMANDS = {}
 local REMOVED_MESSAGE = "Removed in HUD-first build; use /ding settings"
 
 local function parseWords(msg)
-  local trimmed = (msg or ""):lower()
+  local trimmed = (msg or ""):lower():match("^%s*(.-)%s*$")
   local cmd, arg = trimmed:match("^(%S+)%s*(.*)$")
   return cmd or "", arg or ""
 end
