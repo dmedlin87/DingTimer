@@ -19,7 +19,8 @@
     "assertStringMatch",
     "run_tests",
     "it",
-    "LoadAddonFile"
+    "LoadAddonFile",
+        "io"
   ],
   "Lua.diagnostics.disable": [
     "lowercase-global"

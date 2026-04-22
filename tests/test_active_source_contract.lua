@@ -26,6 +26,7 @@ local legacyFiles = {
 }
 
 local function fileExists(path)
+  ---@diagnostic disable-next-line: undefined-global
   local handle = io.open(path, "r")
   if handle then
     handle:close()
@@ -36,6 +37,7 @@ end
 
 local function readTocRuntimeEntries()
   local entries = {}
+  ---@diagnostic disable-next-line: undefined-global
   local handle = assert(io.open("DingTimer/DingTimer.toc", "r"))
   for line in handle:lines() do
     local trimmed = line:match("^%s*(.-)%s*$")
