@@ -1,4 +1,3 @@
-local NS = {}
 local events = {
   {t=10, xp=10, sessionXP=10},
   {t=20, xp=15, sessionXP=25},

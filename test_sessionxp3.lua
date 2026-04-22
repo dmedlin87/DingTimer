@@ -73,7 +73,7 @@ local ctx = {
 }
 local avgs = NS.BuildAverageSeries(events, ctx)
 print("Without sessionXP:")
-for i, a in ipairs(avgs) do print(a) end
+for _, a in ipairs(avgs) do print(a) end
 
 local events2 = {
   { t = 5, xp = 50, sessionXP = 50 },
@@ -84,4 +84,4 @@ local events2 = {
 }
 local avgs2 = NS.BuildAverageSeries(events2, ctx)
 print("With sessionXP:")
-for i, a in ipairs(avgs2) do print(a) end
+for _, a in ipairs(avgs2) do print(a) end

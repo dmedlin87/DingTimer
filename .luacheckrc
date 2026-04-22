@@ -7,7 +7,9 @@ ignore = {
 }
 
 read_globals = {
+  "C_CurrencyInfo",
   "C_Timer",
+  "Constants",
   "CreateFrame",
   "DEFAULT_CHAT_FRAME",
   "GameTooltip",
@@ -24,7 +26,10 @@ read_globals = {
   "InCombatLockdown",
   "IsInInstance",
   "Minimap",
+  "PlaySound",
   "RegisterStateDriver",
+  "UIFrameFadeIn",
+  "UIFrameFadeOut",
   "UIParent",
   "UISpecialFrames",
   "UnitClass",
@@ -52,6 +57,7 @@ files["tests/test_*.lua"] = {
   max_line_length = false,
   globals = {
     "C_Timer",
+    "C_CurrencyInfo",
     "ClearChatLog",
     "CreateFrame",
     "DingTimerDB",
@@ -69,6 +75,7 @@ files["tests/test_*.lua"] = {
     "NS",
     "RegisterStateDriver",
     "SetHonor",
+    "SetHonorApiFlavor",
     "SetInstanceState",
     "SetLevel",
     "SetLifetimeHKs",
@@ -78,6 +85,8 @@ files["tests/test_*.lua"] = {
     "SetXP",
     "SetZone",
     "SlashCmdList",
+    "UIFrameFadeIn",
+    "UIFrameFadeOut",
     "UIParent",
     "assertEqual",
     "assertStringMatch",
@@ -93,6 +102,7 @@ files["tests/test_*.lua"] = {
 
 files["tests/mocks.lua"] = {
   globals = {
+    "C_CurrencyInfo",
     "C_Timer",
     "ClearChatLog",
     "CreateFrame",
@@ -116,6 +126,7 @@ files["tests/mocks.lua"] = {
     "Minimap",
     "RegisterStateDriver",
     "SetHonor",
+    "SetHonorApiFlavor",
     "SetInstanceState",
     "SetLevel",
     "SetLifetimeHKs",
@@ -125,6 +136,8 @@ files["tests/mocks.lua"] = {
     "SetXP",
     "SetZone",
     "SlashCmdList",
+    "UIFrameFadeIn",
+    "UIFrameFadeOut",
     "UIParent",
     "UISpecialFrames",
     "UnitClass",
@@ -133,6 +146,7 @@ files["tests/mocks.lua"] = {
     "UnitXP",
     "UnitXPMax",
     "UnregisterStateDriver",
+    "PlaySound",
     "assertEqual",
     "assertStringMatch",
     "assert_eq",

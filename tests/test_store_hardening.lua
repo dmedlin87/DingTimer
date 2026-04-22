@@ -34,7 +34,8 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
   assert_eq(nil, DingTimerDB.graphFixedMaxXPH, "legacy graph cap state should be removed")
   assert_eq(nil, DingTimerDB.minimapHidden, "legacy minimap state should be removed")
   assert_eq(10, DingTimerDB.schemaVersion, "schemaVersion should advance to v10")
-  assert_eq("1.1.2", DingTimerDB.meta.addonVersion, "stored addon metadata should match the current release version")
+  assert_true(type(DingTimerDB.meta) == "table", "corrupted addon metadata should be repaired")
+  assert_eq("1.1.2", DingTimerDB.meta["addonVersion"], "stored addon metadata should match the current release version")
 end)
 
 it("drops invalid persisted HUD positions before HUD startup", function()
