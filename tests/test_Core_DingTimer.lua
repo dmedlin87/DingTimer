@@ -146,6 +146,8 @@ test_heartbeat_ticker_lifecycle()
 local function test_lazy_heartbeat_decision_logic()
     NS.StopHeartbeatTicker()
     NS.state.lastXPAt = nil
+    local originalIsFloatVisible = NS.IsFloatVisible
+    local originalIsFloatAnimating = NS.IsFloatAnimating
 
     NS.IsFloatVisible = function()
         return true
@@ -160,15 +162,20 @@ local function test_lazy_heartbeat_decision_logic()
     NS.state.lastXPAt = 5
     assert_true(NS.ShouldHeartbeatRun(10), "visible HUD with recent XP activity should require a ticker")
 
+    ---@diagnostic disable-next-line: duplicate-set-field
     NS.IsFloatVisible = function()
         return false
     end
     assert_false(NS.ShouldHeartbeatRun(10), "hidden HUD without animation should not require a ticker")
 
+    ---@diagnostic disable-next-line: duplicate-set-field
     NS.IsFloatAnimating = function()
         return true
     end
     assert_true(NS.ShouldHeartbeatRun(10), "active HUD animation should keep the ticker alive even while hidden")
+
+    NS.IsFloatVisible = originalIsFloatVisible
+    NS.IsFloatAnimating = originalIsFloatAnimating
 end
 
 test_lazy_heartbeat_decision_logic()

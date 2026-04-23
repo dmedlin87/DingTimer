@@ -4,6 +4,7 @@ local baseCreateFrame = CreateFrame
 CreateFrame = function(frameType, name, parent, template)
   local frame = baseCreateFrame(frameType, name, parent, template)
   if not name then
+    ---@diagnostic disable-next-line: duplicate-set-field
     frame.RegisterEvent = function(_, eventName)
       if eventName == "PLAYER_LOGIN" then
         error("simulated registration failure")

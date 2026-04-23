@@ -9,6 +9,7 @@ CreateFrame = function(frameType, name, parent, template)
 
     local baseRegisterEvent = frame.RegisterEvent
     frame._registeredEvents = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
     frame.RegisterEvent = function(self, eventName)
       if eventName == "HONOR_XP_UPDATE" then
         error('Frame:RegisterEvent(): Attempt to register unknown event "HONOR_XP_UPDATE"')

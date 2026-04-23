@@ -44,8 +44,8 @@ The addon centers on one floating HUD and one tiny settings popup. The old tabbe
 <WoW client>\Interface\AddOns\DingTimer\
 ```
 
-3. Enable **DingTimer** on the character select AddOns screen.
-4. Log in.
+1. Enable **DingTimer** on the character select AddOns screen.
+2. Log in.
 
 The bundled PowerShell installer still supports both Retail and MoP Classic style client roots. You can pass either the client root or the direct `Interface\AddOns` path.
 

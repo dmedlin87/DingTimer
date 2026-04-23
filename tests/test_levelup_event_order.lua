@@ -11,6 +11,7 @@ LoadAddonFile("DingTimer/Actions.lua", NS)
 LoadAddonFile("DingTimer/Commands.lua", NS)
 LoadAddonFile("DingTimer/UI_HUDPopup.lua", NS)
 
+---@type table|nil
 local eventFrame = nil
 local baseCreateFrame = CreateFrame
 CreateFrame = function(frameType, name, parent, template)
@@ -25,7 +26,8 @@ LoadAddonFile("DingTimer/DingTimer.lua", "DingTimer", NS)
 CreateFrame = baseCreateFrame
 
 assert_true(eventFrame ~= nil, "event frame should be created")
-local onEvent = eventFrame:GetScript("OnEvent")
+---@cast eventFrame table
+local onEvent = eventFrame.GetScript and eventFrame:GetScript("OnEvent")
 assert_true(onEvent ~= nil, "event frame should register an OnEvent handler")
 
 local function startNearLevelEnd()
