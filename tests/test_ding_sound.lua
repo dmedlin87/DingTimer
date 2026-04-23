@@ -28,9 +28,22 @@ LoadAddonFile("DingTimer/DingTimer.lua", NS)
 
 CreateFrame = baseCreateFrame
 
-assert_true(eventFrame ~= nil, "event frame should be created")
-local onEvent = eventFrame:GetScript("OnEvent")
-assert_true(onEvent ~= nil, "event frame should register an OnEvent handler")
+---@return TestEventFrame
+local function requireEventFrame()
+  assert_true(eventFrame ~= nil, "event frame should be created")
+  return eventFrame
+end
+
+---@param frame TestEventFrame
+---@return fun(self: TestEventFrame, event: string, ...: any)
+local function requireOnEvent(frame)
+  local handler = frame:GetScript("OnEvent")
+  assert_true(handler ~= nil, "event frame should register an OnEvent handler")
+  return handler
+end
+
+local eventFrameRef = requireEventFrame()
+local onEvent = requireOnEvent(eventFrameRef)
 
 local function loadFreshStore()
   DingTimerDB = {
@@ -49,8 +62,7 @@ local function loadFreshStore()
   SetXP(900, 1000)
   SetMoney(0)
   NS.InitStore()
-  ---@cast onEvent fun(self: TestEventFrame, event: string, ...: any)
-  onEvent(eventFrame, "PLAYER_LOGIN")
+  onEvent(eventFrameRef, "PLAYER_LOGIN")
 end
 
 it("plays the level-up sound when the setting is enabled", function()
@@ -58,7 +70,7 @@ it("plays the level-up sound when the setting is enabled", function()
 
   SetTime(5)
   SetLevel(2)
-  onEvent(eventFrame, "PLAYER_LEVEL_UP", 2)
+  onEvent(eventFrameRef, "PLAYER_LEVEL_UP", 2)
 
   local played = GetPlayedSounds()
   assert_eq(1, #played, "level-up should play one sound when enabled")
@@ -72,7 +84,7 @@ it("does not play the level-up sound when the setting is disabled", function()
 
   SetTime(5)
   SetLevel(2)
-  onEvent(eventFrame, "PLAYER_LEVEL_UP", 2)
+  onEvent(eventFrameRef, "PLAYER_LEVEL_UP", 2)
 
   assert_eq(0, #GetPlayedSounds(), "level-up should not play a sound when disabled")
 end)

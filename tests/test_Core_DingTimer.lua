@@ -1,5 +1,8 @@
 dofile("tests/mocks.lua")
 
+---@class TestTicker
+---@field cancelled boolean
+
 local NS = {}
 local ADDON = "DingTimer"
 
@@ -14,6 +17,14 @@ NS.RefreshStatsWindow = function() end
 NS.GraphReset = function() end
 
 LoadAddonFile("DingTimer/Core_DingTimer.lua", ADDON, NS)
+
+---@param ticker TestTicker?
+---@param message string
+---@return TestTicker
+local function requireTicker(ticker, message)
+    assert_true(ticker ~= nil, message)
+    return ticker
+end
 
 -- 1. Test empty list edge case
 local function test_empty_events_list()
@@ -113,8 +124,7 @@ local function test_heartbeat_ticker_lifecycle()
     C_Timer._lastTicker = nil
 
     NS.StartHeartbeatTicker()
-    local firstTicker = C_Timer._lastTicker
-    assert_true(firstTicker ~= nil, "StartHeartbeatTicker should create a ticker")
+    local firstTicker = requireTicker(C_Timer._lastTicker, "StartHeartbeatTicker should create a ticker")
 
     NS.StartHeartbeatTicker()
     assert_equal(firstTicker, C_Timer._lastTicker, "StartHeartbeatTicker should stay idempotent")
@@ -124,8 +134,8 @@ local function test_heartbeat_ticker_lifecycle()
     assert_false(NS.StopHeartbeatTicker(), "StopHeartbeatTicker should be safe to call repeatedly")
 
     NS.StartHeartbeatTicker()
-    local secondTicker = C_Timer._lastTicker
-    assert_true(secondTicker ~= nil and secondTicker ~= firstTicker, "StartHeartbeatTicker should create a fresh ticker after stop")
+    local secondTicker = requireTicker(C_Timer._lastTicker, "StartHeartbeatTicker should create a fresh ticker after stop")
+    assert_true(secondTicker ~= firstTicker, "StartHeartbeatTicker should create a fresh ticker after stop")
     NS.StopHeartbeatTicker()
 end
 

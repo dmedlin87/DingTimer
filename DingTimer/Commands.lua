@@ -26,7 +26,7 @@ local function chat(text)
   NS.chat(NS.C.base .. "[DING]" .. NS.C.r .. " " .. text)
 end
 
-local function showHelp()
+local function showHelp(_arg)
   NS.chat(NS.C.base .. "=== DingTimer Commands (/ding or /dt) ===" .. NS.C.r)
   NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the HUD popup")
   NS.chat("  " .. NS.C.val .. "/ding on|off" .. NS.C.r .. " - Toggle chat output")
@@ -37,7 +37,7 @@ local function showHelp()
   NS.chat("  Advanced dashboard commands from prior versions now redirect to /ding settings.")
 end
 
-local function removedCommand()
+local function removedCommand(_arg)
   chat(REMOVED_MESSAGE)
 end
 
@@ -51,20 +51,20 @@ end
 ROOT_COMMANDS[""] = showHelp
 ROOT_COMMANDS.help = showHelp
 
-ROOT_COMMANDS.settings = function()
+ROOT_COMMANDS.settings = function(_arg)
   if NS.OpenSettingsPopup then
     NS.OpenSettingsPopup()
   end
 end
 
-ROOT_COMMANDS.on = function()
+ROOT_COMMANDS.on = function(_arg)
   if NS.SetChatOutputEnabled then
     NS.SetChatOutputEnabled(true)
   end
   chat("chat output enabled.")
 end
 
-ROOT_COMMANDS.off = function()
+ROOT_COMMANDS.off = function(_arg)
   if NS.SetChatOutputEnabled then
     NS.SetChatOutputEnabled(false)
   end
@@ -122,7 +122,7 @@ ROOT_COMMANDS.float = function(arg)
   chat("Unknown float command. Use 'on', 'off', 'lock', 'unlock', or 'reset'.")
 end
 
-ROOT_COMMANDS.reset = function()
+ROOT_COMMANDS.reset = function(_arg)
   if NS.ResetSession then
     NS.ResetSession("MANUAL_RESET")
   end
