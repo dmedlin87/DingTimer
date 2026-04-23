@@ -88,7 +88,7 @@ All commands work with either `/ding` or `/dt`.
 
 ### Compatibility Note
 
-Older dashboard commands such as `live`, `graph`, `history`, `insights`, `goal`, `split`, `recap`, and `pvp` are now compatibility shims. They print:
+Older dashboard commands such as `live`, `ui`, `stats`, `analysis`, `graph`, `history`, `insights`, `goal`, `split`, `recap`, and `pvp` are now compatibility shims. They print:
 
 ```text
 Removed in HUD-first build; use /ding settings
@@ -121,7 +121,7 @@ The popup contains only these controls:
 - `Level-up sound`
 - `Chat mode` with `Full` and `TTL`
 - `Window` presets: `1m`, `5m`, `10m`, `15m`
-- `Reset session`
+- `Reset session` with a confirm-on-second-click safety step
 
 There is no separate popup position. It anchors to the HUD while the HUD is visible, and it centers on `UIParent` when opened without the HUD.
 
