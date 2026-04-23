@@ -15,6 +15,12 @@ function NS.SetChatOutputEnabled(enabled)
   return DingTimerDB.enabled
 end
 
+function NS.SetDingSoundEnabled(enabled)
+  DingTimerDB.dingSoundEnabled = enabled == true
+  refreshSurfaces()
+  return DingTimerDB.dingSoundEnabled
+end
+
 function NS.SetOutputMode(mode)
   if mode ~= "full" and mode ~= "ttl" then
     return false, "Unknown mode. Use 'full' or 'ttl'."

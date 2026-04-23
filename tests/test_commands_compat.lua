@@ -13,6 +13,7 @@ LoadAddonFile("DingTimer/DingTimer.lua", NS)
 
 DingTimerDB = {
   enabled = true,
+  dingSoundEnabled = true,
   float = false,
   floatLocked = true,
   floatShowInCombat = false,
@@ -84,6 +85,15 @@ it("applies active slash command state changes and reports the result", function
   SlashCmdList.DINGTIMER("window 300")
   assert_eq(300, DingTimerDB.windowSeconds, "window command should update the rolling window")
   assertStringMatch("windowSeconds = 300", lastChatLine(), "window command should report the normalized window")
+
+  ClearChatLog()
+  SlashCmdList.DINGTIMER("settings")
+
+  local popup = NS.GetHUDPopup()
+  assert_true(popup ~= nil, "settings command should create the HUD popup")
+  popup.controls.dingSoundEnabled:SetChecked(false)
+  popup.controls.dingSoundEnabled:GetScript("OnClick")(popup.controls.dingSoundEnabled)
+  assert_false(DingTimerDB.dingSoundEnabled, "popup sound toggle should persist through actions")
 
   ClearChatLog()
   SlashCmdList.DINGTIMER("float unlock")

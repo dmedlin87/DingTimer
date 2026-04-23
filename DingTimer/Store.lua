@@ -16,6 +16,7 @@ end
 
 local DEFAULTS = {
   enabled = true,
+  dingSoundEnabled = true,
   windowSeconds = 600,
   minXPDeltaToPrint = 1,
   mode = "full",
@@ -124,6 +125,11 @@ local function normalizeActiveSettings(db)
     db.enabled = DEFAULTS.enabled
   else
     db.enabled = db.enabled == true
+  end
+  if db.dingSoundEnabled == nil then
+    db.dingSoundEnabled = DEFAULTS.dingSoundEnabled
+  else
+    db.dingSoundEnabled = db.dingSoundEnabled == true
   end
 
   db.windowSeconds = normalizeWindowSeconds(db.windowSeconds)

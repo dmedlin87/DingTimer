@@ -57,7 +57,7 @@ it("reset remains a pure runtime reset without writing history", function()
   assert_eq(0, #NS.state.events, "runtime reset should clear rolling XP events")
 end)
 
-it("level-up and logout no longer append history records", function()
+it("level-up no longer appends history records", function()
   local frame = eventFrame
   assert_true(eventFrame ~= nil, "event frame should be created")
   ---@cast frame TestEventFrame
@@ -70,9 +70,8 @@ it("level-up and logout no longer append history records", function()
 
   ---@cast onEvent fun(self: TestEventFrame, event: string, ...: any)
   onEvent(frame, "PLAYER_LEVEL_UP", 2)
-  onEvent(frame, "PLAYER_LOGOUT")
 
-  assert_eq(0, recordCalls, "level-up and logout should not write history in the HUD-first build")
+  assert_eq(0, recordCalls, "level-up should not write history in the HUD-first build")
 end)
 
 run_tests()

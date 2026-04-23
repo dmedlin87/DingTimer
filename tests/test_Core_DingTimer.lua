@@ -108,4 +108,27 @@ test_set_rolling_window_seconds_invalid_inputs()
 test_set_rolling_window_seconds_out_of_bounds()
 test_set_rolling_window_seconds_valid()
 
+local function test_heartbeat_ticker_lifecycle()
+    NS.StopHeartbeatTicker()
+    C_Timer._lastTicker = nil
+
+    NS.StartHeartbeatTicker()
+    local firstTicker = C_Timer._lastTicker
+    assert_true(firstTicker ~= nil, "StartHeartbeatTicker should create a ticker")
+
+    NS.StartHeartbeatTicker()
+    assert_equal(firstTicker, C_Timer._lastTicker, "StartHeartbeatTicker should stay idempotent")
+
+    assert_true(NS.StopHeartbeatTicker(), "StopHeartbeatTicker should cancel an active ticker")
+    assert_true(firstTicker.cancelled, "StopHeartbeatTicker should cancel the created ticker")
+    assert_false(NS.StopHeartbeatTicker(), "StopHeartbeatTicker should be safe to call repeatedly")
+
+    NS.StartHeartbeatTicker()
+    local secondTicker = C_Timer._lastTicker
+    assert_true(secondTicker ~= nil and secondTicker ~= firstTicker, "StartHeartbeatTicker should create a fresh ticker after stop")
+    NS.StopHeartbeatTicker()
+end
+
+test_heartbeat_ticker_lifecycle()
+
 print("All Core_DingTimer tests passed!")

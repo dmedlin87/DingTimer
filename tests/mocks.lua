@@ -413,7 +413,21 @@ end
 function UIFrameFadeOut(frame, _, _, endAlpha)
   if frame and frame.SetAlpha then frame:SetAlpha(endAlpha or 0) end
 end
-function PlaySound() end
+PLAYED_SOUNDS = {}
+function PlaySound(soundKitID, channel)
+  table.insert(PLAYED_SOUNDS, {
+    soundKitID = soundKitID,
+    channel = channel,
+  })
+end
+
+function ClearPlayedSounds()
+  PLAYED_SOUNDS = {}
+end
+
+function GetPlayedSounds()
+  return PLAYED_SOUNDS
+end
 
 SlashCmdList = {}
 UISpecialFrames = {}

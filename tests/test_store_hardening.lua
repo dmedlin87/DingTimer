@@ -15,6 +15,7 @@ it("initializes fresh SavedVariables with the active HUD defaults", function()
 
   assert_true(type(DingTimerDB) == "table", "InitStore should create a SavedVariables table")
   assert_true(DingTimerDB.enabled, "chat output should default to enabled")
+  assert_true(DingTimerDB.dingSoundEnabled, "level-up sound should default to enabled")
   assert_true(DingTimerDB.float, "HUD should default to visible")
   assert_true(DingTimerDB.floatLocked, "HUD should default to locked")
   assert_false(DingTimerDB.floatShowInCombat, "combat visibility should default to off")
@@ -30,6 +31,7 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
     windowSeconds = "abc",
     minXPDeltaToPrint = true,
     mode = "weird",
+    dingSoundEnabled = "yes",
     mainWindowVisible = true,
     lastOpenTab = 4,
     graphWindowSeconds = "not-a-number",
@@ -47,6 +49,7 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
   assert_eq(600, DingTimerDB.windowSeconds, "windowSeconds should fall back to the default")
   assert_eq(1, DingTimerDB.minXPDeltaToPrint, "minXPDeltaToPrint should fall back to the minimum safe value")
   assert_eq("full", DingTimerDB.mode, "invalid output modes should normalize to full")
+  assert_false(DingTimerDB.dingSoundEnabled, "non-boolean level-up sound values should normalize to false")
   assert_eq(nil, DingTimerDB.mainWindowVisible, "legacy main-window state should be removed")
   assert_eq(nil, DingTimerDB.lastOpenTab, "legacy tab state should be removed")
   assert_eq(nil, DingTimerDB.graphWindowSeconds, "legacy graph state should be removed")

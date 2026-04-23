@@ -2,6 +2,19 @@ local _, NS = ...
 
 local ROOT_COMMANDS = {}
 local REMOVED_MESSAGE = "Removed in HUD-first build; use /ding settings"
+local REMOVED_COMMANDS = {
+  live = true,
+  ui = true,
+  stats = true,
+  analysis = true,
+  graph = true,
+  history = true,
+  insights = true,
+  goal = true,
+  split = true,
+  recap = true,
+  pvp = true,
+}
 
 local function parseWords(msg)
   local trimmed = (msg or ""):lower():match("^%s*(.-)%s*$")
@@ -26,6 +39,13 @@ end
 
 local function removedCommand()
   chat(REMOVED_MESSAGE)
+end
+
+local function resolveRootCommand(cmd)
+  if REMOVED_COMMANDS[cmd] then
+    return removedCommand
+  end
+  return ROOT_COMMANDS[cmd]
 end
 
 ROOT_COMMANDS[""] = showHelp
@@ -108,21 +128,9 @@ ROOT_COMMANDS.reset = function()
   end
 end
 
-ROOT_COMMANDS.live = removedCommand
-ROOT_COMMANDS.ui = removedCommand
-ROOT_COMMANDS.stats = removedCommand
-ROOT_COMMANDS.analysis = removedCommand
-ROOT_COMMANDS.graph = removedCommand
-ROOT_COMMANDS.history = removedCommand
-ROOT_COMMANDS.insights = removedCommand
-ROOT_COMMANDS.goal = removedCommand
-ROOT_COMMANDS.split = removedCommand
-ROOT_COMMANDS.recap = removedCommand
-ROOT_COMMANDS.pvp = removedCommand
-
 function NS.ExecuteSlashCommand(msg)
   local cmd, arg = parseWords(msg)
-  local handler = ROOT_COMMANDS[cmd]
+  local handler = resolveRootCommand(cmd)
   if handler then
     handler(arg)
     return

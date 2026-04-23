@@ -258,10 +258,11 @@ function NS.StartHeartbeatTicker()
   end)
 end
 
-function NS.StartCoachTicker()
-  NS.StartHeartbeatTicker()
-end
-
-function NS.RunCoachHeartbeat(now)
-  NS.RunHeartbeat(now)
+function NS.StopHeartbeatTicker()
+  if not heartbeatTicker then
+    return false
+  end
+  heartbeatTicker:Cancel()
+  heartbeatTicker = nil
+  return true
 end

@@ -132,7 +132,7 @@ function NS.InitHUDPopup()
 
   local frame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate") --[[@as DingTimerHUDPopup]]
   popupFrame = frame
-  popupFrame:SetSize(248, 204)
+  popupFrame:SetSize(248, 228)
   popupFrame:EnableMouse(true)
   popupFrame:SetClampedToScreen(true)
   if NS.ApplyThemeToFrame then
@@ -169,35 +169,40 @@ function NS.InitHUDPopup()
       NS.SetChatOutputEnabled(checked)
     end
   end)
+  popupFrame.controls.dingSoundEnabled = createCheckbox(popupFrame, 14, -112, "Level-up sound", function(checked)
+    if NS.SetDingSoundEnabled then
+      NS.SetDingSoundEnabled(checked)
+    end
+  end)
 
   popupFrame.labels = {}
-  popupFrame.labels.mode = createLabel(popupFrame, 14, -118, "Chat mode")
-  popupFrame.controls.modeFull = createButton(popupFrame, 86, -112, 56, "Full", function()
+  popupFrame.labels.mode = createLabel(popupFrame, 14, -142, "Chat mode")
+  popupFrame.controls.modeFull = createButton(popupFrame, 86, -136, 56, "Full", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("full")
     end
   end)
-  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -112, 56, "TTL", function()
+  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -136, 56, "TTL", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("ttl")
     end
   end)
 
-  popupFrame.labels.window = createLabel(popupFrame, 14, -148, "Window")
-  popupFrame.controls.window1m = createButton(popupFrame, 72, -142, 36, "1m", function()
+  popupFrame.labels.window = createLabel(popupFrame, 14, -172, "Window")
+  popupFrame.controls.window1m = createButton(popupFrame, 72, -166, 36, "1m", function()
     NS.SetRollingWindowSeconds(60)
   end)
-  popupFrame.controls.window5m = createButton(popupFrame, 112, -142, 36, "5m", function()
+  popupFrame.controls.window5m = createButton(popupFrame, 112, -166, 36, "5m", function()
     NS.SetRollingWindowSeconds(300)
   end)
-  popupFrame.controls.window10m = createButton(popupFrame, 152, -142, 44, "10m", function()
+  popupFrame.controls.window10m = createButton(popupFrame, 152, -166, 44, "10m", function()
     NS.SetRollingWindowSeconds(600)
   end)
-  popupFrame.controls.window15m = createButton(popupFrame, 198, -142, 44, "15m", function()
+  popupFrame.controls.window15m = createButton(popupFrame, 198, -166, 44, "15m", function()
     NS.SetRollingWindowSeconds(900)
   end)
 
-  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -174, 228, "Reset session", "|cffff4040Confirm reset|r", function()
+  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -198, 228, "Reset session", "|cffff4040Confirm reset|r", function()
     if NS.ResetSession then
       NS.ResetSession("MANUAL_RESET")
     end
@@ -210,6 +215,7 @@ function NS.InitHUDPopup()
     self.controls.lock:SetChecked(DingTimerDB == nil or DingTimerDB.floatLocked ~= false)
     self.controls.floatShowInCombat:SetChecked(DingTimerDB and DingTimerDB.floatShowInCombat == true)
     self.controls.chat:SetChecked(DingTimerDB == nil or DingTimerDB.enabled == true)
+    self.controls.dingSoundEnabled:SetChecked(DingTimerDB == nil or DingTimerDB.dingSoundEnabled ~= false)
 
     if NS.UI and NS.UI.SetButtonActive then
       NS.UI.SetButtonActive(self.controls.modeFull, (DingTimerDB and DingTimerDB.mode or "full") == "full")

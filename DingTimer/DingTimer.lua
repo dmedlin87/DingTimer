@@ -10,7 +10,6 @@ local REQUIRED_EVENTS = {
   "PLAYER_REGEN_DISABLED",
   "PLAYER_REGEN_ENABLED",
   "PLAYER_MONEY",
-  "PLAYER_LOGOUT",
 }
 
 local function registerRequiredEvent(targetFrame, eventName)
@@ -33,12 +32,16 @@ local function showStartupMessages()
   end
 end
 
-local function onPlayerLogin()
-  NS.resetXPState()
-  NS.StartHeartbeatTicker()
+local function syncFloatVisibility()
   if NS.setFloatVisible then
     NS.setFloatVisible(DingTimerDB.float)
   end
+end
+
+local function onPlayerLogin()
+  NS.resetXPState()
+  NS.StartHeartbeatTicker()
+  syncFloatVisibility()
   showStartupMessages()
 end
 
@@ -78,7 +81,7 @@ local function onLevelUp(level)
       moneyStr
     )
   )
-  if PlaySound and DingTimerDB.dingSoundEnabled ~= false then
+  if PlaySound and DingTimerDB.dingSoundEnabled == true then
     PlaySound(12891, "Master")
   end
   NS.resetXPState()
@@ -116,17 +119,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
       return
     end
 
-    if event == "PLAYER_REGEN_ENABLED" then
-      NS.setFloatVisible(DingTimerDB.float)
-      return
-    end
-
-    if event == "PLAYER_REGEN_DISABLED" then
-      NS.setFloatVisible(DingTimerDB.float)
-      return
-    end
-
-    if event == "PLAYER_LOGOUT" then
+    if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED" then
+      syncFloatVisibility()
       return
     end
   end)

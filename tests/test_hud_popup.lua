@@ -11,6 +11,7 @@ LoadAddonFile("DingTimer/UI_HUDPopup.lua", NS)
 
 DingTimerDB = {
   enabled = true,
+  dingSoundEnabled = true,
   float = true,
   floatLocked = true,
   floatShowInCombat = false,
@@ -92,6 +93,10 @@ it("updates DB values and HUD text immediately from popup controls", function()
   popup.controls.chat:SetChecked(false)
   popup.controls.chat:GetScript("OnClick")(popup.controls.chat)
   assert_false(DingTimerDB.enabled, "chat checkbox should update the enabled flag")
+
+  popup.controls.dingSoundEnabled:SetChecked(false)
+  popup.controls.dingSoundEnabled:GetScript("OnClick")(popup.controls.dingSoundEnabled)
+  assert_false(DingTimerDB.dingSoundEnabled, "level-up sound checkbox should update the DB")
 
   popup.controls.floatShowInCombat:SetChecked(true)
   popup.controls.floatShowInCombat:GetScript("OnClick")(popup.controls.floatShowInCombat)
