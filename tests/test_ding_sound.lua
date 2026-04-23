@@ -31,7 +31,9 @@ CreateFrame = baseCreateFrame
 ---@return TestEventFrame
 local function requireEventFrame()
   assert_true(eventFrame ~= nil, "event frame should be created")
-  return eventFrame
+  local frame = eventFrame
+  ---@cast frame TestEventFrame
+  return frame
 end
 
 ---@param frame TestEventFrame
@@ -39,7 +41,9 @@ end
 local function requireOnEvent(frame)
   local handler = frame:GetScript("OnEvent")
   assert_true(handler ~= nil, "event frame should register an OnEvent handler")
-  return handler
+  local requiredHandler = handler
+  ---@cast requiredHandler fun(self: TestEventFrame, event: string, ...: any)
+  return requiredHandler
 end
 
 local eventFrameRef = requireEventFrame()

@@ -23,7 +23,9 @@ LoadAddonFile("DingTimer/Core_DingTimer.lua", ADDON, NS)
 ---@return TestTicker
 local function requireTicker(ticker, message)
     assert_true(ticker ~= nil, message)
-    return ticker
+    local requiredTicker = ticker
+    ---@cast requiredTicker TestTicker
+    return requiredTicker
 end
 
 -- 1. Test empty list edge case
