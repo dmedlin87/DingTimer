@@ -26,6 +26,43 @@ local legacyFiles = {
   "UI_XPGraphWindow.lua",
 }
 
+local forbiddenRuntimeReferences = {
+  "UI_MainWindow",
+  "UI_SettingsWindow",
+  "UI_XPGraphWindow",
+  "UI_InsightsWindow",
+  "UI_MinimapButton",
+  "SessionCoach",
+  "GraphMath",
+  "NS.GraphFeedXP",
+  "NS.GraphReset",
+  "NS.RefreshStatsWindow",
+  "NS.RefreshMainWindow",
+  "NS.OpenMainWindow",
+  "NS.ToggleMainWindow",
+  "NS.OpenSettingsWindow",
+  "NS.ToggleSettingsWindow",
+  "NS.OpenXPGraphWindow",
+  "NS.ToggleXPGraphWindow",
+  "NS.OpenInsightsWindow",
+  "NS.ToggleInsightsWindow",
+  "NS.CreateMinimapButton",
+}
+
+local forbiddenCommandHandlers = {
+  "ROOT_COMMANDS.live =",
+  "ROOT_COMMANDS.ui =",
+  "ROOT_COMMANDS.stats =",
+  "ROOT_COMMANDS.analysis =",
+  "ROOT_COMMANDS.graph =",
+  "ROOT_COMMANDS.history =",
+  "ROOT_COMMANDS.insights =",
+  "ROOT_COMMANDS.goal =",
+  "ROOT_COMMANDS.split =",
+  "ROOT_COMMANDS.recap =",
+  "ROOT_COMMANDS.pvp =",
+}
+
 local function fileExists(path)
   ---@diagnostic disable-next-line: undefined-global
   local handle = io.open(path, "r")
@@ -50,12 +87,47 @@ local function readTocRuntimeEntries()
   return entries
 end
 
+local function readFile(path)
+  ---@diagnostic disable-next-line: undefined-global
+  local handle = assert(io.open(path, "r"))
+  local contents = handle:read("*a")
+  handle:close()
+  return contents
+end
+
 it("keeps the HUD-first toc load path explicit and stable", function()
   local entries = readTocRuntimeEntries()
   assert_eq(#activeEntries, #entries, "TOC should contain only active HUD-first runtime files")
 
   for i = 1, #activeEntries do
     assert_eq(activeEntries[i], entries[i], "TOC entry order should stay aligned with the HUD-first contract")
+  end
+end)
+
+it("keeps active runtime files free of removed surface references", function()
+  for i = 1, #activeEntries do
+    local path = "DingTimer/" .. activeEntries[i]
+    local contents = readFile(path)
+
+    for j = 1, #forbiddenRuntimeReferences do
+      local token = forbiddenRuntimeReferences[j]
+      assert_false(
+        string.find(contents, token, 1, true) ~= nil,
+        "active runtime file must not reference removed surface token '" .. token .. "': " .. path
+      )
+    end
+  end
+end)
+
+it("keeps removed dashboard commands as compatibility redirects only", function()
+  local contents = readFile("DingTimer/Commands.lua")
+
+  for i = 1, #forbiddenCommandHandlers do
+    local token = forbiddenCommandHandlers[i]
+    assert_false(
+      string.find(contents, token, 1, true) ~= nil,
+      "removed dashboard command must not regain an active handler: " .. token
+    )
   end
 end)
 

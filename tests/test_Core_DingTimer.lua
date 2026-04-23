@@ -69,6 +69,20 @@ local function test_normal_pruning()
     assert_equal(nil, NS.state.events[3], "Third element should be nil")
 end
 
+local function test_pruning_updates_window_sum()
+    NS.state.events = {
+        { t = 10, xp = 100 },
+        { t = 20, xp = 200 },
+        { t = 55, xp = 300 }
+    }
+    NS.state.windowXP = 600
+
+    NS.computeXPPerHour(70, 30)
+
+    assert_equal(1, #NS.state.events, "Only events inside the rolling window should remain")
+    assert_equal(300, NS.state.windowXP, "Pruning should remove expired XP from the rolling sum")
+end
+
 -- 5. Test pruning when all elements are old
 local function test_all_elements_removed()
     NS.state.events = {
@@ -85,6 +99,7 @@ test_empty_events_list()
 test_single_element_keep()
 test_single_element_remove()
 test_normal_pruning()
+test_pruning_updates_window_sum()
 test_all_elements_removed()
 
 -- Tests for SetRollingWindowSeconds
@@ -179,5 +194,28 @@ local function test_lazy_heartbeat_decision_logic()
 end
 
 test_lazy_heartbeat_decision_logic()
+
+local function test_snapshot_cache_invalidates_explicitly()
+    DingTimerDB = { windowSeconds = 60 }
+    SetTime(100)
+    SetXP(100, 1000)
+    NS.resetXPState()
+
+    local first = NS.GetSessionSnapshot(100)
+    SetXP(400, 1000)
+    local cached = NS.GetSessionSnapshot(100)
+
+    assert_equal(first, cached, "Snapshots for the same tick should be cached until invalidated")
+    assert_equal(100, cached.xp, "Cached snapshot should not observe later XP changes in the same tick")
+
+    NS.InvalidateTickCache()
+    local refreshed = NS.GetSessionSnapshot(100)
+
+    assert_true(refreshed ~= cached, "Invalidation should force a fresh snapshot")
+    assert_equal(400, refreshed.xp, "Fresh snapshot should observe the current player XP")
+    assert_equal(600, refreshed.remainingXP, "Fresh snapshot should recompute remaining XP")
+end
+
+test_snapshot_cache_invalidates_explicitly()
 
 print("All Core_DingTimer tests passed!")

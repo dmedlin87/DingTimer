@@ -117,4 +117,19 @@ it("requires confirmation before resetting the session from the popup", function
   assert_eq("Reset session", popup.controls.reset:GetText(), "confirmed reset should restore the idle label")
 end)
 
+it("clears a pending reset confirmation when the popup hides", function()
+  NS.state.sessionXP = 456
+  NS.ShowHUDPopup()
+
+  popup.controls.reset:GetScript("OnClick")(popup.controls.reset)
+  assertStringMatch("Confirm reset", popup.controls.reset:GetText(), "precondition: reset should be armed")
+
+  NS.HideHUDPopup()
+  assert_eq("Reset session", popup.controls.reset:GetText(), "hiding the popup should disarm reset confirmation")
+
+  NS.ShowHUDPopup()
+  popup.controls.reset:GetScript("OnClick")(popup.controls.reset)
+  assert_eq(456, NS.state.sessionXP, "first reset click after hiding should only arm confirmation again")
+end)
+
 run_tests()
