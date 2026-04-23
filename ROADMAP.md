@@ -1,13 +1,19 @@
 # ROADMAP.md
 
-This repo does not currently publish a formal feature roadmap.
+## Current Goals
 
-## Current Priorities
+- Keep the addon centered on the floating HUD and compact settings popup.
+- Preserve the current slash-command compatibility shims and HUD-first startup flow.
+- Favor small maintenance changes that improve correctness, clarity, and test coverage.
 
-- Keep the documentation surface aligned with the addon code and scripts.
-- Preserve the current addon load order, saved-variable schema, and test expectations.
-- Maintain compatibility with the supported Lua 5.1 addon environment.
+## Non-Goals
 
-## Notes
+- Reintroducing dashboard, graph, history, insights, coach, minimap, or PvP surfaces.
+- Large architecture rewrites or speculative subsystem churn.
+- Expanding the addon beyond leveling HUD behavior without a deliberate product change.
 
-- When a real feature roadmap is added, this file should be updated to list the planned work in priority order.
+## Maintenance Priorities
+
+- Keep `DingTimer.toc`, docs, and tests aligned with the active runtime files.
+- Preserve Lua 5.1 / WoW addon compatibility and safe SavedVariables migrations.
+- Prefer pure helpers and narrow ownership cleanup when they make HUD behavior easier to verify.

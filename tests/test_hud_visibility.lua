@@ -32,12 +32,14 @@ DingTimerDB = {
 }
 
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/HUDText.lua", NS)
 LoadAddonFile("DingTimer/Core_HUD.lua", NS)
 
 NS.setFloatVisible(true)
 local floatFrame = NS.GetFloatFrame()
 assert_true(floatFrame ~= nil, "HUD should create a floating frame when shown")
 assert_true(floatFrame:IsShown(), "HUD should show out of combat by default")
+assert_true(C_Timer._lastTicker == nil, "showing the HUD alone should not start the heartbeat ticker")
 
 DingTimerDB.floatShowInCombat = true
 NS.setFloatVisible(true)

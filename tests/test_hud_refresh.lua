@@ -46,6 +46,7 @@ local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/HUDText.lua", NS)
 LoadAddonFile("DingTimer/Core_HUD.lua", NS)
 LoadAddonFile("DingTimer/Core_Events.lua", NS)
 
@@ -61,17 +62,20 @@ NS.InitStore()
 SetTime(0)
 SetXP(0, 1000)
 NS.resetXPState()
-NS.StartHeartbeatTicker()
 NS.setFloatVisible(true)
+NS.UpdateHeartbeatTicker()
 
 local ticker = C_Timer._lastTicker
-assert_true(ticker ~= nil, "heartbeat ticker should start")
----@cast ticker TestHeartbeatTicker
-assert_eq(ticker.interval, 1, "heartbeat ticker should tick every second")
+assert_true(ticker == nil, "heartbeat ticker should stay stopped until there is live XP activity")
 
 SetTime(60)
 SetXP(100, 1000)
 NS.onXPUpdate()
+
+ticker = C_Timer._lastTicker
+assert_true(ticker ~= nil, "heartbeat ticker should start after an XP gain creates live HUD activity")
+---@cast ticker TestHeartbeatTicker
+assert_eq(ticker.interval, 1, "heartbeat ticker should tick every second")
 
 local frame = capturedFrame
 assert_true(capturedFrame ~= nil, "floating HUD frame should be created")
@@ -131,6 +135,7 @@ assertStringMatch("Last +100 (9)", frame.subText:GetText(), "HUD should keep the
 assertStringMatch("Need 900", frame.subText:GetText(), "HUD should keep the remaining XP needed visible after the rolling window expires")
 assert_eq("?? to level", frame.titleText:GetText(), "HUD should fall back to TTL-only text when no pace is available")
 assert_eq(expectedFillWidth, frame.progressFill:GetWidth(), "HUD XP bar should keep the player's actual level progress after the rolling window expires")
+assert_true(ticker.cancelled, "heartbeat ticker should stop once the rolling window no longer needs live HUD refreshes")
 
 SetTime(200)
 SetXP(100000000, 1000000000)

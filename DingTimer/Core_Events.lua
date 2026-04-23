@@ -97,4 +97,7 @@ function NS.onMoneyUpdate()
   end
 
   NS.InvalidateTickCache()
+  if NS.UpdateHeartbeatTicker then
+    NS.UpdateHeartbeatTicker(now)
+  end
 end

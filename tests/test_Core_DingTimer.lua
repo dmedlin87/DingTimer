@@ -143,4 +143,34 @@ end
 
 test_heartbeat_ticker_lifecycle()
 
+local function test_lazy_heartbeat_decision_logic()
+    NS.StopHeartbeatTicker()
+    NS.state.lastXPAt = nil
+
+    NS.IsFloatVisible = function()
+        return true
+    end
+    NS.IsFloatAnimating = function()
+        return false
+    end
+    DingTimerDB = { windowSeconds = 60 }
+
+    assert_false(NS.ShouldHeartbeatRun(10), "visible HUD without live XP activity should not require a ticker")
+
+    NS.state.lastXPAt = 5
+    assert_true(NS.ShouldHeartbeatRun(10), "visible HUD with recent XP activity should require a ticker")
+
+    NS.IsFloatVisible = function()
+        return false
+    end
+    assert_false(NS.ShouldHeartbeatRun(10), "hidden HUD without animation should not require a ticker")
+
+    NS.IsFloatAnimating = function()
+        return true
+    end
+    assert_true(NS.ShouldHeartbeatRun(10), "active HUD animation should keep the ticker alive even while hidden")
+end
+
+test_lazy_heartbeat_decision_logic()
+
 print("All Core_DingTimer tests passed!")

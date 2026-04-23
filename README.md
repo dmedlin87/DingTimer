@@ -150,9 +150,9 @@ This keeps the HUD responsive to what you are doing now instead of what you were
 - Level-up sound enablement
 - Rolling window setting
 - Chat output enablement and mode
-- Release metadata
+- Addon version metadata
 
-Legacy history, PvP, and coach data are preserved in `DingTimerDB` for rollback safety if they already exist, but the HUD-first build does not update those records anymore.
+Legacy history, PvP, and coach data are preserved in `DingTimerDB` for rollback safety if they already exist, but the HUD-first build does not update those records anymore. Misleading cross-session uptime timestamps are not persisted.
 
 ## Running Tests
 

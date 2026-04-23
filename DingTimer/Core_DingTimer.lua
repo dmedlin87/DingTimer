@@ -244,9 +244,35 @@ function NS.GetSessionSnapshot(now)
 end
 
 function NS.RunHeartbeat(now)
+  now = now or GetTime()
   if NS.RefreshFloatingHUD then
-    NS.RefreshFloatingHUD(now or GetTime())
+    NS.RefreshFloatingHUD(now)
   end
+  if NS.UpdateHeartbeatTicker then
+    NS.UpdateHeartbeatTicker(now)
+  end
+end
+
+function NS.HasRecentXPActivity(now)
+  local lastXPAt = NS.state.lastXPAt
+  if not lastXPAt then
+    return false
+  end
+
+  now = now or GetTime()
+  return (now - lastXPAt) <= NS.GetRollingWindowSeconds()
+end
+
+function NS.ShouldHeartbeatRun(now)
+  if NS.IsFloatAnimating and NS.IsFloatAnimating() then
+    return true
+  end
+
+  if not (NS.IsFloatVisible and NS.IsFloatVisible()) then
+    return false
+  end
+
+  return NS.HasRecentXPActivity(now)
 end
 
 function NS.StartHeartbeatTicker()
@@ -265,4 +291,13 @@ function NS.StopHeartbeatTicker()
   heartbeatTicker:Cancel()
   heartbeatTicker = nil
   return true
+end
+
+function NS.UpdateHeartbeatTicker(now)
+  if NS.ShouldHeartbeatRun(now) then
+    NS.StartHeartbeatTicker()
+    return true
+  end
+  NS.StopHeartbeatTicker()
+  return false
 end

@@ -53,6 +53,7 @@ it("migrates legacy surface state to schema v10 while preserving HUD settings an
     },
     meta = {
       createdAt = 12,
+      lastSeenAt = 18,
     },
   }
 
@@ -80,7 +81,8 @@ it("migrates legacy surface state to schema v10 while preserving HUD settings an
   assert_eq("xp-1", DingTimerDB.xp.profiles.default.sessions[1].id, "legacy XP history should be preserved for rollback safety")
   assert_eq("pvp-1", DingTimerDB.pvp.profiles.default.sessions[1].id, "legacy PvP history should be preserved for rollback safety")
   assert_eq("Old recap", DingTimerDB.coach.lastRecap.headline, "legacy coach data should be preserved for rollback safety")
-  assert_eq(12, DingTimerDB.meta.createdAt, "existing metadata should be preserved")
+  assert_eq(nil, DingTimerDB.meta.createdAt, "misleading persisted createdAt metadata should be removed during migration")
+  assert_eq(nil, DingTimerDB.meta.lastSeenAt, "misleading persisted lastSeenAt metadata should be removed during migration")
   assert_eq("1.1.2", DingTimerDB.meta.addonVersion, "addon version metadata should be refreshed")
 end)
 

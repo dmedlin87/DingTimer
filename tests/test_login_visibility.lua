@@ -19,6 +19,7 @@ local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
+LoadAddonFile("DingTimer/HUDText.lua", NS)
 LoadAddonFile("DingTimer/Core_HUD.lua", NS)
 LoadAddonFile("DingTimer/Core_Events.lua", NS)
 LoadAddonFile("DingTimer/Actions.lua", NS)
@@ -55,6 +56,7 @@ onEvent(frame, "PLAYER_LOGIN")
 local floatFrame = NS.GetFloatFrame()
 assert_true(floatFrame ~= nil, "HUD frame should exist after login")
 assert_true(floatFrame:IsShown(), "HUD should show on login when show-in-combat is enabled")
+assert_true(C_Timer._lastTicker == nil, "login should not start the heartbeat ticker until the HUD has live activity")
 
 InCombatLockdown = baseInCombatLockdown
 

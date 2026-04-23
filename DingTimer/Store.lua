@@ -27,8 +27,6 @@ local DEFAULTS = {
   schemaVersion = 10,
   meta = {
     addonVersion = ADDON_VERSION,
-    createdAt = 0,
-    lastSeenAt = 0,
   },
 }
 
@@ -153,15 +151,13 @@ local function normalizeActiveSettings(db)
   db.floatPosition = normalizeFloatPosition(db.floatPosition)
 end
 
-local function updateMetadata(db, now)
+local function updateMetadata(db)
   if type(db.meta) ~= "table" then
     db.meta = {}
   end
   db.meta.addonVersion = ADDON_VERSION
-  if not tonumber(db.meta.createdAt) or tonumber(db.meta.createdAt) == 0 then
-    db.meta.createdAt = now
-  end
-  db.meta.lastSeenAt = now
+  db.meta.createdAt = nil
+  db.meta.lastSeenAt = nil
 end
 
 local function migrateTo10(db)
@@ -181,7 +177,6 @@ local function migrateStore(db)
 end
 
 function NS.InitStore()
-  local now = GetTime and GetTime() or 0
   local db = DingTimerDB
 
   if type(db) ~= "table" then
@@ -190,6 +185,6 @@ function NS.InitStore()
   end
 
   normalizeActiveSettings(db)
-  updateMetadata(db, now)
+  updateMetadata(db)
   migrateStore(db)
 end

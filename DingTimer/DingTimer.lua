@@ -40,7 +40,6 @@ end
 
 local function onPlayerLogin()
   NS.resetXPState()
-  NS.StartHeartbeatTicker()
   syncFloatVisibility()
   showStartupMessages()
 end

@@ -11,6 +11,7 @@ The shipped addon now loads only these modules through [`DingTimer/DingTimer.toc
 - `Util.lua`
 - `Store.lua`
 - `Core_DingTimer.lua`
+- `HUDText.lua`
 - `Core_HUD.lua`
 - `Core_Events.lua`
 - `Actions.lua`
@@ -27,7 +28,8 @@ DingTimer/
   DingTimer.toc      # Active load order
   Util.lua           # Formatting, colors, shared UI helpers
   Store.lua          # SavedVariables init and schema v10 cleanup
-  Core_DingTimer.lua # Rolling XP state, snapshot math, and heartbeat ticker
+  Core_DingTimer.lua # Rolling XP state, snapshot math, and lazy heartbeat ticker
+  HUDText.lua        # Pure HUD title/subtext formatting
   Core_HUD.lua       # Floating HUD frame, animation, and visibility
   Core_Events.lua    # XP and money event mutation
   Actions.lua        # Popup-facing actions and session reset
@@ -50,7 +52,8 @@ tests/
 
 ## Important Runtime Details
 
-- `Core_DingTimer.lua` owns rolling state, snapshot math, and the 1-second ticker.
+- `Core_DingTimer.lua` owns rolling state, snapshot math, and the lazy 1-second ticker.
+- `HUDText.lua` owns pure HUD text formatting and should stay free of frame mutation.
 - `Core_HUD.lua` owns the floating HUD frame, animation, and visibility behavior.
 - `Core_Events.lua` owns XP and money event mutation.
 - `NS.GetSessionSnapshot()` is still derived from rolling XP events and remains the source for HUD text.

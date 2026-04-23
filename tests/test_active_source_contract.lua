@@ -4,6 +4,7 @@ local activeEntries = {
   "Util.lua",
   "Store.lua",
   "Core_DingTimer.lua",
+  "HUDText.lua",
   "Core_HUD.lua",
   "Core_Events.lua",
   "Actions.lua",

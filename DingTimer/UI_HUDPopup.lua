@@ -27,9 +27,6 @@ local function createCheckbox(parent, x, y, label, callback)
     if callback then
       callback(self:GetChecked())
     end
-    if popupFrame and popupFrame.Refresh then
-      popupFrame:Refresh()
-    end
   end)
 
   local text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -62,9 +59,6 @@ local function createButton(parent, x, y, width, label, callback)
   btn:SetScript("OnClick", function()
     if callback then
       callback()
-    end
-    if popupFrame and popupFrame.Refresh then
-      popupFrame:Refresh()
     end
   end)
   if NS.UI and NS.UI.DecorateButton then
@@ -102,9 +96,6 @@ local function createConfirmButton(parent, x, y, width, idleLabel, confirmLabel,
     resetToIdle()
     if callback then
       callback()
-    end
-    if popupFrame and popupFrame.Refresh then
-      popupFrame:Refresh()
     end
   end)
 

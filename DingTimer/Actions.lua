@@ -34,6 +34,7 @@ function NS.SetFloatEnabled(enabled)
   DingTimerDB.float = enabled == true
   if NS.setFloatVisible then
     NS.setFloatVisible(DingTimerDB.float)
+    return DingTimerDB.float
   end
   refreshSurfaces()
   return DingTimerDB.float
@@ -49,6 +50,7 @@ function NS.SetFloatShowInCombat(showInCombat)
   DingTimerDB.floatShowInCombat = showInCombat == true
   if DingTimerDB.float and NS.setFloatVisible then
     NS.setFloatVisible(true)
+    return DingTimerDB.floatShowInCombat
   end
   refreshSurfaces()
   return DingTimerDB.floatShowInCombat
@@ -61,6 +63,7 @@ function NS.ResetFloatHUD()
   end
   if NS.setFloatVisible then
     NS.setFloatVisible(true)
+    return true
   end
   refreshSurfaces()
   return true
