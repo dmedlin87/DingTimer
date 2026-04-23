@@ -2,6 +2,7 @@ dofile("tests/mocks.lua")
 
 ---@class TestFontRegion
 ---@field GetText fun(self: TestFontRegion): string
+---@field GetPoint fun(self: TestFontRegion): string, any, string, number, number
 
 ---@class TestTextureRegion
 ---@field IsShown fun(self: TestTextureRegion): boolean

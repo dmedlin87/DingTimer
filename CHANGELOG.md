@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Nothing yet.
+- Fixed Windows coverage setup when LuaRocks emits quoted environment assignments.
+- Fixed level-up event ordering so completed-level rollover XP is not counted in the fresh session when `PLAYER_LEVEL_UP` arrives before `PLAYER_XP_UPDATE`.
 
 ## 1.1.1
 

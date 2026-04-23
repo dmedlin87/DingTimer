@@ -1,1 +1,7 @@
 tmpclaude-*
+__pycache__/
+.pytest_cache/
+*.pyc
+luacov.stats.out
+luacov.report.out
+release-assets/

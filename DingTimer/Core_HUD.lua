@@ -369,14 +369,14 @@ function NS.ensureFloat()
     floatFrame:SetBackdropBorderColor(0.18, 0.58, 0.72, 0.88)
   end
 
-  local hudGlow = floatFrame:CreateTexture(nil, "BACKGROUND")
+  local hudGlow = floatFrame:CreateTexture(nil, "BACKGROUND") --[[@as DingTimerTexture]]
   hudGlow:SetPoint("TOPLEFT", floatFrame, "TOPLEFT", -4, 4)
   hudGlow:SetPoint("BOTTOMRIGHT", floatFrame, "BOTTOMRIGHT", 4, -4)
   hudGlow:SetColorTexture(0.08, 0.28, 0.36, 1)
   hudGlow:SetAlpha(0.12)
   floatFrame._hudGlow = hudGlow
 
-  local bottomLine = floatFrame:CreateTexture(nil, "BORDER")
+  local bottomLine = floatFrame:CreateTexture(nil, "BORDER") --[[@as DingTimerTexture]]
   bottomLine:SetHeight(1)
   bottomLine:SetPoint("BOTTOMLEFT", floatFrame, "BOTTOMLEFT", 12, 6)
   bottomLine:SetPoint("BOTTOMRIGHT", floatFrame, "BOTTOMRIGHT", -12, 6)
@@ -483,7 +483,7 @@ function NS.ensureFloat()
     tick:SetColorTexture(0.52, 0.74, 0.82, 0.16)
   end
 
-  local fill = bar:CreateTexture(nil, "ARTWORK")
+  local fill = bar:CreateTexture(nil, "ARTWORK") --[[@as DingTimerTexture]]
   fill:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
   fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
   fill:SetWidth(0)
@@ -491,7 +491,7 @@ function NS.ensureFloat()
   fill:Hide()
   floatFrame.progressFill = fill
 
-  local sheen = bar:CreateTexture(nil, "OVERLAY")
+  local sheen = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   sheen:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, -1)
   sheen:SetWidth(0)
   sheen:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.42)))
@@ -505,7 +505,7 @@ function NS.ensureFloat()
   fillShade:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.4)))
   fillShade:SetColorTexture(0.03, 0.08, 0.12, 0.18)
 
-  local pulse = bar:CreateTexture(nil, "OVERLAY")
+  local pulse = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   pulse:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
   pulse:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
   pulse:SetWidth(0)
@@ -516,7 +516,7 @@ function NS.ensureFloat()
   pulse:Hide()
   floatFrame.progressPulse = pulse
 
-  local spark = bar:CreateTexture(nil, "OVERLAY")
+  local spark = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
   spark:SetBlendMode("ADD")
   spark:SetSize(14, HUD_BAR_HEIGHT + 6)
@@ -524,7 +524,7 @@ function NS.ensureFloat()
   spark:Hide()
   floatFrame.progressSpark = spark
 
-  local cap = bar:CreateTexture(nil, "OVERLAY")
+  local cap = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   cap:SetSize(2, HUD_BAR_HEIGHT + 2)
   cap:SetTexture("Interface\\Buttons\\WHITE8X8")
   cap:SetBlendMode("ADD")
@@ -533,7 +533,7 @@ function NS.ensureFloat()
   cap:Hide()
   floatFrame.progressCap = cap
 
-  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight") --[[@as DingTimerTextRegion]]
   title:SetPoint("TOP", floatFrame, "TOP", 0, -8)
   if title.SetWidth then
     title:SetWidth(HUD_BAR_WIDTH + 10)
@@ -547,7 +547,7 @@ function NS.ensureFloat()
   title:SetJustifyH("CENTER")
   floatFrame.titleText = title
 
-  local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") --[[@as DingTimerTextRegion]]
   sub:SetPoint("BOTTOM", bar, "TOP", 0, 4)
   if sub.SetWidth then
     sub:SetWidth(HUD_BAR_WIDTH + 16)

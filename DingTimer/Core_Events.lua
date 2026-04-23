@@ -10,8 +10,13 @@ function NS.onXPUpdate()
 
   local delta = xp - (NS.state.lastXP or 0)
   if delta < 0 then
-    delta = (NS.state.lastMax or 0) - (NS.state.lastXP or 0) + xp
+    if NS.state.skipNextXPDropAfterLevelUp then
+      delta = 0
+    else
+      delta = (NS.state.lastMax or 0) - (NS.state.lastXP or 0) + xp
+    end
   end
+  NS.state.skipNextXPDropAfterLevelUp = false
 
   NS.state.lastXP = xp
   NS.state.lastMax = maxXP

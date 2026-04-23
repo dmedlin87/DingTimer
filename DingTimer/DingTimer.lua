@@ -82,6 +82,7 @@ local function onLevelUp(level)
     PlaySound(12891, "Master")
   end
   NS.resetXPState()
+  NS.state.skipNextXPDropAfterLevelUp = true
 end
 
 frame:SetScript("OnEvent", function(_, event, ...)

@@ -50,9 +50,14 @@ function Apply-LuaRocksPath {
     if ($LASTEXITCODE -ne 0 -or -not $lines) { return }
 
     foreach ($line in $lines) {
-        if ($line -match '^SET\s+([A-Z_]+)=(.*)$') {
-            $name = $matches[1]
-            $value = $matches[2]
+        $match = [regex]::Match($line, '^SET\s+"([^=]+)=(.*)"\s*$')
+        if (-not $match.Success) {
+            $match = [regex]::Match($line, '^SET\s+([^=]+)=(.*)$')
+        }
+
+        if ($match.Success) {
+            $name = $match.Groups[1].Value
+            $value = $match.Groups[2].Value
             Set-Item -Path "Env:$name" -Value $value
         }
     }

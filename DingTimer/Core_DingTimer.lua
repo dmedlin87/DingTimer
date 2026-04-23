@@ -21,6 +21,7 @@ NS.state = {
   moneyEvents = {},
   windowXP = 0,
   windowMoney = 0,
+  skipNextXPDropAfterLevelUp = false,
 }
 
 local heartbeatTicker = nil
@@ -56,6 +57,7 @@ local function clearInternalState(now)
   NS.state.moneyEvents = {}
   NS.state.windowXP = 0
   NS.state.windowMoney = 0
+  NS.state.skipNextXPDropAfterLevelUp = false
 end
 
 function NS.InvalidateTickCache()
