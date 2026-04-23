@@ -215,7 +215,7 @@ function NS.InitHUDPopup()
     self.controls.lock:SetChecked(DingTimerDB == nil or DingTimerDB.floatLocked ~= false)
     self.controls.floatShowInCombat:SetChecked(DingTimerDB and DingTimerDB.floatShowInCombat == true)
     self.controls.chat:SetChecked(DingTimerDB == nil or DingTimerDB.enabled == true)
-    self.controls.dingSoundEnabled:SetChecked(DingTimerDB == nil or DingTimerDB.dingSoundEnabled ~= false)
+    self.controls.dingSoundEnabled:SetChecked(DingTimerDB == nil or DingTimerDB.dingSoundEnabled == true)
 
     if NS.UI and NS.UI.SetButtonActive then
       NS.UI.SetButtonActive(self.controls.modeFull, (DingTimerDB and DingTimerDB.mode or "full") == "full")
