@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Promoted `dingSoundEnabled` into a documented saved setting with popup control, normalization, and level-up sound coverage.
+- Removed the level-up sound toggle and preview from the HUD popup while keeping saved setting normalization and level-up sound coverage.
 - Trimmed slash-command compatibility handling into a smaller helper, removed the no-op logout event registration, and added explicit heartbeat ticker stop coverage.
 - Fixed Windows coverage setup when LuaRocks emits quoted environment assignments.
 - Fixed level-up event ordering so completed-level rollover XP is not counted in the fresh session when `PLAYER_LEVEL_UP` arrives before `PLAYER_XP_UPDATE`.

@@ -92,9 +92,8 @@ it("applies active slash command state changes and reports the result", function
 
   local popup = NS.GetHUDPopup()
   assert_true(popup ~= nil, "settings command should create the HUD popup")
-  popup.controls.dingSoundEnabled:SetChecked(false)
-  popup.controls.dingSoundEnabled:GetScript("OnClick")(popup.controls.dingSoundEnabled)
-  assert_false(DingTimerDB.dingSoundEnabled, "popup sound toggle should persist through actions")
+  assert_true(popup.controls.dingSoundEnabled == nil, "settings popup should not expose the removed sound toggle")
+  assert_true(popup.controls.previewSound == nil, "settings popup should not expose the removed sound preview button")
 
   ClearChatLog()
   SlashCmdList.DINGTIMER("float unlock")

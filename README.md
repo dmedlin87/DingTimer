@@ -30,11 +30,11 @@ The addon centers on one floating HUD and one tiny settings popup. The old tabbe
 
 - Floating HUD with live `TTL`, rolling `XP/hr`, an animated current-level XP bar, last gain, and XP needed to level
 - Built-in HUD profiles: `Full`, `Compact`, `Bar+TTL`, and `Graph`
-- Tiny popup for HUD visibility, lock state, combat visibility, HUD profile, chat mode, level-up sound with preview, window presets, and reset
+- Tiny popup for HUD visibility, lock state, combat visibility, HUD profile, chat mode, window presets, and reset
 - Rolling-window XP tracking instead of stale long-session pace
 - Optional chat output in `full` or `ttl` mode
 - Level-up announcement with time spent in level and net money
-- Persistent HUD position and core settings in `DingTimerDB`, including the level-up sound toggle
+- Persistent HUD position and core settings in `DingTimerDB`
 
 ## Installation
 
@@ -116,7 +116,7 @@ HUD profiles are selected from the popup:
 - `Full`: default wide HUD with large TTL title, detail line, and XP bar
 - `Compact`: same information in a smaller frame
 - `Bar+TTL`: focused TTL label plus XP bar, without the detail line
-- `Graph`: rolling XP gain bars over the selected window, plus the TTL/detail labels
+- `Graph`: rolling XP gain bars over the selected window, hover tooltips for each bar, plus the TTL/detail labels
 
 ## Popup Controls
 
@@ -126,9 +126,7 @@ The popup contains only these controls:
 - `Lock`
 - `Show in combat`
 - `Chat on/off`
-- `Level-up sound`
-- `Preview` sound
-- `HUD` profile: `Full`, `Compact`, `Bar`, `G`
+- `HUD` profile: `Full`, `Compact`, `Bar`, `Graph`
 - `Chat mode` with `Full` and `TTL`
 - `Window` presets: `1m`, `5m`, `10m`, `15m`
 - `Reset session` with a confirm-on-second-click safety step

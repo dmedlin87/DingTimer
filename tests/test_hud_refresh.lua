@@ -39,6 +39,7 @@ dofile("tests/mocks.lua")
 ---@field progressTicks TestTextureRegion[]
 ---@field graphArea TestFrameRegion?
 ---@field graphBars TestTextureRegion[]?
+---@field graphHitboxes TestFrameRegion[]?
 ---@field graphPeakText TestFontRegion?
 ---@field _dingGlow TestTextureRegion?
 ---@field _dingAccent TestTextureRegion?
@@ -233,6 +234,8 @@ assert_true(frame.graphGuides[1]:IsShown(), "graph profile should show graph gui
 assert_false(frame.progressBar:IsShown(), "graph profile should hide the level-progress bar")
 assert_true(frame.graphBars ~= nil, "graph profile should create graph bars")
 assert_eq(18, #frame.graphBars, "graph profile should create one bar per graph bucket")
+assert_true(frame.graphHitboxes ~= nil, "graph profile should create graph hover hitboxes")
+assert_eq(18, #frame.graphHitboxes, "graph profile should create one hover hitbox per graph bucket")
 assert_true(frame.graphBars[12]:GetHeight() > frame.graphBars[18]:GetHeight(), "older larger gains should scale taller than smaller recent gains")
 assert_true(frame.graphBars[18]:GetHeight() >= 3, "graph profile should keep smaller gains visible")
 assertStringMatch("Max +100", frame.graphPeakText:GetText(), "graph profile should label the largest bucket gain")
@@ -246,6 +249,17 @@ local buckets, peak = NS.BuildXPGraphBuckets(NS.state.events, 380, 60, 6)
 assert_eq(100, buckets[4], "graph bucket helper should place the older gain in the correct interval bucket")
 assert_eq(40, buckets[6], "graph bucket helper should place the current gain in the newest bucket")
 assert_eq(100, peak, "graph bucket helper should return the peak bucket XP")
+ClearTooltip()
+local newestGraphHitbox = frame.graphHitboxes[18]
+newestGraphHitbox:GetScript("OnEnter")(newestGraphHitbox)
+local tooltipLines = GetTooltipLines()
+assert_true(GameTooltip:IsShown(), "graph bar hover should show a tooltip")
+assertStringMatch("DingTimer Graph", tooltipLines[1], "graph bar tooltip should identify the graph")
+assertStringMatch("+40 XP", tooltipLines[2], "graph bar tooltip should show the hovered bucket XP")
+assertStringMatch("Latest 3s bucket", tooltipLines[3], "graph bar tooltip should show the hovered bucket time range")
+assertStringMatch("Peak +100", tooltipLines[4], "graph bar tooltip should show the peak bucket for context")
+newestGraphHitbox:GetScript("OnLeave")(newestGraphHitbox)
+assert_false(GameTooltip:IsShown(), "graph bar tooltip should hide when leaving the hovered bar")
 local olderGraphHeight = frame.graphBars[12]:GetHeight()
 local newestGraphHeight = frame.graphBars[18]:GetHeight()
 SetTime(395)

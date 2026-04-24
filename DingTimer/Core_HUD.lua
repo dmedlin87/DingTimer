@@ -47,6 +47,7 @@ local math_sqrt = math.sqrt
 ---@field graphArea Frame?
 ---@field graphBackdrop DingTimerTexture?
 ---@field graphBars DingTimerTexture[]?
+---@field graphHitboxes Frame[]?
 ---@field graphBaseline DingTimerTexture?
 ---@field graphGuides DingTimerTexture[]?
 ---@field graphPeakText DingTimerTextRegion?
@@ -269,6 +270,18 @@ local function setGraphWidgetsShown(frame, shown)
       end
     end
   end
+  if frame.graphHitboxes then
+    for i = 1, #frame.graphHitboxes do
+      local hitbox = frame.graphHitboxes[i]
+      if hitbox then
+        if shown and hitbox.Show then
+          hitbox:Show()
+        elseif not shown and hitbox.Hide then
+          hitbox:Hide()
+        end
+      end
+    end
+  end
   if frame.graphGuides then
     for i = 1, #frame.graphGuides do
       local guide = frame.graphGuides[i]
@@ -280,6 +293,9 @@ local function setGraphWidgetsShown(frame, shown)
         end
       end
     end
+  end
+  if not shown and GameTooltip and GameTooltip.Hide then
+    GameTooltip:Hide()
   end
 end
 
@@ -356,6 +372,16 @@ local function applyFloatProfileLayout(frame, profile)
           graphBar:ClearAllPoints()
           graphBar:SetWidth(barWidth)
           graphBar:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", paddingX + math_floor((i - 1) * (barWidth + gap)), barBaseY)
+        end
+      end
+      if frame.graphHitboxes then
+        for i = 1, #frame.graphHitboxes do
+          local hitbox = frame.graphHitboxes[i]
+          if hitbox then
+            hitbox:ClearAllPoints()
+            hitbox:SetSize(barWidth, graphHeight)
+            hitbox:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", paddingX + math_floor((i - 1) * (barWidth + gap)), 0)
+          end
         end
       end
     end
@@ -591,6 +617,83 @@ function NS.BuildXPGraphBuckets(events, now, windowSeconds, bucketCount)
   return computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
 end
 
+local function formatGraphBucketRange(data)
+  local bucketCount = math_floor(tonumber(data and data.count) or 1)
+  if bucketCount < 1 then
+    bucketCount = 1
+  end
+  local bucketIndex = math_floor(tonumber(data and data.index) or bucketCount)
+  if bucketIndex < 1 then
+    bucketIndex = 1
+  elseif bucketIndex > bucketCount then
+    bucketIndex = bucketCount
+  end
+
+  local windowSeconds = tonumber(data and data.windowSeconds) or 0
+  if windowSeconds <= 0 then
+    return "Rolling window bucket"
+  end
+
+  local bucketSeconds = windowSeconds / bucketCount
+  local newerSeconds = math_max(0, math_floor(((bucketCount - bucketIndex) * bucketSeconds) + 0.5))
+  local olderSeconds = math_max(1, math_floor(((bucketCount - bucketIndex + 1) * bucketSeconds) + 0.5))
+  if newerSeconds <= 0 then
+    return "Latest " .. NS.fmtTime(olderSeconds) .. " bucket"
+  end
+  return NS.fmtTime(newerSeconds) .. "-" .. NS.fmtTime(olderSeconds) .. " before latest gain"
+end
+
+local function showXPGraphBucketTooltip(self)
+  local data = self and self._dingGraphBucket
+  if not data or not GameTooltip then
+    return
+  end
+
+  local amount = tonumber(data.amount) or 0
+  GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+  if GameTooltip.ClearLines then
+    GameTooltip:ClearLines()
+  end
+  GameTooltip:AddLine(NS.C.base .. "DingTimer Graph" .. NS.C.r)
+  if amount > 0 then
+    GameTooltip:AddLine("+" .. NS.FormatNumber(amount) .. " XP", 1, 1, 1)
+  else
+    GameTooltip:AddLine("No XP", 1, 1, 1)
+  end
+  GameTooltip:AddLine(formatGraphBucketRange(data), 0.82, 0.88, 0.92)
+
+  local peak = tonumber(data.peak) or 0
+  if peak > 0 then
+    GameTooltip:AddLine("Peak +" .. NS.FormatNumber(peak), 0.78, 0.9, 0.95)
+  end
+  GameTooltip:Show()
+end
+
+local function hideXPGraphBucketTooltip()
+  if GameTooltip and GameTooltip.Hide then
+    GameTooltip:Hide()
+  end
+end
+
+local function updateXPGraphTooltipData(frame, buckets, peak, snapshot, bucketCount)
+  if not frame or not frame.graphHitboxes then
+    return
+  end
+
+  for i = 1, #frame.graphHitboxes do
+    local hitbox = frame.graphHitboxes[i]
+    if hitbox then
+      hitbox._dingGraphBucket = {
+        index = i,
+        count = bucketCount,
+        amount = buckets and buckets[i] or 0,
+        peak = peak or 0,
+        windowSeconds = snapshot and snapshot.rollingWindow or 0,
+      }
+    end
+  end
+end
+
 local function updateXPGraphVisual(frame, snapshot, profile)
   if not frame or not frame.graphBars or not snapshot or not profile then
     return
@@ -598,7 +701,8 @@ local function updateXPGraphVisual(frame, snapshot, profile)
 
   local graphHeight = profile.graphHeight or 28
   local usableHeight = math_max(6, graphHeight - ((profile.graphBarBaseY or 1) + 5))
-  local buckets, peak = computeXPGraphBuckets(NS.state and NS.state.events, snapshot.now, snapshot.rollingWindow, profile.graphBucketCount)
+  local bucketCount = profile.graphBucketCount or #frame.graphBars
+  local buckets, peak = computeXPGraphBuckets(NS.state and NS.state.events, snapshot.now, snapshot.rollingWindow, bucketCount)
   local minimumHeight = 3
 
   for i = 1, #frame.graphBars do
@@ -626,12 +730,45 @@ local function updateXPGraphVisual(frame, snapshot, profile)
     end
   end
 
+  updateXPGraphTooltipData(frame, buckets, peak, snapshot, bucketCount)
+
   if frame.graphPeakText then
     if peak > 0 then
       frame.graphPeakText:SetText("Max +" .. NS.FormatNumber(peak))
     else
       frame.graphPeakText:SetText("No XP")
     end
+  end
+end
+
+local function handleFloatDragStart(frame)
+  if not frame or DingTimerDB.floatLocked then
+    return
+  end
+  frame:StartMoving()
+end
+
+local function handleFloatDragStop(frame)
+  if not frame or DingTimerDB.floatLocked then
+    return
+  end
+  frame:StopMovingOrSizing()
+  local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
+  DingTimerDB.floatPosition = {
+    point = point,
+    relativePoint = relativePoint,
+    xOfs = xOfs,
+    yOfs = yOfs,
+  }
+end
+
+local function handleFloatClick(frame, button)
+  if button == "RightButton" and NS.ToggleHUDPopup then
+    NS.ToggleHUDPopup(frame)
+    return
+  end
+  if button == "LeftButton" and DingTimerDB.floatLocked and NS.ToggleHUDPopup then
+    NS.ToggleHUDPopup(frame)
   end
 end
 
@@ -847,36 +984,9 @@ function NS.ensureFloat()
   bottomLine:SetColorTexture(0.05, 0.12, 0.16, 0.58)
   floatFrame._hudBottomLine = bottomLine
 
-  floatFrame:SetScript("OnDragStart", function(self)
-    if DingTimerDB.floatLocked then
-      return
-    end
-    self:StartMoving()
-  end)
-
-  floatFrame:SetScript("OnDragStop", function(self)
-    if DingTimerDB.floatLocked then
-      return
-    end
-    self:StopMovingOrSizing()
-    local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-    DingTimerDB.floatPosition = {
-      point = point,
-      relativePoint = relativePoint,
-      xOfs = xOfs,
-      yOfs = yOfs,
-    }
-  end)
-
-  floatFrame:SetScript("OnClick", function(self, button)
-    if button == "RightButton" and NS.ToggleHUDPopup then
-      NS.ToggleHUDPopup(self)
-      return
-    end
-    if button == "LeftButton" and DingTimerDB.floatLocked and NS.ToggleHUDPopup then
-      NS.ToggleHUDPopup(self)
-    end
-  end)
+  floatFrame:SetScript("OnDragStart", handleFloatDragStart)
+  floatFrame:SetScript("OnDragStop", handleFloatDragStop)
+  floatFrame:SetScript("OnClick", handleFloatClick)
 
   floatFrame:SetScript("OnEnter", function(self)
     self._hovered = true
@@ -1032,6 +1142,7 @@ function NS.ensureFloat()
   floatFrame.graphBaseline = graphBaseline
 
   floatFrame.graphBars = {}
+  floatFrame.graphHitboxes = {}
   local graphBucketCount = HUD_PROFILES.graph.graphBucketCount
   local graphGap = HUD_PROFILES.graph.graphGap
   local graphPaddingX = HUD_PROFILES.graph.graphPaddingX
@@ -1044,6 +1155,26 @@ function NS.ensureFloat()
     graphBar:SetColorTexture(0.07, 0.16, 0.20, 0.36)
     graphBar:Hide()
     floatFrame.graphBars[i] = graphBar
+
+    local graphHitbox = CreateFrame("Button", nil, graphArea)
+    graphHitbox:SetSize(graphBarWidth, HUD_PROFILES.graph.graphHeight)
+    graphHitbox:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", graphPaddingX + math_floor((i - 1) * (graphBarWidth + graphGap)), 0)
+    graphHitbox:EnableMouse(true)
+    graphHitbox:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    graphHitbox:RegisterForDrag("LeftButton")
+    graphHitbox:SetScript("OnEnter", showXPGraphBucketTooltip)
+    graphHitbox:SetScript("OnLeave", hideXPGraphBucketTooltip)
+    graphHitbox:SetScript("OnClick", function(_, button)
+      handleFloatClick(floatFrame, button)
+    end)
+    graphHitbox:SetScript("OnDragStart", function()
+      handleFloatDragStart(floatFrame)
+    end)
+    graphHitbox:SetScript("OnDragStop", function()
+      handleFloatDragStop(floatFrame)
+    end)
+    graphHitbox:Hide()
+    floatFrame.graphHitboxes[i] = graphHitbox
   end
 
   local graphPeakText = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") --[[@as DingTimerTextRegion]]

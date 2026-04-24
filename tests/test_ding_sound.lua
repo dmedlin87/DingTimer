@@ -94,7 +94,7 @@ it("does not play the level-up sound when the setting is disabled", function()
   assert_eq(0, #GetPlayedSounds(), "level-up should not play a sound when disabled")
 end)
 
-it("previews the level-up sound from settings without changing the toggle", function()
+it("previews the level-up sound helper without changing the toggle", function()
   loadFreshStore()
   NS.SetDingSoundEnabled(false)
   ClearPlayedSounds()

@@ -398,15 +398,46 @@ C_CurrencyInfo = {
   end
 }
 
+local tooltipLines = {}
 GameTooltip = {
-  SetOwner = function() end,
-  SetText = function() end,
-  AddLine = function() end,
-  AddDoubleLine = function() end,
-  ClearLines = function() end,
-  Show = function() end,
-  Hide = function() end,
+  _shown = false,
+  SetOwner = function(self, owner, anchor)
+    self._owner = owner
+    self._anchor = anchor
+  end,
+  SetText = function(_, text)
+    tooltipLines = { text }
+  end,
+  AddLine = function(_, text)
+    table.insert(tooltipLines, text)
+  end,
+  AddDoubleLine = function(_, left, right)
+    table.insert(tooltipLines, (left or "") .. " " .. (right or ""))
+  end,
+  ClearLines = function()
+    tooltipLines = {}
+  end,
+  Show = function(self)
+    self._shown = true
+  end,
+  Hide = function(self)
+    self._shown = false
+  end,
+  IsShown = function(self)
+    return self._shown
+  end,
 }
+
+function ClearTooltip()
+  tooltipLines = {}
+  GameTooltip._owner = nil
+  GameTooltip._anchor = nil
+  GameTooltip._shown = false
+end
+
+function GetTooltipLines()
+  return tooltipLines
+end
 
 function RegisterStateDriver() end
 function UnregisterStateDriver() end
