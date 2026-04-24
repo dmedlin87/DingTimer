@@ -3,6 +3,8 @@ dofile("tests/mocks.lua")
 ---@class TestFontRegion
 ---@field GetText fun(self: TestFontRegion): string
 ---@field GetPoint fun(self: TestFontRegion): string, any, string, number, number
+---@field _fontObject string?
+---@field _justifyH string?
 
 ---@class TestTextureRegion
 ---@field IsShown fun(self: TestTextureRegion): boolean
@@ -26,8 +28,10 @@ dofile("tests/mocks.lua")
 ---@field progressFill TestFrameRegion
 ---@field progressPulse TestTextureRegion
 ---@field progressSpark TestTextureRegion
+---@field progressTicks TestTextureRegion[]
 ---@field _dingGlow TestTextureRegion?
 ---@field _dingAccent TestTextureRegion?
+---@field GetWidth fun(self: TestHUDFrame): number
 ---@field GetScript fun(self: TestHUDFrame, scriptName: string): function?
 
 ---@type TestHUDFrame?
@@ -86,7 +90,11 @@ assertStringMatch("Last +", frame.subText:GetText(), "HUD should show the most r
 assertStringMatch("Last +100 (9)", frame.subText:GetText(), "HUD should show the most recent XP gain and gains remaining estimate on the second line")
 assertStringMatch("Need 900", frame.subText:GetText(), "HUD should show the remaining XP needed to level")
 assert_true(string.find(frame.titleText:GetText(), "DingTimer", 1, true) == nil, "HUD title should not include the addon name")
+assert_eq("GameFontHighlightLarge", frame.titleText._fontObject, "HUD TTL text should use the larger title font")
+assert_eq("CENTER", frame.titleText._justifyH, "HUD TTL title text should stay centered in the wider frame")
+assert_eq(385, frame:GetWidth(), "HUD frame should be 25% wider than the original 308px width")
 assert_true(frame.progressBar ~= nil, "HUD should create an internal XP progress bar")
+assert_eq(345, frame.progressBar:GetWidth(), "HUD XP bar should stretch with the wider frame")
 local barPoint, barRelativeTo, barRelativePoint, _, barYOffset = frame.progressBar:GetPoint()
 assert_eq("BOTTOM", barPoint, "HUD XP bar should sit below the detail label")
 assert_eq(frame, barRelativeTo, "HUD XP bar should anchor to the HUD frame")
@@ -100,6 +108,13 @@ assert_false(frame._dingGlow and frame._dingGlow:IsShown(), "HUD should hide the
 assert_false(frame._dingAccent and frame._dingAccent:IsShown(), "HUD should hide the shared top accent behind the TTL label")
 assert_true(frame.progressPulse ~= nil, "HUD should create a gain pulse texture")
 assert_true(frame.progressSpark ~= nil, "HUD should create a gain spark texture")
+assert_true(frame.progressTicks ~= nil, "HUD should keep XP tick markers available for layering checks")
+for i = 1, 3 do
+  local tick = frame.progressTicks[i]
+  assert_true(tick ~= nil, "HUD should create XP tick marker " .. i)
+  assert_eq("OVERLAY", tick._drawLayer, "HUD XP tick markers should render above the progress fill")
+  assert_eq(2, tick._subLevel, "HUD XP tick markers should render above other bar overlay shading")
+end
 assert_true(frame:GetScript("OnUpdate") ~= nil, "HUD should animate when XP is gained")
 
 local onUpdate = frame:GetScript("OnUpdate")

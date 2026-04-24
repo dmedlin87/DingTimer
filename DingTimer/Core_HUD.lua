@@ -32,6 +32,7 @@ local math_min = math.min
 ---@field progressPulse DingTimerTexture?
 ---@field progressSpark DingTimerTexture?
 ---@field progressCap DingTimerTexture?
+---@field progressTicks DingTimerTexture[]?
 ---@field _dingAccent DingTimerTexture?
 ---@field _dingGlow DingTimerTexture?
 ---@field _hudGlow DingTimerTexture?
@@ -46,9 +47,9 @@ local math_min = math.min
 ---@type DingTimerFloatFrame?
 local floatFrame = nil
 
-local HUD_WIDTH = 308
+local HUD_WIDTH = 385
 local HUD_HEIGHT = 66
-local HUD_BAR_WIDTH = 276
+local HUD_BAR_WIDTH = 345
 local HUD_BAR_HEIGHT = 9
 local HUD_PROGRESS_ANIM_DURATION = 0.28
 local HUD_GAIN_PULSE_DURATION = 0.65
@@ -434,14 +435,6 @@ function NS.ensureFloat()
   trackGlow:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
   trackGlow:SetColorTexture(0.12, 0.24, 0.32, 0.22)
 
-  for i = 1, 3 do
-    local tick = bar:CreateTexture(nil, "BORDER")
-    tick:SetWidth(1)
-    tick:SetHeight(HUD_BAR_HEIGHT - 4)
-    tick:SetPoint("CENTER", bar, "LEFT", math_floor((HUD_BAR_WIDTH * i / 4) + 0.5), 0)
-    tick:SetColorTexture(0.52, 0.74, 0.82, 0.16)
-  end
-
   local fill = bar:CreateTexture(nil, "ARTWORK") --[[@as DingTimerTexture]]
   fill:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
   fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
@@ -463,6 +456,16 @@ function NS.ensureFloat()
   fillShade:SetWidth(HUD_BAR_WIDTH)
   fillShade:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.4)))
   fillShade:SetColorTexture(0.03, 0.08, 0.12, 0.18)
+
+  floatFrame.progressTicks = {}
+  for i = 1, 3 do
+    local tick = bar:CreateTexture(nil, "OVERLAY", nil, 2) --[[@as DingTimerTexture]]
+    tick:SetWidth(1)
+    tick:SetHeight(HUD_BAR_HEIGHT - 4)
+    tick:SetPoint("CENTER", bar, "LEFT", math_floor((HUD_BAR_WIDTH * i / 4) + 0.5), 0)
+    tick:SetColorTexture(0.74, 0.92, 1.0, 0.34)
+    floatFrame.progressTicks[i] = tick
+  end
 
   local pulse = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   pulse:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
@@ -492,16 +495,19 @@ function NS.ensureFloat()
   cap:Hide()
   floatFrame.progressCap = cap
 
-  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight") --[[@as DingTimerTextRegion]]
-  title:SetPoint("TOP", floatFrame, "TOP", 0, -8)
+  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge") --[[@as DingTimerTextRegion]]
+  title:SetPoint("TOP", floatFrame, "TOP", 0, -7)
   if title.SetWidth then
     title:SetWidth(HUD_BAR_WIDTH + 10)
   end
   if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(title, "value")
+    NS.UI.ApplyTextStyle(title, "title")
   end
   if title.SetTextColor then
-    title:SetTextColor(0.95, 0.98, 1.0)
+    title:SetTextColor(0.92, 0.98, 1.0)
+  end
+  if title.SetShadowColor then
+    title:SetShadowColor(0, 0, 0, 0.92)
   end
   title:SetJustifyH("CENTER")
   floatFrame.titleText = title

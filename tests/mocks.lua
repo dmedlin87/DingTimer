@@ -160,10 +160,10 @@ local function newFontString()
   fs.ClearAllPoints = function(self)
     self._point = { "CENTER", nil, "CENTER", 0, 0 }
   end
-  fs.SetJustifyH = function() end
+  fs.SetJustifyH = function(self, justify) self._justifyH = justify end
   fs.SetJustifyV = function() end
-  fs.SetTextColor = function() end
-  fs.SetFontObject = function() end
+  fs.SetTextColor = function(self, r, g, b, a) self._textColor = { r, g, b, a } end
+  fs.SetFontObject = function(self, fontObject) self._fontObject = fontObject end
   fs.SetText = function(self, text) self._text = text end
   fs.GetText = function(self) return self._text end
   fs.GetStringWidth = function(self) return #(self._text or "") * 6 end
@@ -174,13 +174,15 @@ local function newFontString()
   return fs
 end
 
-local function newTexture(parent)
+local function newTexture(parent, drawLayer, subLevel)
   local tx = {
     _parent = parent,
     _shown = true,
     _alpha = 1,
     _width = 0,
     _height = 0,
+    _drawLayer = drawLayer,
+    _subLevel = subLevel,
     _point = { "CENTER", parent, "CENTER", 0, 0 },
   }
   tx.GetParent = function(self) return self._parent end
@@ -320,7 +322,7 @@ local function newFrame(name, parent)
     end
   end
   frame.CreateFontString = function() return newFontString() end
-  frame.CreateTexture = function(self) return newTexture(self) end
+  frame.CreateTexture = function(self, _, drawLayer, _, subLevel) return newTexture(self, drawLayer, subLevel) end
   frame.CreateLine = function() return newLine() end
   return frame
 end
