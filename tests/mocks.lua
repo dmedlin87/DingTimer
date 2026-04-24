@@ -167,10 +167,12 @@ local function newFontString()
   fs.SetText = function(self, text) self._text = text end
   fs.GetText = function(self) return self._text end
   fs.GetStringWidth = function(self) return #(self._text or "") * 6 end
-  fs.SetWidth = function() end
+  fs.SetWidth = function(self, width) self._width = width end
+  fs.GetWidth = function(self) return self._width end
   fs.Show = function(self) self._shown = true end
   fs.Hide = function(self) self._shown = false end
   fs.SetShown = function(self, shown) self._shown = shown end
+  fs.IsShown = function(self) return self._shown end
   return fs
 end
 

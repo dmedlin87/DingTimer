@@ -94,4 +94,18 @@ it("does not play the level-up sound when the setting is disabled", function()
   assert_eq(0, #GetPlayedSounds(), "level-up should not play a sound when disabled")
 end)
 
+it("previews the level-up sound from settings without changing the toggle", function()
+  loadFreshStore()
+  NS.SetDingSoundEnabled(false)
+  ClearPlayedSounds()
+
+  assert_true(NS.PreviewDingSound(), "preview should report that playback was attempted")
+
+  local played = GetPlayedSounds()
+  assert_eq(1, #played, "preview should play exactly one sound")
+  assert_eq(12891, played[1].soundKitID, "preview should use the level-up sound kit")
+  assert_eq("Master", played[1].channel, "preview should play on the Master channel")
+  assert_false(DingTimerDB.dingSoundEnabled, "preview should not re-enable the level-up sound toggle")
+end)
+
 run_tests()

@@ -20,6 +20,7 @@ local DEFAULTS = {
   windowSeconds = 600,
   minXPDeltaToPrint = 1,
   mode = "full",
+  hudProfile = "full",
   float = true,
   floatShowInCombat = false,
   floatLocked = true,
@@ -59,6 +60,20 @@ local function normalizeOutputMode(mode)
     return "ttl"
   end
   return "full"
+end
+
+local VALID_HUD_PROFILES = {
+  full = true,
+  compact = true,
+  bar_ttl = true,
+  graph = true,
+}
+
+local function normalizeHUDProfile(profile)
+  if VALID_HUD_PROFILES[profile] then
+    return profile
+  end
+  return DEFAULTS.hudProfile
 end
 
 local VALID_ANCHOR_POINTS = {
@@ -133,6 +148,7 @@ local function normalizeActiveSettings(db)
   db.windowSeconds = normalizeWindowSeconds(db.windowSeconds)
   db.minXPDeltaToPrint = normalizeMinXPDeltaToPrint(db.minXPDeltaToPrint)
   db.mode = normalizeOutputMode(db.mode)
+  db.hudProfile = normalizeHUDProfile(db.hudProfile)
   if db.float == nil then
     db.float = DEFAULTS.float
   else

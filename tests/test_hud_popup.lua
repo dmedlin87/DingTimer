@@ -27,6 +27,10 @@ NS.setFloatVisible(true)
 local floatFrame = NS.GetFloatFrame()
 local popup = NS.InitHUDPopup()
 
+local function buttonFillAlpha(button)
+  return button and button._dingFill and button._dingFill._color and button._dingFill._color[4]
+end
+
 it("toggles the popup from HUD clicks according to lock state", function()
   NS.HideHUDPopup()
 
@@ -83,6 +87,33 @@ it("updates DB values and HUD text immediately from popup controls", function()
   SetXP(0, 1000)
   NS.resetXPState()
   NS.RefreshFloatingHUD()
+  popup:Refresh()
+
+  assert_eq(0.96, buttonFillAlpha(popup.controls.profileFull), "full profile should be active by default")
+  popup.controls.profileCompact:GetScript("OnClick")(popup.controls.profileCompact)
+  assert_eq("compact", DingTimerDB.hudProfile, "compact profile button should update the HUD profile")
+  assert_eq(308, floatFrame:GetWidth(), "compact profile button should resize the HUD immediately")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.profileCompact), "compact profile button should become active")
+  assert_eq(0.7, buttonFillAlpha(popup.controls.profileFull), "full profile button should become inactive")
+
+  popup.controls.profileBarTTL:GetScript("OnClick")(popup.controls.profileBarTTL)
+  assert_eq("bar_ttl", DingTimerDB.hudProfile, "bar+TTL profile button should update the HUD profile")
+  assert_eq(260, floatFrame:GetWidth(), "bar+TTL profile button should resize the HUD immediately")
+  assert_false(floatFrame.subText:IsShown(), "bar+TTL profile button should hide the HUD detail line")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.profileBarTTL), "bar+TTL profile button should become active")
+
+  popup.controls.profileGraph:GetScript("OnClick")(popup.controls.profileGraph)
+  assert_eq("graph", DingTimerDB.hudProfile, "graph profile button should update the HUD profile")
+  assert_eq(385, floatFrame:GetWidth(), "graph profile button should keep the wide HUD width")
+  assert_true(floatFrame.graphArea:IsShown(), "graph profile button should show the HUD graph")
+  assert_false(floatFrame.progressBar:IsShown(), "graph profile button should replace the XP bar")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.profileGraph), "graph profile button should become active")
+
+  popup.controls.profileFull:GetScript("OnClick")(popup.controls.profileFull)
+  assert_eq("full", DingTimerDB.hudProfile, "full profile button should restore the full HUD profile")
+  assert_eq(385, floatFrame:GetWidth(), "full profile button should restore the full HUD width")
+  assert_true(floatFrame.subText:IsShown(), "full profile button should restore the HUD detail line")
+  assert_false(floatFrame.graphArea:IsShown(), "full profile button should hide the HUD graph")
 
   popup.controls.window1m:GetScript("OnClick")(popup.controls.window1m)
   assert_eq(60, DingTimerDB.windowSeconds, "window quick button should update the rolling window")
@@ -98,6 +129,10 @@ it("updates DB values and HUD text immediately from popup controls", function()
   popup.controls.dingSoundEnabled:SetChecked(false)
   popup.controls.dingSoundEnabled:GetScript("OnClick")(popup.controls.dingSoundEnabled)
   assert_false(DingTimerDB.dingSoundEnabled, "level-up sound checkbox should update the DB")
+
+  ClearPlayedSounds()
+  popup.controls.previewSound:GetScript("OnClick")(popup.controls.previewSound)
+  assert_eq(1, #GetPlayedSounds(), "preview sound button should play the level-up sound")
 
   popup.controls.floatShowInCombat:SetChecked(true)
   popup.controls.floatShowInCombat:GetScript("OnClick")(popup.controls.floatShowInCombat)

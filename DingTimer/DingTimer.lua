@@ -38,6 +38,14 @@ local function syncFloatVisibility()
   end
 end
 
+function NS.PlayDingSoundPreview()
+  if PlaySound then
+    PlaySound(12891, "Master")
+    return true
+  end
+  return false
+end
+
 local function onPlayerLogin()
   NS.resetXPState()
   syncFloatVisibility()
@@ -80,8 +88,8 @@ local function onLevelUp(level)
       moneyStr
     )
   )
-  if PlaySound and DingTimerDB.dingSoundEnabled == true then
-    PlaySound(12891, "Master")
+  if DingTimerDB.dingSoundEnabled == true and NS.PlayDingSoundPreview then
+    NS.PlayDingSoundPreview()
   end
   NS.resetXPState()
   NS.state.skipNextXPDropAfterLevelUp = true

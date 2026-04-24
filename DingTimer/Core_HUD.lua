@@ -7,6 +7,15 @@ local math_min = math.min
 
 ---@class DingTimerTextRegion: FontString
 ---@field SetText fun(self: DingTimerTextRegion, text: string)
+---@field SetWidth fun(self: DingTimerTextRegion, width: number)?
+---@field SetFontObject fun(self: DingTimerTextRegion, fontObject: string)?
+---@field SetTextColor fun(self: DingTimerTextRegion, r: number, g: number, b: number, a: number?)?
+---@field SetShadowColor fun(self: DingTimerTextRegion, r: number, g: number, b: number, a: number)?
+---@field ClearAllPoints fun(self: DingTimerTextRegion)?
+---@field SetPoint fun(self: DingTimerTextRegion, point: string, relativeTo: any, relativePoint: string, xOfs: number, yOfs: number)?
+---@field SetJustifyH fun(self: DingTimerTextRegion, justify: string)?
+---@field Show fun(self: DingTimerTextRegion)?
+---@field Hide fun(self: DingTimerTextRegion)?
 
 ---@class DingTimerTexture: Texture
 ---@field SetWidth fun(self: DingTimerTexture, width: number)
@@ -33,10 +42,16 @@ local math_min = math.min
 ---@field progressSpark DingTimerTexture?
 ---@field progressCap DingTimerTexture?
 ---@field progressTicks DingTimerTexture[]?
+---@field progressFillShade DingTimerTexture?
+---@field graphArea Frame?
+---@field graphBars DingTimerTexture[]?
+---@field graphBaseline DingTimerTexture?
+---@field graphPeakText DingTimerTextRegion?
 ---@field _dingAccent DingTimerTexture?
 ---@field _dingGlow DingTimerTexture?
 ---@field _hudGlow DingTimerTexture?
 ---@field _hudBottomLine DingTimerTexture?
+---@field _hudProfile string?
 ---@field progressBarWidth number?
 ---@field _displayedProgress number?
 ---@field _targetProgress number?
@@ -47,10 +62,98 @@ local math_min = math.min
 ---@type DingTimerFloatFrame?
 local floatFrame = nil
 
-local HUD_WIDTH = 385
-local HUD_HEIGHT = 66
-local HUD_BAR_WIDTH = 345
-local HUD_BAR_HEIGHT = 9
+local HUD_DEFAULT_PROFILE = "full"
+local HUD_PROFILES = {
+  full = {
+    id = "full",
+    label = "Full",
+    width = 385,
+    height = 66,
+    barWidth = 345,
+    barHeight = 9,
+    barYOffset = 11,
+    titleTemplate = "GameFontHighlightLarge",
+    titleStyle = "title",
+    titleYOffset = -7,
+    titleWidthExtra = 10,
+    titleColor = { 0.92, 0.98, 1.0 },
+    titleShadowAlpha = 0.92,
+    subVisible = true,
+    subYOffset = 4,
+    subWidthExtra = 16,
+    subTextMaxChars = 64,
+  },
+  compact = {
+    id = "compact",
+    label = "Compact",
+    width = 308,
+    height = 54,
+    barWidth = 276,
+    barHeight = 8,
+    barYOffset = 9,
+    titleTemplate = "GameFontHighlight",
+    titleStyle = "value",
+    titleYOffset = -6,
+    titleWidthExtra = 8,
+    titleColor = { 0.95, 0.98, 1.0 },
+    titleShadowAlpha = 0.88,
+    subVisible = true,
+    subYOffset = 3,
+    subWidthExtra = 12,
+    subTextMaxChars = 48,
+  },
+  bar_ttl = {
+    id = "bar_ttl",
+    label = "Bar+TTL",
+    width = 260,
+    height = 38,
+    barWidth = 232,
+    barHeight = 8,
+    barYOffset = 8,
+    titleTemplate = "GameFontHighlight",
+    titleStyle = "value",
+    titleYOffset = -6,
+    titleWidthExtra = 6,
+    titleColor = { 0.92, 0.98, 1.0 },
+    titleShadowAlpha = 0.9,
+    subVisible = false,
+    subYOffset = 3,
+    subWidthExtra = 0,
+    subTextMaxChars = 0,
+    shortTTL = true,
+  },
+  graph = {
+    id = "graph",
+    label = "Graph",
+    width = 385,
+    height = 82,
+    barWidth = 345,
+    barHeight = 8,
+    barYOffset = 8,
+    titleTemplate = "GameFontHighlight",
+    titleStyle = "value",
+    titleYOffset = -6,
+    titleWidthExtra = 10,
+    titleColor = { 0.92, 0.98, 1.0 },
+    titleShadowAlpha = 0.88,
+    subVisible = true,
+    subYOffset = 4,
+    subWidthExtra = 16,
+    subTextMaxChars = 58,
+    graphVisible = true,
+    graphWidth = 345,
+    graphHeight = 32,
+    graphYOffset = 11,
+    graphBucketCount = 18,
+  },
+}
+local HUD_PROFILE_CHOICES = {
+  HUD_PROFILES.full,
+  HUD_PROFILES.compact,
+  HUD_PROFILES.bar_ttl,
+  HUD_PROFILES.graph,
+}
+local HUD_DEFAULT = HUD_PROFILES[HUD_DEFAULT_PROFILE]
 local HUD_PROGRESS_ANIM_DURATION = 0.28
 local HUD_GAIN_PULSE_DURATION = 0.65
 local HUD_PROGRESS_EPSILON = 0.0005
@@ -81,8 +184,240 @@ local function easeOutCubic(value)
   return 1 - (inv * inv * inv)
 end
 
+local function resolveHUDProfile(profileId)
+  return HUD_PROFILES[profileId] or HUD_DEFAULT
+end
+
+local function getActiveHUDProfile()
+  return resolveHUDProfile(DingTimerDB and DingTimerDB.hudProfile)
+end
+
+local function setProgressWidgetsShown(frame, shown)
+  if not frame then
+    return
+  end
+
+  local widgets = {
+    frame.progressBar,
+    frame.progressFill,
+    frame.progressSheen,
+    frame.progressPulse,
+    frame.progressSpark,
+    frame.progressCap,
+    frame.progressFillShade,
+  }
+  for i = 1, #widgets do
+    local widget = widgets[i]
+    if widget then
+      if shown and widget.Show then
+        widget:Show()
+      elseif not shown and widget.Hide then
+        widget:Hide()
+      end
+    end
+  end
+  if frame.progressTicks then
+    for i = 1, #frame.progressTicks do
+      local tick = frame.progressTicks[i]
+      if tick then
+        if shown and tick.Show then
+          tick:Show()
+        elseif not shown and tick.Hide then
+          tick:Hide()
+        end
+      end
+    end
+  end
+end
+
+local function setGraphWidgetsShown(frame, shown)
+  if not frame then
+    return
+  end
+
+  local widgets = {
+    frame.graphArea,
+    frame.graphBaseline,
+    frame.graphPeakText,
+  }
+  for i = 1, #widgets do
+    local widget = widgets[i]
+    if widget then
+      if shown and widget.Show then
+        widget:Show()
+      elseif not shown and widget.Hide then
+        widget:Hide()
+      end
+    end
+  end
+  if frame.graphBars then
+    for i = 1, #frame.graphBars do
+      local bar = frame.graphBars[i]
+      if bar then
+        if shown and bar.Show then
+          bar:Show()
+        elseif not shown and bar.Hide then
+          bar:Hide()
+        end
+      end
+    end
+  end
+end
+
+local function applyTitleStyle(title, profile)
+  if not title or not profile then
+    return
+  end
+
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(title, profile.titleStyle or "value")
+  elseif title.SetFontObject then
+    title:SetFontObject(profile.titleTemplate or "GameFontHighlight")
+  end
+  if title.SetTextColor and profile.titleColor then
+    title:SetTextColor(profile.titleColor[1], profile.titleColor[2], profile.titleColor[3])
+  end
+  if title.SetShadowColor then
+    title:SetShadowColor(0, 0, 0, profile.titleShadowAlpha or 0.85)
+  end
+  if title.SetJustifyH then
+    title:SetJustifyH("CENTER")
+  end
+end
+
+local function applySubTextStyle(sub)
+  if not sub then
+    return
+  end
+
+  if NS.UI and NS.UI.ApplyTextStyle then
+    NS.UI.ApplyTextStyle(sub, "subtle")
+  end
+  if sub.SetTextColor then
+    sub:SetTextColor(0.82, 0.88, 0.92)
+  end
+  if sub.SetJustifyH then
+    sub:SetJustifyH("CENTER")
+  end
+end
+
+local function applyFloatProfileLayout(frame, profile)
+  if not frame or not profile then
+    return
+  end
+
+  frame._hudProfile = profile.id
+  frame:SetSize(profile.width, profile.height)
+
+  local bar = frame.progressBar
+  if bar then
+    bar:SetSize(profile.barWidth, profile.barHeight)
+    bar:ClearAllPoints()
+    bar:SetPoint("BOTTOM", frame, "BOTTOM", 0, profile.barYOffset)
+    frame.progressBarWidth = profile.barWidth
+  end
+  setProgressWidgetsShown(frame, profile.graphVisible ~= true)
+  setGraphWidgetsShown(frame, profile.graphVisible == true)
+
+  if frame.graphArea then
+    local graphWidth = profile.graphWidth or profile.barWidth
+    local graphHeight = profile.graphHeight or 28
+    frame.graphArea:SetSize(graphWidth, graphHeight)
+    frame.graphArea:ClearAllPoints()
+    frame.graphArea:SetPoint("BOTTOM", frame, "BOTTOM", 0, profile.graphYOffset or profile.barYOffset or 8)
+    if frame.graphBars then
+      local bucketCount = profile.graphBucketCount or #frame.graphBars
+      local gap = 2
+      local barWidth = math_max(2, math_floor((graphWidth - ((bucketCount - 1) * gap)) / bucketCount))
+      for i = 1, #frame.graphBars do
+        local graphBar = frame.graphBars[i]
+        if graphBar then
+          graphBar:ClearAllPoints()
+          graphBar:SetWidth(barWidth)
+          graphBar:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", math_floor((i - 1) * (barWidth + gap)), 1)
+        end
+      end
+    end
+  end
+  if frame.graphBaseline and frame.graphArea then
+    frame.graphBaseline:ClearAllPoints()
+    frame.graphBaseline:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", 0, 0)
+    frame.graphBaseline:SetPoint("BOTTOMRIGHT", frame.graphArea, "BOTTOMRIGHT", 0, 0)
+    frame.graphBaseline:SetHeight(1)
+  end
+
+  if frame.progressSheen then
+    frame.progressSheen:SetHeight(math_max(3, math_floor(profile.barHeight * 0.42)))
+  end
+  if frame.progressFillShade then
+    frame.progressFillShade:SetWidth(profile.barWidth)
+    frame.progressFillShade:SetHeight(math_max(3, math_floor(profile.barHeight * 0.4)))
+  end
+  if frame.progressTicks and bar then
+    for i = 1, 3 do
+      local tick = frame.progressTicks[i]
+      if tick then
+        tick:ClearAllPoints()
+        tick:SetWidth(1)
+        tick:SetHeight(math_max(2, profile.barHeight - 4))
+        tick:SetPoint("CENTER", bar, "LEFT", math_floor((profile.barWidth * i / 4) + 0.5), 0)
+        tick:SetColorTexture(0.74, 0.92, 1.0, 0.34)
+      end
+    end
+  end
+  if frame.progressSpark then
+    frame.progressSpark:SetSize(14, profile.barHeight + 6)
+  end
+  if frame.progressCap then
+    frame.progressCap:SetSize(2, profile.barHeight + 2)
+  end
+
+  local title = frame.titleText
+  if title then
+    if title.ClearAllPoints then
+      title:ClearAllPoints()
+    end
+    if title.SetPoint then
+      title:SetPoint("TOP", frame, "TOP", 0, profile.titleYOffset)
+    end
+    if title.SetWidth then
+      title:SetWidth(profile.barWidth + (profile.titleWidthExtra or 0))
+    end
+    applyTitleStyle(title, profile)
+    if title.Show then
+      title:Show()
+    end
+  end
+
+  local sub = frame.subText
+  if sub then
+    if sub.ClearAllPoints then
+      sub:ClearAllPoints()
+    end
+    local subAnchor = profile.graphVisible and frame.graphArea or bar
+    if sub.SetPoint and subAnchor then
+      sub:SetPoint("BOTTOM", subAnchor, "TOP", 0, profile.subYOffset or 0)
+    end
+    if sub.SetWidth then
+      sub:SetWidth(profile.barWidth + (profile.subWidthExtra or 0))
+    end
+    applySubTextStyle(sub)
+    if profile.subVisible == false then
+      if sub.Hide then
+        sub:Hide()
+      end
+    elseif sub.Show then
+      sub:Show()
+    end
+  end
+end
+
 local function updateFloatBarVisual(frame, progress, pulseAlpha)
   if not frame or not frame.progressBar or not frame.progressFill then
+    return
+  end
+  if frame._hudProfile == "graph" then
+    setProgressWidgetsShown(frame, false)
     return
   end
 
@@ -91,7 +426,7 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   local pulse = frame.progressPulse
   local spark = frame.progressSpark
   local cap = frame.progressCap
-  local barWidth = frame.progressBarWidth or HUD_BAR_WIDTH
+  local barWidth = frame.progressBarWidth or HUD_DEFAULT.barWidth
 
   progress = clampProgress(progress)
   pulseAlpha = tonumber(pulseAlpha) or 0
@@ -156,6 +491,82 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   elseif cap then
     cap:SetAlpha(0)
     cap:Hide()
+  end
+end
+
+local function computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
+  local buckets = {}
+  local peak = 0
+  bucketCount = bucketCount or 18
+  local bucketSeconds = (windowSeconds or 1) / bucketCount
+  if bucketSeconds <= 0 then
+    bucketSeconds = 1
+  end
+
+  for i = 1, bucketCount do
+    buckets[i] = 0
+  end
+
+  for i = 1, #(events or {}) do
+    local event = events[i]
+    local age = now - (event.t or now)
+    if age >= 0 and age <= windowSeconds then
+      local index = bucketCount - math_floor(age / bucketSeconds)
+      if index < 1 then
+        index = 1
+      elseif index > bucketCount then
+        index = bucketCount
+      end
+      buckets[index] = buckets[index] + (tonumber(event.xp) or 0)
+      if buckets[index] > peak then
+        peak = buckets[index]
+      end
+    end
+  end
+
+  return buckets, peak
+end
+
+function NS.BuildXPGraphBuckets(events, now, windowSeconds, bucketCount)
+  return computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
+end
+
+local function updateXPGraphVisual(frame, snapshot, profile)
+  if not frame or not frame.graphBars or not snapshot or not profile then
+    return
+  end
+
+  local graphHeight = profile.graphHeight or 28
+  local buckets, peak = computeXPGraphBuckets(NS.state and NS.state.events, snapshot.now, snapshot.rollingWindow, profile.graphBucketCount)
+  local minimumHeight = 2
+
+  for i = 1, #frame.graphBars do
+    local graphBar = frame.graphBars[i]
+    if graphBar then
+      local amount = buckets[i] or 0
+      local barHeight = 0
+      if amount > 0 and peak > 0 then
+        barHeight = math_max(minimumHeight, math_floor((amount / peak) * graphHeight + 0.5))
+      end
+      graphBar:SetHeight(barHeight)
+      if amount > 0 then
+        local intensity = 0.48 + (0.32 * (amount / peak))
+        graphBar:SetColorTexture(0.18, intensity, 0.92, 0.82)
+        graphBar:Show()
+      else
+        graphBar:SetColorTexture(0.08, 0.18, 0.24, 0.34)
+        graphBar:SetHeight(1)
+        graphBar:Show()
+      end
+    end
+  end
+
+  if frame.graphPeakText then
+    if peak > 0 then
+      frame.graphPeakText:SetText("Peak +" .. NS.FormatNumber(peak))
+    else
+      frame.graphPeakText:SetText("No XP")
+    end
   end
 end
 
@@ -302,14 +713,42 @@ function NS.IsFloatAnimating()
   return floatFrame ~= nil and (floatFrame._progressAnim ~= nil or floatFrame._gainPulse ~= nil)
 end
 
+function NS.GetHUDProfiles()
+  return HUD_PROFILE_CHOICES
+end
+
+function NS.GetHUDProfile()
+  return getActiveHUDProfile().id
+end
+
+function NS.SetHUDProfile(profileId)
+  local profile = resolveHUDProfile(profileId)
+  if DingTimerDB then
+    DingTimerDB.hudProfile = profile.id
+  end
+
+  if floatFrame then
+    applyFloatProfileLayout(floatFrame, profile)
+    updateFloatBarVisual(floatFrame, floatFrame._displayedProgress or floatFrame._targetProgress or 0, floatFrame._gainPulse and 1 or 0)
+  end
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD()
+  end
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
+  end
+  return profile.id
+end
+
 function NS.ensureFloat()
   if floatFrame then
     return
   end
 
+  local profile = getActiveHUDProfile()
   local frame = CreateFrame("Button", nil, UIParent, "BackdropTemplate") --[[@as DingTimerFloatFrame]]
   floatFrame = frame
-  floatFrame:SetSize(HUD_WIDTH, HUD_HEIGHT)
+  floatFrame:SetSize(profile.width, profile.height)
   floatFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 220)
   floatFrame:SetMovable(true)
   floatFrame:EnableMouse(true)
@@ -410,10 +849,10 @@ function NS.ensureFloat()
   end
 
   local bar = CreateFrame("Frame", nil, floatFrame)
-  bar:SetSize(HUD_BAR_WIDTH, HUD_BAR_HEIGHT)
-  bar:SetPoint("BOTTOM", floatFrame, "BOTTOM", 0, 11)
+  bar:SetSize(profile.barWidth, profile.barHeight)
+  bar:SetPoint("BOTTOM", floatFrame, "BOTTOM", 0, profile.barYOffset)
   floatFrame.progressBar = bar
-  floatFrame.progressBarWidth = HUD_BAR_WIDTH
+  floatFrame.progressBarWidth = profile.barWidth
 
   local barShadow = bar:CreateTexture(nil, "BACKGROUND")
   barShadow:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
@@ -446,23 +885,24 @@ function NS.ensureFloat()
   local sheen = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   sheen:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, -1)
   sheen:SetWidth(0)
-  sheen:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.42)))
+  sheen:SetHeight(math_max(3, math_floor(profile.barHeight * 0.42)))
   sheen:SetColorTexture(0.94, 0.99, 1.0, 0.10)
   sheen:Hide()
   floatFrame.progressSheen = sheen
 
   local fillShade = bar:CreateTexture(nil, "OVERLAY")
   fillShade:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
-  fillShade:SetWidth(HUD_BAR_WIDTH)
-  fillShade:SetHeight(math_max(4, math_floor(HUD_BAR_HEIGHT * 0.4)))
+  fillShade:SetWidth(profile.barWidth)
+  fillShade:SetHeight(math_max(3, math_floor(profile.barHeight * 0.4)))
   fillShade:SetColorTexture(0.03, 0.08, 0.12, 0.18)
+  floatFrame.progressFillShade = fillShade
 
   floatFrame.progressTicks = {}
   for i = 1, 3 do
     local tick = bar:CreateTexture(nil, "OVERLAY", nil, 2) --[[@as DingTimerTexture]]
     tick:SetWidth(1)
-    tick:SetHeight(HUD_BAR_HEIGHT - 4)
-    tick:SetPoint("CENTER", bar, "LEFT", math_floor((HUD_BAR_WIDTH * i / 4) + 0.5), 0)
+    tick:SetHeight(math_max(2, profile.barHeight - 4))
+    tick:SetPoint("CENTER", bar, "LEFT", math_floor((profile.barWidth * i / 4) + 0.5), 0)
     tick:SetColorTexture(0.74, 0.92, 1.0, 0.34)
     floatFrame.progressTicks[i] = tick
   end
@@ -481,13 +921,13 @@ function NS.ensureFloat()
   local spark = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
   spark:SetBlendMode("ADD")
-  spark:SetSize(14, HUD_BAR_HEIGHT + 6)
+  spark:SetSize(14, profile.barHeight + 6)
   spark:SetAlpha(0)
   spark:Hide()
   floatFrame.progressSpark = spark
 
   local cap = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
-  cap:SetSize(2, HUD_BAR_HEIGHT + 2)
+  cap:SetSize(2, profile.barHeight + 2)
   cap:SetTexture("Interface\\Buttons\\WHITE8X8")
   cap:SetBlendMode("ADD")
   cap:SetVertexColor(0.86, 0.98, 1.0, 1)
@@ -495,37 +935,69 @@ function NS.ensureFloat()
   cap:Hide()
   floatFrame.progressCap = cap
 
-  local title = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge") --[[@as DingTimerTextRegion]]
-  title:SetPoint("TOP", floatFrame, "TOP", 0, -7)
-  if title.SetWidth then
-    title:SetWidth(HUD_BAR_WIDTH + 10)
+  local graphArea = CreateFrame("Frame", nil, floatFrame)
+  graphArea:SetSize(HUD_PROFILES.graph.graphWidth, HUD_PROFILES.graph.graphHeight)
+  graphArea:SetPoint("BOTTOM", floatFrame, "BOTTOM", 0, HUD_PROFILES.graph.graphYOffset)
+  graphArea:Hide()
+  floatFrame.graphArea = graphArea
+
+  local graphBaseline = graphArea:CreateTexture(nil, "BORDER") --[[@as DingTimerTexture]]
+  graphBaseline:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", 0, 0)
+  graphBaseline:SetPoint("BOTTOMRIGHT", graphArea, "BOTTOMRIGHT", 0, 0)
+  graphBaseline:SetHeight(1)
+  graphBaseline:SetColorTexture(0.34, 0.44, 0.52, 0.55)
+  graphBaseline:Hide()
+  floatFrame.graphBaseline = graphBaseline
+
+  floatFrame.graphBars = {}
+  local graphBucketCount = HUD_PROFILES.graph.graphBucketCount
+  local graphGap = 2
+  local graphBarWidth = math_max(2, math_floor((HUD_PROFILES.graph.graphWidth - ((graphBucketCount - 1) * graphGap)) / graphBucketCount))
+  for i = 1, graphBucketCount do
+    local graphBar = graphArea:CreateTexture(nil, "ARTWORK") --[[@as DingTimerTexture]]
+    graphBar:SetWidth(graphBarWidth)
+    graphBar:SetHeight(1)
+    graphBar:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", math_floor((i - 1) * (graphBarWidth + graphGap)), 1)
+    graphBar:SetColorTexture(0.08, 0.18, 0.24, 0.34)
+    graphBar:Hide()
+    floatFrame.graphBars[i] = graphBar
   end
+
+  local graphPeakText = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") --[[@as DingTimerTextRegion]]
+  graphPeakText:SetPoint("TOPRIGHT", graphArea, "TOPRIGHT", 0, -1)
   if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(title, "title")
+    NS.UI.ApplyTextStyle(graphPeakText, "subtle")
   end
-  if title.SetTextColor then
-    title:SetTextColor(0.92, 0.98, 1.0)
+  if graphPeakText.SetTextColor then
+    graphPeakText:SetTextColor(0.74, 0.88, 0.94, 0.9)
   end
-  if title.SetShadowColor then
-    title:SetShadowColor(0, 0, 0, 0.92)
+  if graphPeakText.SetJustifyH then
+    graphPeakText:SetJustifyH("RIGHT")
   end
-  title:SetJustifyH("CENTER")
+  graphPeakText:SetText("")
+  graphPeakText:Hide()
+  floatFrame.graphPeakText = graphPeakText
+
+  local title = floatFrame:CreateFontString(nil, "OVERLAY", profile.titleTemplate) --[[@as DingTimerTextRegion]]
+  title:SetPoint("TOP", floatFrame, "TOP", 0, profile.titleYOffset)
+  if title.SetWidth then
+    title:SetWidth(profile.barWidth + (profile.titleWidthExtra or 0))
+  end
+  applyTitleStyle(title, profile)
   floatFrame.titleText = title
 
   local sub = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") --[[@as DingTimerTextRegion]]
-  sub:SetPoint("BOTTOM", bar, "TOP", 0, 4)
+  sub:SetPoint("BOTTOM", bar, "TOP", 0, profile.subYOffset)
   if sub.SetWidth then
-    sub:SetWidth(HUD_BAR_WIDTH + 16)
+    sub:SetWidth(profile.barWidth + (profile.subWidthExtra or 0))
   end
-  if NS.UI and NS.UI.ApplyTextStyle then
-    NS.UI.ApplyTextStyle(sub, "subtle")
+  applySubTextStyle(sub)
+  if profile.subVisible == false then
+    sub:Hide()
   end
-  if sub.SetTextColor then
-    sub:SetTextColor(0.82, 0.88, 0.92)
-  end
-  sub:SetJustifyH("CENTER")
   floatFrame.subText = sub
 
+  applyFloatProfileLayout(floatFrame, profile)
   updateFloatBarVisual(floatFrame, 0, 0)
 
   floatFrame:Hide()
@@ -592,6 +1064,10 @@ function NS.RefreshFloatingHUD(now)
   if not frame then
     return
   end
+  local profile = getActiveHUDProfile()
+  if frame._hudProfile ~= profile.id then
+    applyFloatProfileLayout(frame, profile)
+  end
   now = now or GetTime()
 
   local snapshot = NS.GetSessionSnapshot(now)
@@ -600,8 +1076,14 @@ function NS.RefreshFloatingHUD(now)
   end
 
   setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
+  if profile.graphVisible then
+    updateXPGraphVisual(frame, snapshot, profile)
+  end
 
-  local header, paceText = NS.BuildHUDText(snapshot)
+  local header, paceText = NS.BuildHUDText(snapshot, {
+    shortTTL = profile.shortTTL,
+    subTextMaxChars = profile.subTextMaxChars,
+  })
 
   local titleText = frame.titleText
   local subText = frame.subText
@@ -610,5 +1092,15 @@ function NS.RefreshFloatingHUD(now)
   end
 
   titleText:SetText(header)
-  subText:SetText("|cffc6d2db" .. paceText .. "|r")
+  if profile.subVisible == false then
+    subText:SetText("")
+    if subText.Hide then
+      subText:Hide()
+    end
+  else
+    if subText.Show then
+      subText:Show()
+    end
+    subText:SetText("|cffc6d2db" .. paceText .. "|r")
+  end
 end

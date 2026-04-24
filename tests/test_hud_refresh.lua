@@ -3,16 +3,19 @@ dofile("tests/mocks.lua")
 ---@class TestFontRegion
 ---@field GetText fun(self: TestFontRegion): string
 ---@field GetPoint fun(self: TestFontRegion): string, any, string, number, number
+---@field IsShown fun(self: TestFontRegion): boolean
 ---@field _fontObject string?
 ---@field _justifyH string?
 
 ---@class TestTextureRegion
 ---@field IsShown fun(self: TestTextureRegion): boolean
 ---@field GetAlpha fun(self: TestTextureRegion): number
+---@field GetPoint fun(self: TestTextureRegion): string, any, string, number, number
 
 ---@class TestFrameRegion
 ---@field GetPoint fun(self: TestFrameRegion): string, any, string, number, number
 ---@field GetWidth fun(self: TestFrameRegion): number
+---@field GetHeight fun(self: TestFrameRegion): number
 
 ---@class TestHeartbeatTicker
 ---@field interval number
@@ -32,6 +35,7 @@ dofile("tests/mocks.lua")
 ---@field _dingGlow TestTextureRegion?
 ---@field _dingAccent TestTextureRegion?
 ---@field GetWidth fun(self: TestHUDFrame): number
+---@field GetHeight fun(self: TestHUDFrame): number
 ---@field GetScript fun(self: TestHUDFrame, scriptName: string): function?
 
 ---@type TestHUDFrame?
@@ -115,6 +119,41 @@ for i = 1, 3 do
   assert_eq("OVERLAY", tick._drawLayer, "HUD XP tick markers should render above the progress fill")
   assert_eq(2, tick._subLevel, "HUD XP tick markers should render above other bar overlay shading")
 end
+
+local savedPoint, savedRelativeTo, savedRelativePoint, savedX, savedY = frame:GetPoint()
+NS.SetHUDProfile("compact")
+assert_eq("compact", DingTimerDB.hudProfile, "profile switch should persist the compact HUD profile")
+assert_eq(308, frame:GetWidth(), "compact profile should apply the smaller frame width")
+assert_eq(54, frame:GetHeight(), "compact profile should apply the smaller frame height")
+assert_eq(276, frame.progressBar:GetWidth(), "compact profile should apply the smaller XP bar width")
+assert_eq(8, frame.progressBar:GetHeight(), "compact profile should apply the smaller XP bar height")
+assert_eq("GameFontHighlight", frame.titleText._fontObject, "compact profile should use a smaller title font")
+assert_true(frame.subText:IsShown(), "compact profile should keep the detail line visible")
+local compactPoint, compactRelativeTo, compactRelativePoint, compactX, compactY = frame:GetPoint()
+assert_eq(savedPoint, compactPoint, "profile switching should not reset the saved HUD anchor point")
+assert_eq(savedRelativeTo, compactRelativeTo, "profile switching should not reset the saved HUD relative target")
+assert_eq(savedRelativePoint, compactRelativePoint, "profile switching should not reset the saved HUD relative point")
+assert_eq(savedX, compactX, "profile switching should not reset the saved HUD x offset")
+assert_eq(savedY, compactY, "profile switching should not reset the saved HUD y offset")
+
+NS.SetHUDProfile("bar_ttl")
+assert_eq("bar_ttl", DingTimerDB.hudProfile, "profile switch should persist the bar+TTL HUD profile")
+assert_eq(260, frame:GetWidth(), "bar+TTL profile should apply the focused frame width")
+assert_eq(38, frame:GetHeight(), "bar+TTL profile should apply the focused frame height")
+assert_eq(232, frame.progressBar:GetWidth(), "bar+TTL profile should apply the focused XP bar width")
+assert_eq("9m 0s", frame.titleText:GetText(), "bar+TTL profile should show short TTL text")
+assert_eq("", frame.subText:GetText(), "bar+TTL profile should clear the detail text")
+assert_false(frame.subText:IsShown(), "bar+TTL profile should hide the detail line")
+local _, _, _, firstTickX = frame.progressTicks[1]:GetPoint()
+assert_eq(58, firstTickX, "bar+TTL tick markers should reposition for the focused XP bar width")
+
+NS.SetHUDProfile("full")
+assert_eq("full", DingTimerDB.hudProfile, "profile switch should return to the full HUD profile")
+assert_eq(385, frame:GetWidth(), "full profile should restore the default frame width")
+assert_eq(345, frame.progressBar:GetWidth(), "full profile should restore the default XP bar width")
+assertStringMatch("to level", frame.titleText:GetText(), "full profile should restore the full TTL title")
+assert_true(frame.subText:IsShown(), "full profile should restore the detail line")
+
 assert_true(frame:GetScript("OnUpdate") ~= nil, "HUD should animate when XP is gained")
 
 local onUpdate = frame:GetScript("OnUpdate")
@@ -163,5 +202,34 @@ NS.onXPUpdate()
 assertStringMatch("36.0B XP/hr", frame.subText:GetText(), "HUD should compact very large XP/hr values")
 assertStringMatch("Last +100.0M (8)", frame.subText:GetText(), "HUD should compact very large last-gain text")
 assertStringMatch("Need 800.0M", frame.subText:GetText(), "HUD should compact very large remaining-XP text")
+
+SetTime(300)
+SetXP(0, 1000)
+NS.resetXPState()
+SetTime(360)
+SetXP(100, 1000)
+NS.onXPUpdate()
+SetTime(380)
+SetXP(140, 1000)
+NS.onXPUpdate()
+NS.SetHUDProfile("graph")
+assert_eq("graph", DingTimerDB.hudProfile, "profile switch should persist the graph HUD profile")
+assert_eq(385, frame:GetWidth(), "graph profile should keep the wide HUD frame")
+assert_eq(82, frame:GetHeight(), "graph profile should make room for the XP graph")
+assert_true(frame.graphArea ~= nil, "graph profile should create a graph area")
+assert_true(frame.graphArea:IsShown(), "graph profile should show the graph area")
+assert_false(frame.progressBar:IsShown(), "graph profile should hide the level-progress bar")
+assert_true(frame.graphBars ~= nil, "graph profile should create graph bars")
+assert_eq(18, #frame.graphBars, "graph profile should create one bar per graph bucket")
+assert_true(frame.graphBars[12]:GetHeight() > frame.graphBars[18]:GetHeight(), "older larger gains should scale taller than smaller recent gains")
+assertStringMatch("Peak +100", frame.graphPeakText:GetText(), "graph profile should label the largest bucket gain")
+local buckets, peak = NS.BuildXPGraphBuckets(NS.state.events, 380, 60, 6)
+assert_eq(100, buckets[4], "graph bucket helper should place the older gain in the correct interval bucket")
+assert_eq(40, buckets[6], "graph bucket helper should place the current gain in the newest bucket")
+assert_eq(100, peak, "graph bucket helper should return the peak bucket XP")
+
+NS.SetHUDProfile("full")
+assert_false(frame.graphArea:IsShown(), "leaving the graph profile should hide the graph area")
+assert_true(frame.progressBar:IsShown(), "leaving the graph profile should restore the XP bar")
 
 print("HUD rolling refresh test passed!")

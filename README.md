@@ -29,7 +29,8 @@ The addon centers on one floating HUD and one tiny settings popup. The old tabbe
 ## Features
 
 - Floating HUD with live `TTL`, rolling `XP/hr`, an animated current-level XP bar, last gain, and XP needed to level
-- Tiny popup for HUD visibility, lock state, combat visibility, chat mode, level-up sound, window presets, and reset
+- Built-in HUD profiles: `Full`, `Compact`, `Bar+TTL`, and `Graph`
+- Tiny popup for HUD visibility, lock state, combat visibility, HUD profile, chat mode, level-up sound with preview, window presets, and reset
 - Rolling-window XP tracking instead of stale long-session pace
 - Optional chat output in `full` or `ttl` mode
 - Level-up announcement with time spent in level and net money
@@ -96,7 +97,7 @@ Removed in HUD-first build; use /ding settings
 
 ## HUD Behavior
 
-The floating HUD has two text lines plus an XP bar strip:
+The default `Full` floating HUD has two text lines plus an XP bar strip:
 
 ```text
 9m 0s to level
@@ -110,6 +111,13 @@ The floating HUD has two text lines plus an XP bar strip:
 
 The HUD hides automatically in combat unless `Show in combat` is enabled in the popup.
 
+HUD profiles are selected from the popup:
+
+- `Full`: default wide HUD with large TTL title, detail line, and XP bar
+- `Compact`: same information in a smaller frame
+- `Bar+TTL`: focused TTL label plus XP bar, without the detail line
+- `Graph`: rolling XP gain bars over the selected window, plus the TTL/detail labels
+
 ## Popup Controls
 
 The popup contains only these controls:
@@ -119,6 +127,8 @@ The popup contains only these controls:
 - `Show in combat`
 - `Chat on/off`
 - `Level-up sound`
+- `Preview` sound
+- `HUD` profile: `Full`, `Compact`, `Bar`, `G`
 - `Chat mode` with `Full` and `TTL`
 - `Window` presets: `1m`, `5m`, `10m`, `15m`
 - `Reset session` with a confirm-on-second-click safety step
@@ -146,7 +156,7 @@ This keeps the HUD responsive to what you are doing now instead of what you were
 
 `DingTimerDB` stores:
 
-- HUD visibility, lock state, combat visibility, and position
+- HUD visibility, lock state, combat visibility, profile, and position
 - Level-up sound enablement
 - Rolling window setting
 - Chat output enablement and mode

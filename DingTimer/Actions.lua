@@ -21,6 +21,17 @@ function NS.SetDingSoundEnabled(enabled)
   return DingTimerDB.dingSoundEnabled
 end
 
+function NS.PreviewDingSound()
+  if NS.PlayDingSoundPreview then
+    return NS.PlayDingSoundPreview()
+  end
+  if PlaySound then
+    PlaySound(12891, "Master")
+    return true
+  end
+  return false
+end
+
 function NS.SetOutputMode(mode)
   if mode ~= "full" and mode ~= "ttl" then
     return false, "Unknown mode. Use 'full' or 'ttl'."

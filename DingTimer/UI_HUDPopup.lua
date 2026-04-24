@@ -123,7 +123,7 @@ function NS.InitHUDPopup()
 
   local frame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate") --[[@as DingTimerHUDPopup]]
   popupFrame = frame
-  popupFrame:SetSize(248, 228)
+  popupFrame:SetSize(292, 288)
   popupFrame:EnableMouse(true)
   popupFrame:SetClampedToScreen(true)
   if NS.ApplyThemeToFrame then
@@ -165,35 +165,62 @@ function NS.InitHUDPopup()
       NS.SetDingSoundEnabled(checked)
     end
   end)
+  popupFrame.controls.previewSound = createButton(popupFrame, 178, -109, 100, "Preview", function()
+    if NS.PreviewDingSound then
+      NS.PreviewDingSound()
+    end
+  end)
 
   popupFrame.labels = {}
-  popupFrame.labels.mode = createLabel(popupFrame, 14, -142, "Chat mode")
-  popupFrame.controls.modeFull = createButton(popupFrame, 86, -136, 56, "Full", function()
+  popupFrame.labels.profile = createLabel(popupFrame, 14, -142, "HUD")
+  popupFrame.controls.profileFull = createButton(popupFrame, 58, -136, 50, "Full", function()
+    if NS.SetHUDProfile then
+      NS.SetHUDProfile("full")
+    end
+  end)
+  popupFrame.controls.profileCompact = createButton(popupFrame, 112, -136, 68, "Compact", function()
+    if NS.SetHUDProfile then
+      NS.SetHUDProfile("compact")
+    end
+  end)
+  popupFrame.controls.profileBarTTL = createButton(popupFrame, 184, -136, 58, "Bar", function()
+    if NS.SetHUDProfile then
+      NS.SetHUDProfile("bar_ttl")
+    end
+  end)
+  popupFrame.controls.profileGraph = createButton(popupFrame, 246, -136, 32, "G", function()
+    if NS.SetHUDProfile then
+      NS.SetHUDProfile("graph")
+    end
+  end)
+
+  popupFrame.labels.mode = createLabel(popupFrame, 14, -172, "Chat mode")
+  popupFrame.controls.modeFull = createButton(popupFrame, 86, -166, 56, "Full", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("full")
     end
   end)
-  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -136, 56, "TTL", function()
+  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -166, 56, "TTL", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("ttl")
     end
   end)
 
-  popupFrame.labels.window = createLabel(popupFrame, 14, -172, "Window")
-  popupFrame.controls.window1m = createButton(popupFrame, 72, -166, 36, "1m", function()
+  popupFrame.labels.window = createLabel(popupFrame, 14, -202, "Window")
+  popupFrame.controls.window1m = createButton(popupFrame, 72, -196, 36, "1m", function()
     NS.SetRollingWindowSeconds(60)
   end)
-  popupFrame.controls.window5m = createButton(popupFrame, 112, -166, 36, "5m", function()
+  popupFrame.controls.window5m = createButton(popupFrame, 112, -196, 36, "5m", function()
     NS.SetRollingWindowSeconds(300)
   end)
-  popupFrame.controls.window10m = createButton(popupFrame, 152, -166, 44, "10m", function()
+  popupFrame.controls.window10m = createButton(popupFrame, 152, -196, 44, "10m", function()
     NS.SetRollingWindowSeconds(600)
   end)
-  popupFrame.controls.window15m = createButton(popupFrame, 198, -166, 44, "15m", function()
+  popupFrame.controls.window15m = createButton(popupFrame, 198, -196, 44, "15m", function()
     NS.SetRollingWindowSeconds(900)
   end)
 
-  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -198, 228, "Reset session", "|cffff4040Confirm reset|r", function()
+  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -228, 264, "Reset session", "|cffff4040Confirm reset|r", function()
     if NS.ResetSession then
       NS.ResetSession("MANUAL_RESET")
     end
@@ -209,6 +236,12 @@ function NS.InitHUDPopup()
     self.controls.dingSoundEnabled:SetChecked(DingTimerDB == nil or DingTimerDB.dingSoundEnabled == true)
 
     if NS.UI and NS.UI.SetButtonActive then
+      local profile = DingTimerDB and DingTimerDB.hudProfile or "full"
+      NS.UI.SetButtonActive(self.controls.profileFull, profile == "full")
+      NS.UI.SetButtonActive(self.controls.profileCompact, profile == "compact")
+      NS.UI.SetButtonActive(self.controls.profileBarTTL, profile == "bar_ttl")
+      NS.UI.SetButtonActive(self.controls.profileGraph, profile == "graph")
+
       NS.UI.SetButtonActive(self.controls.modeFull, (DingTimerDB and DingTimerDB.mode or "full") == "full")
       NS.UI.SetButtonActive(self.controls.modeTTL, (DingTimerDB and DingTimerDB.mode or "full") == "ttl")
 

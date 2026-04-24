@@ -59,10 +59,16 @@ local function buildHUDIdleTitleSuffix(snapshot)
   return ""
 end
 
-function NS.BuildHUDText(snapshot)
+function NS.BuildHUDText(snapshot, options)
+  options = options or {}
+  if options.shortTTL then
+    return NS.fmtTime(snapshot.ttl), ""
+  end
+
   local title = NS.fmtTime(snapshot.ttl) .. " to level" .. buildHUDIdleTitleSuffix(snapshot)
   local sub = buildHUDPaceText(snapshot, false)
-  if string.len(sub) > HUD_SUB_TEXT_MAX_CHARS then
+  local maxChars = tonumber(options.subTextMaxChars) or HUD_SUB_TEXT_MAX_CHARS
+  if string.len(sub) > maxChars then
     sub = buildHUDPaceText(snapshot, true)
   end
   return title, sub
