@@ -890,7 +890,7 @@ function NS.ensureFloat()
   sheen:Hide()
   floatFrame.progressSheen = sheen
 
-  local fillShade = bar:CreateTexture(nil, "OVERLAY")
+  local fillShade = bar:CreateTexture(nil, "OVERLAY") --[[@as DingTimerTexture]]
   fillShade:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
   fillShade:SetWidth(profile.barWidth)
   fillShade:SetHeight(math_max(3, math_floor(profile.barHeight * 0.4)))

@@ -10,12 +10,17 @@ dofile("tests/mocks.lua")
 ---@class TestTextureRegion
 ---@field IsShown fun(self: TestTextureRegion): boolean
 ---@field GetAlpha fun(self: TestTextureRegion): number
+---@field GetWidth fun(self: TestTextureRegion): number
+---@field GetHeight fun(self: TestTextureRegion): number
 ---@field GetPoint fun(self: TestTextureRegion): string, any, string, number, number
+---@field _drawLayer string?
+---@field _subLevel number?
 
 ---@class TestFrameRegion
 ---@field GetPoint fun(self: TestFrameRegion): string, any, string, number, number
 ---@field GetWidth fun(self: TestFrameRegion): number
 ---@field GetHeight fun(self: TestFrameRegion): number
+---@field IsShown fun(self: TestFrameRegion): boolean
 
 ---@class TestHeartbeatTicker
 ---@field interval number
@@ -28,12 +33,16 @@ dofile("tests/mocks.lua")
 ---@field titleText TestFontRegion
 ---@field subText TestFontRegion
 ---@field progressBar TestFrameRegion
----@field progressFill TestFrameRegion
+---@field progressFill TestTextureRegion
 ---@field progressPulse TestTextureRegion
 ---@field progressSpark TestTextureRegion
 ---@field progressTicks TestTextureRegion[]
+---@field graphArea TestFrameRegion?
+---@field graphBars TestTextureRegion[]?
+---@field graphPeakText TestFontRegion?
 ---@field _dingGlow TestTextureRegion?
 ---@field _dingAccent TestTextureRegion?
+---@field GetPoint fun(self: TestHUDFrame): string, any, string, number, number
 ---@field GetWidth fun(self: TestHUDFrame): number
 ---@field GetHeight fun(self: TestHUDFrame): number
 ---@field GetScript fun(self: TestHUDFrame, scriptName: string): function?
