@@ -399,6 +399,15 @@ C_CurrencyInfo = {
 }
 
 local tooltipLines = {}
+---@class TestGameTooltip: Frame
+---@field _shown boolean
+---@field _owner any
+---@field _anchor string?
+---@field SetOwner fun(self: TestGameTooltip, owner: any, anchor: string?)
+---@field Show fun(self: TestGameTooltip)
+---@field Hide fun(self: TestGameTooltip)
+---@field IsShown fun(self: TestGameTooltip): boolean
+---@type TestGameTooltip
 GameTooltip = {
   _shown = false,
   SetOwner = function(self, owner, anchor)
@@ -417,12 +426,15 @@ GameTooltip = {
   ClearLines = function()
     tooltipLines = {}
   end,
+  ---@param self TestGameTooltip
   Show = function(self)
     self._shown = true
   end,
+  ---@param self TestGameTooltip
   Hide = function(self)
     self._shown = false
   end,
+  ---@param self TestGameTooltip
   IsShown = function(self)
     return self._shown
   end,

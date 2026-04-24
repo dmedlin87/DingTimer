@@ -3,6 +3,7 @@ dofile("tests/mocks.lua")
 ---@class TestFontRegion
 ---@field GetText fun(self: TestFontRegion): string
 ---@field GetPoint fun(self: TestFontRegion): string, any, string, number, number
+---@field GetWidth fun(self: TestFontRegion): number
 ---@field IsShown fun(self: TestFontRegion): boolean
 ---@field _fontObject string?
 ---@field _justifyH string?
@@ -21,6 +22,7 @@ dofile("tests/mocks.lua")
 ---@field GetWidth fun(self: TestFrameRegion): number
 ---@field GetHeight fun(self: TestFrameRegion): number
 ---@field IsShown fun(self: TestFrameRegion): boolean
+---@field GetScript fun(self: TestFrameRegion, scriptName: string): function?
 
 ---@class TestHeartbeatTicker
 ---@field interval number
@@ -38,8 +40,10 @@ dofile("tests/mocks.lua")
 ---@field progressSpark TestTextureRegion
 ---@field progressTicks TestTextureRegion[]
 ---@field graphArea TestFrameRegion?
+---@field graphBackdrop TestTextureRegion?
 ---@field graphBars TestTextureRegion[]?
 ---@field graphHitboxes TestFrameRegion[]?
+---@field graphGuides TestTextureRegion[]?
 ---@field graphPeakText TestFontRegion?
 ---@field _dingGlow TestTextureRegion?
 ---@field _dingAccent TestTextureRegion?
