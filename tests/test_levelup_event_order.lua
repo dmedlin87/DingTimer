@@ -53,31 +53,31 @@ local function startNearLevelEnd()
   assert_eq(NS.state.sessionXP, 0, "precondition: login should start a clean session")
 end
 
-it("keeps completed-level rollover XP out of the new session when level-up arrives first", function()
+it("keeps rolling XP continuous when level-up arrives before the XP bar drop", function()
   startNearLevelEnd()
 
   SetTime(10)
   SetLevel(2)
   onEvent(eventFrame, "PLAYER_LEVEL_UP", 2)
 
-  assert_eq(NS.state.sessionXP, 0, "level-up should reset the completed level session")
+  assert_eq(NS.state.sessionXP, 0, "level-up should not add XP by itself")
 
   SetXP(50, 1200)
   onEvent(eventFrame, "PLAYER_XP_UPDATE", "player")
 
-  assert_eq(NS.state.sessionXP, 0, "post-level XP drop should become the new level baseline")
-  assert_eq(#NS.state.events, 0, "post-level XP drop should not create a rolling event")
+  assert_eq(NS.state.sessionXP, 150, "post-level XP drop should count completed-level rollover XP")
+  assert_eq(#NS.state.events, 1, "post-level XP drop should create a rolling event")
   assert_eq(NS.state.lastXP, 50, "post-level XP update should refresh the baseline")
 
   SetTime(20)
   SetXP(100, 1200)
   onEvent(eventFrame, "PLAYER_XP_UPDATE", "player")
 
-  assert_eq(NS.state.sessionXP, 50, "later XP gains in the new level should be recorded normally")
-  assert_eq(#NS.state.events, 1, "later XP gains should create rolling events normally")
+  assert_eq(NS.state.sessionXP, 200, "later XP gains should continue from the rollover total")
+  assert_eq(#NS.state.events, 2, "later XP gains should append to the continuous rolling events")
 end)
 
-it("keeps rollover XP in the completed level when XP update arrives before level-up", function()
+it("keeps rolling XP continuous when XP update arrives before level-up", function()
   startNearLevelEnd()
 
   SetTime(10)
@@ -89,16 +89,16 @@ it("keeps rollover XP in the completed level when XP update arrives before level
 
   onEvent(eventFrame, "PLAYER_LEVEL_UP", 2)
 
-  assert_eq(NS.state.sessionXP, 0, "level-up should reset the new level session after the summary")
-  assert_eq(#NS.state.events, 0, "level-up should clear old rolling XP events")
+  assert_eq(NS.state.sessionXP, 150, "level-up should preserve the continuous XP session")
+  assert_eq(#NS.state.events, 1, "level-up should preserve old rolling XP events")
   assert_eq(NS.state.lastXP, 50, "new level should start from the post-rollover XP value")
 
   SetTime(20)
   SetXP(100, 1200)
   onEvent(eventFrame, "PLAYER_XP_UPDATE", "player")
 
-  assert_eq(NS.state.sessionXP, 50, "new-level XP after reset should be counted from the new baseline")
-  assert_eq(#NS.state.events, 1, "new-level XP after reset should create one rolling event")
+  assert_eq(NS.state.sessionXP, 200, "new-level XP should continue from the rollover total")
+  assert_eq(#NS.state.events, 2, "new-level XP should append one rolling event")
 end)
 
 run_tests()

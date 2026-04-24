@@ -54,7 +54,7 @@ end
 
 local function onLevelUp(level)
   local now = GetTime()
-  local timeTaken = now - (NS.state.sessionStartTime or now)
+  local timeTaken = now - (NS.state.levelStartTime or NS.state.sessionStartTime or now)
   local moneyNet = NS.state.sessionMoney or 0
 
   local timeStr = NS.fmtTime(timeTaken)
@@ -91,8 +91,9 @@ local function onLevelUp(level)
   if DingTimerDB.dingSoundEnabled == true and NS.PlayDingSoundPreview then
     NS.PlayDingSoundPreview()
   end
-  NS.resetXPState()
-  NS.state.skipNextXPDropAfterLevelUp = true
+  if NS.MarkLevelBoundary then
+    NS.MarkLevelBoundary(level, now)
+  end
 end
 
 frame:SetScript("OnEvent", function(_, event, ...)

@@ -9,6 +9,7 @@ local math_min = math.min
 NS.state = {
   sessionStartTime = 0,
   levelStart = 0,
+  levelStartTime = 0,
   lastXP = 0,
   lastMax = 0,
   lastXPGain = nil,
@@ -45,6 +46,7 @@ end
 local function clearInternalState(now)
   NS.state.sessionStartTime = now
   NS.state.levelStart = (UnitLevel and UnitLevel("player")) or 0
+  NS.state.levelStartTime = now
   NS.state.lastXP = UnitXP("player") or 0
   NS.state.lastMax = UnitXPMax("player") or 0
   NS.state.lastXPGain = nil
@@ -68,6 +70,20 @@ end
 function NS.resetXPState()
   local now = GetTime()
   clearInternalState(now)
+  NS.InvalidateTickCache()
+  if NS.RefreshFloatingHUD then
+    NS.RefreshFloatingHUD(now)
+  end
+  if NS.RefreshHUDPopup then
+    NS.RefreshHUDPopup()
+  end
+end
+
+function NS.MarkLevelBoundary(level, now)
+  now = now or GetTime()
+  NS.state.levelStart = level or ((UnitLevel and UnitLevel("player")) or 0)
+  NS.state.levelStartTime = now
+  NS.state.lastTTL = nil
   NS.InvalidateTickCache()
   if NS.RefreshFloatingHUD then
     NS.RefreshFloatingHUD(now)
