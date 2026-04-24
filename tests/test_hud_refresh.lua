@@ -123,7 +123,8 @@ assert_false(frame.progressPulse:IsShown(), "HUD pulse should hide after the ani
 SetTime(95)
 ticker:Fire()
 
-assertStringMatch("6,000 XP/hr (idle 35s)", frame.subText:GetText(), "HUD should mark retained rolling rates as idle instead of looking frozen")
+assertStringMatch("idle 35s", frame.titleText:GetText(), "HUD should mark retained rolling rates as idle on the TTL label")
+assert_true(string.find(frame.subText:GetText(), "(idle", 1, true) == nil, "HUD detail label should leave idle state on the TTL label")
 
 SetTime(121)
 ticker:Fire()

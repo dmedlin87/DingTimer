@@ -15,8 +15,9 @@ it("builds detailed HUD text for active rolling XP", function()
     rollingWindow = 60,
   })
 
-  assert_eq("9m 0s to level", title, "title should show TTL only")
-  assertStringMatch("6,000 XP/hr (idle 35s)", sub, "subtext should show rolling pace and idle age")
+  assert_eq("9m 0s to level (idle 35s)", title, "title should show TTL and idle age")
+  assertStringMatch("6,000 XP/hr", sub, "subtext should show rolling pace")
+  assert_true(string.find(sub, "(idle", 1, true) == nil, "subtext should leave idle age on the title")
   assertStringMatch("Last +100 (9)", sub, "subtext should include last gain details")
   assertStringMatch("Need 900", sub, "subtext should include remaining XP")
 end)

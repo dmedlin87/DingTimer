@@ -31,11 +31,7 @@ local function buildHUDPaceText(snapshot, compact)
   local paceParts = {}
 
   if snapshot.currentXph and snapshot.currentXph > 0 then
-    local paceText = formatHUDNumber(NS.Round(snapshot.currentXph), compact) .. " XP/hr"
-    if snapshot.secondsSinceLastXP and snapshot.secondsSinceLastXP >= HUD_IDLE_LABEL_SECONDS then
-      paceText = paceText .. " (idle " .. NS.fmtTime(snapshot.secondsSinceLastXP) .. ")"
-    end
-    paceParts[#paceParts + 1] = paceText
+    paceParts[#paceParts + 1] = formatHUDNumber(NS.Round(snapshot.currentXph), compact) .. " XP/hr"
   else
     paceParts[#paceParts + 1] = "No XP in " .. NS.fmtTime(snapshot.rollingWindow or 0)
   end
@@ -52,8 +48,19 @@ local function buildHUDPaceText(snapshot, compact)
   return table.concat(paceParts, "  |  ")
 end
 
+local function buildHUDIdleTitleSuffix(snapshot)
+  if snapshot.currentXph
+    and snapshot.currentXph > 0
+    and snapshot.secondsSinceLastXP
+    and snapshot.secondsSinceLastXP >= HUD_IDLE_LABEL_SECONDS
+  then
+    return " (idle " .. NS.fmtTime(snapshot.secondsSinceLastXP) .. ")"
+  end
+  return ""
+end
+
 function NS.BuildHUDText(snapshot)
-  local title = NS.fmtTime(snapshot.ttl) .. " to level"
+  local title = NS.fmtTime(snapshot.ttl) .. " to level" .. buildHUDIdleTitleSuffix(snapshot)
   local sub = buildHUDPaceText(snapshot, false)
   if string.len(sub) > HUD_SUB_TEXT_MAX_CHARS then
     sub = buildHUDPaceText(snapshot, true)
