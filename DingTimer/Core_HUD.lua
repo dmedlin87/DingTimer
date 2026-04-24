@@ -4,6 +4,7 @@ local math_abs = math.abs
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
+local math_sqrt = math.sqrt
 
 ---@class DingTimerTextRegion: FontString
 ---@field SetText fun(self: DingTimerTextRegion, text: string)
@@ -44,8 +45,10 @@ local math_min = math.min
 ---@field progressTicks DingTimerTexture[]?
 ---@field progressFillShade DingTimerTexture?
 ---@field graphArea Frame?
+---@field graphBackdrop DingTimerTexture?
 ---@field graphBars DingTimerTexture[]?
 ---@field graphBaseline DingTimerTexture?
+---@field graphGuides DingTimerTexture[]?
 ---@field graphPeakText DingTimerTextRegion?
 ---@field _dingAccent DingTimerTexture?
 ---@field _dingGlow DingTimerTexture?
@@ -126,7 +129,7 @@ local HUD_PROFILES = {
     id = "graph",
     label = "Graph",
     width = 385,
-    height = 82,
+    height = 96,
     barWidth = 345,
     barHeight = 8,
     barYOffset = 8,
@@ -137,14 +140,17 @@ local HUD_PROFILES = {
     titleColor = { 0.92, 0.98, 1.0 },
     titleShadowAlpha = 0.88,
     subVisible = true,
-    subYOffset = 4,
+    subYOffset = 11,
     subWidthExtra = 16,
     subTextMaxChars = 58,
     graphVisible = true,
     graphWidth = 345,
-    graphHeight = 32,
-    graphYOffset = 11,
+    graphHeight = 46,
+    graphYOffset = 10,
     graphBucketCount = 18,
+    graphGap = 2,
+    graphPaddingX = 4,
+    graphBarBaseY = 3,
   },
 }
 local HUD_PROFILE_CHOICES = {
@@ -237,6 +243,7 @@ local function setGraphWidgetsShown(frame, shown)
 
   local widgets = {
     frame.graphArea,
+    frame.graphBackdrop,
     frame.graphBaseline,
     frame.graphPeakText,
   }
@@ -258,6 +265,18 @@ local function setGraphWidgetsShown(frame, shown)
           bar:Show()
         elseif not shown and bar.Hide then
           bar:Hide()
+        end
+      end
+    end
+  end
+  if frame.graphGuides then
+    for i = 1, #frame.graphGuides do
+      local guide = frame.graphGuides[i]
+      if guide then
+        if shown and guide.Show then
+          guide:Show()
+        elseif not shown and guide.Hide then
+          guide:Hide()
         end
       end
     end
@@ -327,23 +346,43 @@ local function applyFloatProfileLayout(frame, profile)
     frame.graphArea:SetPoint("BOTTOM", frame, "BOTTOM", 0, profile.graphYOffset or profile.barYOffset or 8)
     if frame.graphBars then
       local bucketCount = profile.graphBucketCount or #frame.graphBars
-      local gap = 2
-      local barWidth = math_max(2, math_floor((graphWidth - ((bucketCount - 1) * gap)) / bucketCount))
+      local gap = profile.graphGap or 2
+      local paddingX = profile.graphPaddingX or 0
+      local barBaseY = profile.graphBarBaseY or 1
+      local barWidth = math_max(2, math_floor((graphWidth - (paddingX * 2) - ((bucketCount - 1) * gap)) / bucketCount))
       for i = 1, #frame.graphBars do
         local graphBar = frame.graphBars[i]
         if graphBar then
           graphBar:ClearAllPoints()
           graphBar:SetWidth(barWidth)
-          graphBar:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", math_floor((i - 1) * (barWidth + gap)), 1)
+          graphBar:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", paddingX + math_floor((i - 1) * (barWidth + gap)), barBaseY)
         end
       end
     end
   end
+  if frame.graphBackdrop and frame.graphArea then
+    frame.graphBackdrop:ClearAllPoints()
+    frame.graphBackdrop:SetPoint("TOPLEFT", frame.graphArea, "TOPLEFT", 0, 0)
+    frame.graphBackdrop:SetPoint("BOTTOMRIGHT", frame.graphArea, "BOTTOMRIGHT", 0, 0)
+    frame.graphBackdrop:SetColorTexture(0.02, 0.05, 0.07, 0.64)
+  end
   if frame.graphBaseline and frame.graphArea then
     frame.graphBaseline:ClearAllPoints()
-    frame.graphBaseline:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", 0, 0)
-    frame.graphBaseline:SetPoint("BOTTOMRIGHT", frame.graphArea, "BOTTOMRIGHT", 0, 0)
+    frame.graphBaseline:SetPoint("BOTTOMLEFT", frame.graphArea, "BOTTOMLEFT", profile.graphPaddingX or 0, 1)
+    frame.graphBaseline:SetPoint("BOTTOMRIGHT", frame.graphArea, "BOTTOMRIGHT", -(profile.graphPaddingX or 0), 1)
     frame.graphBaseline:SetHeight(1)
+  end
+  if frame.graphGuides and frame.graphArea then
+    local guideGraphHeight = profile.graphHeight or 28
+    for i = 1, #frame.graphGuides do
+      local guide = frame.graphGuides[i]
+      if guide then
+        guide:ClearAllPoints()
+        guide:SetPoint("LEFT", frame.graphArea, "LEFT", profile.graphPaddingX or 0, math_floor((guideGraphHeight * i / (#frame.graphGuides + 1)) + 0.5))
+        guide:SetPoint("RIGHT", frame.graphArea, "RIGHT", -(profile.graphPaddingX or 0), math_floor((guideGraphHeight * i / (#frame.graphGuides + 1)) + 0.5))
+        guide:SetHeight(1)
+      end
+    end
   end
 
   if frame.progressSheen then
@@ -497,20 +536,41 @@ end
 local function computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
   local buckets = {}
   local peak = 0
-  bucketCount = bucketCount or 18
-  local bucketSeconds = (windowSeconds or 1) / bucketCount
-  if bucketSeconds <= 0 then
-    bucketSeconds = 1
+  now = tonumber(now) or 0
+  windowSeconds = tonumber(windowSeconds) or 1
+  if windowSeconds <= 0 then
+    windowSeconds = 1
   end
+  bucketCount = math_floor(tonumber(bucketCount) or 18)
+  if bucketCount < 1 then
+    bucketCount = 18
+  end
+  local bucketSeconds = windowSeconds / bucketCount
 
   for i = 1, bucketCount do
     buckets[i] = 0
   end
 
+  local anchor = nil
   for i = 1, #(events or {}) do
     local event = events[i]
-    local age = now - (event.t or now)
-    if age >= 0 and age <= windowSeconds then
+    local eventTime = tonumber(event and event.t)
+    if eventTime and eventTime <= now and (now - eventTime) <= windowSeconds then
+      if not anchor or eventTime > anchor then
+        anchor = eventTime
+      end
+    end
+  end
+
+  if not anchor then
+    return buckets, peak
+  end
+
+  for i = 1, #(events or {}) do
+    local event = events[i]
+    local eventTime = tonumber(event and event.t)
+    local age = eventTime and (anchor - eventTime) or nil
+    if age and age >= 0 and age <= windowSeconds and (now - eventTime) <= windowSeconds then
       local index = bucketCount - math_floor(age / bucketSeconds)
       if index < 1 then
         index = 1
@@ -537,25 +597,30 @@ local function updateXPGraphVisual(frame, snapshot, profile)
   end
 
   local graphHeight = profile.graphHeight or 28
+  local usableHeight = math_max(6, graphHeight - ((profile.graphBarBaseY or 1) + 5))
   local buckets, peak = computeXPGraphBuckets(NS.state and NS.state.events, snapshot.now, snapshot.rollingWindow, profile.graphBucketCount)
-  local minimumHeight = 2
+  local minimumHeight = 3
 
   for i = 1, #frame.graphBars do
     local graphBar = frame.graphBars[i]
     if graphBar then
       local amount = buckets[i] or 0
+      local ratio = (peak > 0) and (amount / peak) or 0
       local barHeight = 0
       if amount > 0 and peak > 0 then
-        barHeight = math_max(minimumHeight, math_floor((amount / peak) * graphHeight + 0.5))
+        barHeight = math_max(minimumHeight, math_floor((math_sqrt(ratio) * usableHeight) + 0.5))
       end
       graphBar:SetHeight(barHeight)
       if amount > 0 then
-        local intensity = 0.48 + (0.32 * (amount / peak))
-        graphBar:SetColorTexture(0.18, intensity, 0.92, 0.82)
+        local recency = i / #frame.graphBars
+        local red = 0.10 + (0.16 * recency)
+        local green = 0.58 + (0.24 * ratio) + (0.08 * recency)
+        local blue = 0.76 + (0.18 * recency)
+        graphBar:SetColorTexture(red, green, blue, 0.9)
         graphBar:Show()
       else
-        graphBar:SetColorTexture(0.08, 0.18, 0.24, 0.34)
-        graphBar:SetHeight(1)
+        graphBar:SetColorTexture(0.07, 0.16, 0.20, 0.36)
+        graphBar:SetHeight(2)
         graphBar:Show()
       end
     end
@@ -563,7 +628,7 @@ local function updateXPGraphVisual(frame, snapshot, profile)
 
   if frame.graphPeakText then
     if peak > 0 then
-      frame.graphPeakText:SetText("Peak +" .. NS.FormatNumber(peak))
+      frame.graphPeakText:SetText("Max +" .. NS.FormatNumber(peak))
     else
       frame.graphPeakText:SetText("No XP")
     end
@@ -941,35 +1006,56 @@ function NS.ensureFloat()
   graphArea:Hide()
   floatFrame.graphArea = graphArea
 
+  local graphBackdrop = graphArea:CreateTexture(nil, "BACKGROUND") --[[@as DingTimerTexture]]
+  graphBackdrop:SetAllPoints(graphArea)
+  graphBackdrop:SetColorTexture(0.02, 0.05, 0.07, 0.64)
+  graphBackdrop:Hide()
+  floatFrame.graphBackdrop = graphBackdrop
+
+  floatFrame.graphGuides = {}
+  for i = 1, 2 do
+    local guide = graphArea:CreateTexture(nil, "BORDER") --[[@as DingTimerTexture]]
+    guide:SetPoint("LEFT", graphArea, "LEFT", HUD_PROFILES.graph.graphPaddingX, math_floor((HUD_PROFILES.graph.graphHeight * i / 3) + 0.5))
+    guide:SetPoint("RIGHT", graphArea, "RIGHT", -HUD_PROFILES.graph.graphPaddingX, math_floor((HUD_PROFILES.graph.graphHeight * i / 3) + 0.5))
+    guide:SetHeight(1)
+    guide:SetColorTexture(0.22, 0.34, 0.40, 0.18)
+    guide:Hide()
+    floatFrame.graphGuides[i] = guide
+  end
+
   local graphBaseline = graphArea:CreateTexture(nil, "BORDER") --[[@as DingTimerTexture]]
-  graphBaseline:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", 0, 0)
-  graphBaseline:SetPoint("BOTTOMRIGHT", graphArea, "BOTTOMRIGHT", 0, 0)
+  graphBaseline:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", HUD_PROFILES.graph.graphPaddingX, 1)
+  graphBaseline:SetPoint("BOTTOMRIGHT", graphArea, "BOTTOMRIGHT", -HUD_PROFILES.graph.graphPaddingX, 1)
   graphBaseline:SetHeight(1)
-  graphBaseline:SetColorTexture(0.34, 0.44, 0.52, 0.55)
+  graphBaseline:SetColorTexture(0.34, 0.48, 0.56, 0.62)
   graphBaseline:Hide()
   floatFrame.graphBaseline = graphBaseline
 
   floatFrame.graphBars = {}
   local graphBucketCount = HUD_PROFILES.graph.graphBucketCount
-  local graphGap = 2
-  local graphBarWidth = math_max(2, math_floor((HUD_PROFILES.graph.graphWidth - ((graphBucketCount - 1) * graphGap)) / graphBucketCount))
+  local graphGap = HUD_PROFILES.graph.graphGap
+  local graphPaddingX = HUD_PROFILES.graph.graphPaddingX
+  local graphBarWidth = math_max(2, math_floor((HUD_PROFILES.graph.graphWidth - (graphPaddingX * 2) - ((graphBucketCount - 1) * graphGap)) / graphBucketCount))
   for i = 1, graphBucketCount do
     local graphBar = graphArea:CreateTexture(nil, "ARTWORK") --[[@as DingTimerTexture]]
     graphBar:SetWidth(graphBarWidth)
-    graphBar:SetHeight(1)
-    graphBar:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", math_floor((i - 1) * (graphBarWidth + graphGap)), 1)
-    graphBar:SetColorTexture(0.08, 0.18, 0.24, 0.34)
+    graphBar:SetHeight(2)
+    graphBar:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", graphPaddingX + math_floor((i - 1) * (graphBarWidth + graphGap)), HUD_PROFILES.graph.graphBarBaseY)
+    graphBar:SetColorTexture(0.07, 0.16, 0.20, 0.36)
     graphBar:Hide()
     floatFrame.graphBars[i] = graphBar
   end
 
   local graphPeakText = floatFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") --[[@as DingTimerTextRegion]]
-  graphPeakText:SetPoint("TOPRIGHT", graphArea, "TOPRIGHT", 0, -1)
+  graphPeakText:SetPoint("BOTTOMRIGHT", graphArea, "TOPRIGHT", -4, 1)
+  if graphPeakText.SetWidth then
+    graphPeakText:SetWidth(96)
+  end
   if NS.UI and NS.UI.ApplyTextStyle then
     NS.UI.ApplyTextStyle(graphPeakText, "subtle")
   end
   if graphPeakText.SetTextColor then
-    graphPeakText:SetTextColor(0.74, 0.88, 0.94, 0.9)
+    graphPeakText:SetTextColor(0.78, 0.9, 0.95, 0.95)
   end
   if graphPeakText.SetJustifyH then
     graphPeakText:SetJustifyH("RIGHT")
