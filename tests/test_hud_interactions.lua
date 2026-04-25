@@ -16,6 +16,8 @@ dofile("tests/mocks.lua")
 ---@field IsShown fun(self: InteractionTestFrame): boolean
 ---@field Hide fun(self: InteractionTestFrame)
 ---@field Show fun(self: InteractionTestFrame)
+---@field StartMoving fun(self: InteractionTestFrame)
+---@field StopMovingOrSizing fun(self: InteractionTestFrame)
 
 local snapshot = {
   progress = 0,
