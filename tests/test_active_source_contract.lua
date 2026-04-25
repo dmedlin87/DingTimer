@@ -63,6 +63,11 @@ local forbiddenCommandHandlers = {
   "ROOT_COMMANDS.pvp =",
 }
 
+local requiredInterfaceVersions = {
+  "120001",
+  "50503",
+}
+
 local function fileExists(path)
   ---@diagnostic disable-next-line: undefined-global
   local handle = io.open(path, "r")
@@ -94,6 +99,26 @@ local function readFile(path)
   handle:close()
   return contents
 end
+
+local function readTocInterfaceVersions()
+  local contents = readFile("DingTimer/DingTimer.toc")
+  local interfaceLine = contents:match("## Interface:%s*([^\r\n]+)")
+  assert_true(interfaceLine ~= nil, "TOC should declare supported WoW interface versions")
+
+  local versions = {}
+  for version in interfaceLine:gmatch("[^,%s]+") do
+    versions[version] = true
+  end
+  return versions
+end
+
+it("keeps supported client interface versions current", function()
+  local versions = readTocInterfaceVersions()
+  for i = 1, #requiredInterfaceVersions do
+    local version = requiredInterfaceVersions[i]
+    assert_true(versions[version] == true, "TOC should include supported interface version " .. version)
+  end
+end)
 
 it("keeps the HUD-first toc load path explicit and stable", function()
   local entries = readTocRuntimeEntries()

@@ -1,4 +1,4 @@
-## Interface: 120001, 50500
+## Interface: 120001, 50503
 ## Title: DingTimer
 ## Notes: HUD XP/hr + Time-to-Level
 ## Author: dmedlin87
