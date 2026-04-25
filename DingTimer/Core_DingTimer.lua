@@ -132,6 +132,19 @@ function NS.ComputeRollingRatePerHour(evList, now, sessionStart, windowSeconds, 
 
   local sessionElapsed = now - (sessionStart or now)
   local elapsed = math_min(sessionElapsed, windowSeconds)
+  if sessionElapsed >= windowSeconds then
+    local newestEvent = evList[#evList]
+    local newestAt = newestEvent and tonumber(newestEvent.t) or nil
+    if newestAt then
+      local decayStart = (sessionStart or now) + windowSeconds
+      if newestAt > decayStart then
+        decayStart = newestAt
+      end
+      if now > decayStart then
+        elapsed = elapsed + (now - decayStart)
+      end
+    end
+  end
   if elapsed <= 0 then
     elapsed = 1
   end

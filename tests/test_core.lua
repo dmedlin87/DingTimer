@@ -58,7 +58,7 @@ assert_near(xph, 200 * 3600 / 600, 0.1, "XP/hr should be 1200")
 
 SetTime(801)
 xph = NS.computeXPPerHour(801, 600) -- event at 200 is now pruned (801-200 > 600)
-assert_near(xph, 100 * 3600 / 600, 0.1, "XP/hr should be 600 after pruning")
+assert_near(xph, 100 * 3600 / 601, 0.1, "XP/hr should decay every second after pruning")
 
 -- Test 4b: Snapshot pace should reflect the raw rolling rate immediately
 NS.resetXPState()

@@ -188,6 +188,10 @@ onUpdate(frame, 1)
 assert_true(frame:GetScript("OnUpdate") == nil, "HUD should stop animating once the pulse finishes")
 assert_false(frame.progressPulse:IsShown(), "HUD pulse should hide after the animation completes")
 
+SetTime(61)
+ticker:Fire()
+assertStringMatch("5,902 XP/hr", frame.subText:GetText(), "heartbeat should refresh decaying XP/hr text every second")
+
 SetTime(95)
 ticker:Fire()
 

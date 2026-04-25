@@ -140,13 +140,13 @@ DingTimer uses a rolling window instead of a long session average:
 ```text
 1. Collect XP gains inside the current window
 2. Sum the XP in that window
-3. Use min(session elapsed, window size) as the elapsed time
+3. Use session elapsed until the window fills; after that, add idle seconds since the latest retained XP gain so the displayed pace decays every second
 4. XP/hr = (sum / elapsed) * 3600
 ```
 
 Default window: `10 minutes`
 
-When retained XP is still inside the rolling window but no fresh XP has arrived for 30+ seconds, the HUD adds an `idle <time>` label so the fixed-window average is not mistaken for a currently active pace.
+When retained XP is still inside the rolling window but no fresh XP has arrived for 30+ seconds, the HUD adds an `idle <time>` label so the decaying pace is clearly marked as idle.
 
 This keeps the HUD responsive to what you are doing now instead of what you were doing half an hour ago.
 

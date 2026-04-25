@@ -83,6 +83,20 @@ local function test_pruning_updates_window_sum()
     assert_equal(300, NS.state.windowXP, "Pruning should remove expired XP from the rolling sum")
 end
 
+local function test_saturated_window_rate_decays_each_second()
+    NS.state.sessionStartTime = 0
+    NS.state.events = { { t = 600, xp = 100 } }
+    NS.state.windowXP = 100
+
+    local initialXph = NS.computeXPPerHour(600, 60)
+    local nextSecondXph = NS.computeXPPerHour(601, 60)
+
+    assert_near(initialXph, 100 * 3600 / 60, 0.1, "XP/hr should use the window at the moment XP arrives")
+    assert_near(nextSecondXph, 100 * 3600 / 61, 0.1, "XP/hr should decay on the next heartbeat")
+    assert_true(nextSecondXph < initialXph, "XP/hr should not remain flat between heartbeat ticks")
+    NS.state.windowXP = nil
+end
+
 -- 5. Test pruning when all elements are old
 local function test_all_elements_removed()
     NS.state.events = {
@@ -100,6 +114,7 @@ test_single_element_keep()
 test_single_element_remove()
 test_normal_pruning()
 test_pruning_updates_window_sum()
+test_saturated_window_rate_decays_each_second()
 test_all_elements_removed()
 
 -- Tests for SetRollingWindowSeconds
