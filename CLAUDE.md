@@ -12,6 +12,7 @@ The shipped addon now loads only these modules through [`DingTimer/DingTimer.toc
 - `Store.lua`
 - `Core_DingTimer.lua`
 - `HUDText.lua`
+- `HUDGraph.lua`
 - `Core_HUD.lua`
 - `Core_Events.lua`
 - `Actions.lua`
@@ -30,6 +31,7 @@ DingTimer/
   Store.lua          # SavedVariables init and schema v10 cleanup
   Core_DingTimer.lua # Rolling XP state, snapshot math, and lazy heartbeat ticker
   HUDText.lua        # Pure HUD title/subtext formatting
+  HUDGraph.lua       # HUD graph bucket math, rendering, and tooltip data
   Core_HUD.lua       # Floating HUD frame, animation, and visibility
   Core_Events.lua    # XP and money event mutation
   Actions.lua        # Popup-facing actions and session reset
@@ -54,6 +56,7 @@ tests/
 
 - `Core_DingTimer.lua` owns rolling state, snapshot math, and the lazy 1-second ticker.
 - `HUDText.lua` owns pure HUD text formatting and should stay free of frame mutation.
+- `HUDGraph.lua` owns HUD graph bucket math, rendering, and tooltip data.
 - `Core_HUD.lua` owns the floating HUD frame, animation, and visibility behavior.
 - `Core_Events.lua` owns XP and money event mutation.
 - `NS.GetSessionSnapshot()` is still derived from rolling XP events and remains the source for HUD text.
@@ -73,6 +76,7 @@ Useful targeted runs:
 
 ```powershell
 python .\run_tests.py tests\test_hud_visibility.lua
+python .\run_tests.py tests\test_hud_graph.lua
 python .\run_tests.py tests\test_hud_refresh.lua
 python .\run_tests.py tests\test_hud_popup.lua
 python .\run_tests.py tests\test_commands_compat.lua

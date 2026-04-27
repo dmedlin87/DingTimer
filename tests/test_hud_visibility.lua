@@ -33,6 +33,7 @@ DingTimerDB = {
 
 LoadAddonFile("DingTimer/Core_DingTimer.lua", NS)
 LoadAddonFile("DingTimer/HUDText.lua", NS)
+LoadAddonFile("DingTimer/HUDGraph.lua", NS)
 LoadAddonFile("DingTimer/Core_HUD.lua", NS)
 
 NS.setFloatVisible(true)

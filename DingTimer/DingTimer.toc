@@ -10,16 +10,18 @@
 # 2. Store.lua        - SavedVariables init and schema v10 cleanup
 # 3. Core_DingTimer   - rolling XP state, snapshot math, and heartbeat
 # 4. HUDText.lua      - pure HUD text formatting helpers
-# 5. Core_HUD.lua     - floating HUD frame, animation, and visibility
-# 6. Core_Events.lua  - XP and money event mutation
-# 7. Actions.lua      - popup-facing setting actions and reset behavior
-# 8. Commands.lua     - reduced slash command surface plus compatibility shims
-# 9. UI_HUDPopup.lua  - compact popup anchored to the HUD or UIParent
-# 10. DingTimer.lua   - event wiring and slash command registration
+# 5. HUDGraph.lua     - HUD graph bucket math, rendering, and tooltip data
+# 6. Core_HUD.lua     - floating HUD frame, animation, and visibility
+# 7. Core_Events.lua  - XP and money event mutation
+# 8. Actions.lua      - popup-facing setting actions and reset behavior
+# 9. Commands.lua     - reduced slash command surface plus compatibility shims
+# 10. UI_HUDPopup.lua - compact popup anchored to the HUD or UIParent
+# 11. DingTimer.lua   - event wiring and slash command registration
 Util.lua
 Store.lua
 Core_DingTimer.lua
 HUDText.lua
+HUDGraph.lua
 Core_HUD.lua
 Core_Events.lua
 Actions.lua

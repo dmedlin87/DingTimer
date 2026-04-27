@@ -4,7 +4,6 @@ local math_abs = math.abs
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
-local math_sqrt = math.sqrt
 
 ---@class DingTimerTextRegion: FontString
 ---@field SetText fun(self: DingTimerTextRegion, text: string)
@@ -559,185 +558,15 @@ local function updateFloatBarVisual(frame, progress, pulseAlpha)
   end
 end
 
-local function computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
-  local buckets = {}
-  local peak = 0
-  now = tonumber(now) or 0
-  windowSeconds = tonumber(windowSeconds) or 1
-  if windowSeconds <= 0 then
-    windowSeconds = 1
-  end
-  bucketCount = math_floor(tonumber(bucketCount) or 18)
-  if bucketCount < 1 then
-    bucketCount = 18
-  end
-  local bucketSeconds = windowSeconds / bucketCount
-
-  for i = 1, bucketCount do
-    buckets[i] = 0
-  end
-
-  local anchor = nil
-  for i = 1, #(events or {}) do
-    local event = events[i]
-    local eventTime = tonumber(event and event.t)
-    if eventTime and eventTime <= now and (now - eventTime) <= windowSeconds then
-      if not anchor or eventTime > anchor then
-        anchor = eventTime
-      end
-    end
-  end
-
-  if not anchor then
-    return buckets, peak
-  end
-
-  for i = 1, #(events or {}) do
-    local event = events[i]
-    local eventTime = tonumber(event and event.t)
-    local age = eventTime and (anchor - eventTime) or nil
-    if age and age >= 0 and age <= windowSeconds and (now - eventTime) <= windowSeconds then
-      local index = bucketCount - math_floor(age / bucketSeconds)
-      if index < 1 then
-        index = 1
-      elseif index > bucketCount then
-        index = bucketCount
-      end
-      buckets[index] = buckets[index] + (tonumber(event.xp) or 0)
-      if buckets[index] > peak then
-        peak = buckets[index]
-      end
-    end
-  end
-
-  return buckets, peak
-end
-
-function NS.BuildXPGraphBuckets(events, now, windowSeconds, bucketCount)
-  return computeXPGraphBuckets(events, now, windowSeconds, bucketCount)
-end
-
-local function formatGraphBucketRange(data)
-  local bucketCount = math_floor(tonumber(data and data.count) or 1)
-  if bucketCount < 1 then
-    bucketCount = 1
-  end
-  local bucketIndex = math_floor(tonumber(data and data.index) or bucketCount)
-  if bucketIndex < 1 then
-    bucketIndex = 1
-  elseif bucketIndex > bucketCount then
-    bucketIndex = bucketCount
-  end
-
-  local windowSeconds = tonumber(data and data.windowSeconds) or 0
-  if windowSeconds <= 0 then
-    return "Rolling window bucket"
-  end
-
-  local bucketSeconds = windowSeconds / bucketCount
-  local newerSeconds = math_max(0, math_floor(((bucketCount - bucketIndex) * bucketSeconds) + 0.5))
-  local olderSeconds = math_max(1, math_floor(((bucketCount - bucketIndex + 1) * bucketSeconds) + 0.5))
-  if newerSeconds <= 0 then
-    return "Latest " .. NS.fmtTime(olderSeconds) .. " bucket"
-  end
-  return NS.fmtTime(newerSeconds) .. "-" .. NS.fmtTime(olderSeconds) .. " before latest gain"
-end
-
 local function showXPGraphBucketTooltip(self)
-  local data = self and self._dingGraphBucket
-  if not data or not GameTooltip then
-    return
+  if NS.HUDGraph and NS.HUDGraph.ShowTooltip then
+    NS.HUDGraph.ShowTooltip(self)
   end
-
-  local amount = tonumber(data.amount) or 0
-  GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
-  if GameTooltip.ClearLines then
-    GameTooltip:ClearLines()
-  end
-  GameTooltip:AddLine(NS.C.base .. "DingTimer Graph" .. NS.C.r)
-  if amount > 0 then
-    GameTooltip:AddLine("+" .. NS.FormatNumber(amount) .. " XP", 1, 1, 1)
-  else
-    GameTooltip:AddLine("No XP", 1, 1, 1)
-  end
-  GameTooltip:AddLine(formatGraphBucketRange(data), 0.82, 0.88, 0.92)
-
-  local peak = tonumber(data.peak) or 0
-  if peak > 0 then
-    GameTooltip:AddLine("Peak +" .. NS.FormatNumber(peak), 0.78, 0.9, 0.95)
-  end
-  GameTooltip:Show()
 end
 
 local function hideXPGraphBucketTooltip()
-  if GameTooltip and GameTooltip.Hide then
-    GameTooltip:Hide()
-  end
-end
-
-local function updateXPGraphTooltipData(frame, buckets, peak, snapshot, bucketCount)
-  if not frame or not frame.graphHitboxes then
-    return
-  end
-
-  for i = 1, #frame.graphHitboxes do
-    local hitbox = frame.graphHitboxes[i]
-    if hitbox then
-      hitbox._dingGraphBucket = {
-        index = i,
-        count = bucketCount,
-        amount = buckets and buckets[i] or 0,
-        peak = peak or 0,
-        windowSeconds = snapshot and snapshot.rollingWindow or 0,
-      }
-    end
-  end
-end
-
-local function updateXPGraphVisual(frame, snapshot, profile)
-  if not frame or not frame.graphBars or not snapshot or not profile then
-    return
-  end
-
-  local graphHeight = profile.graphHeight or 28
-  local usableHeight = math_max(6, graphHeight - ((profile.graphBarBaseY or 1) + 5))
-  local bucketCount = profile.graphBucketCount or #frame.graphBars
-  local buckets, peak = computeXPGraphBuckets(NS.state and NS.state.events, snapshot.now, snapshot.rollingWindow, bucketCount)
-  local minimumHeight = 3
-
-  for i = 1, #frame.graphBars do
-    local graphBar = frame.graphBars[i]
-    if graphBar then
-      local amount = buckets[i] or 0
-      local ratio = (peak > 0) and (amount / peak) or 0
-      local barHeight = 0
-      if amount > 0 and peak > 0 then
-        barHeight = math_max(minimumHeight, math_floor((math_sqrt(ratio) * usableHeight) + 0.5))
-      end
-      graphBar:SetHeight(barHeight)
-      if amount > 0 then
-        local recency = i / #frame.graphBars
-        local red = 0.10 + (0.16 * recency)
-        local green = 0.58 + (0.24 * ratio) + (0.08 * recency)
-        local blue = 0.76 + (0.18 * recency)
-        graphBar:SetColorTexture(red, green, blue, 0.9)
-        graphBar:Show()
-      else
-        graphBar:SetColorTexture(0.07, 0.16, 0.20, 0.36)
-        graphBar:SetHeight(2)
-        graphBar:Show()
-      end
-    end
-  end
-
-  updateXPGraphTooltipData(frame, buckets, peak, snapshot, bucketCount)
-
-  if frame.graphPeakText then
-    if peak > 0 then
-      frame.graphPeakText:SetText("Max +" .. NS.FormatNumber(peak))
-    else
-      frame.graphPeakText:SetText("No XP")
-    end
+  if NS.HUDGraph and NS.HUDGraph.HideTooltip then
+    NS.HUDGraph.HideTooltip()
   end
 end
 
@@ -1293,8 +1122,8 @@ function NS.RefreshFloatingHUD(now)
   end
 
   setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
-  if profile.graphVisible then
-    updateXPGraphVisual(frame, snapshot, profile)
+  if profile.graphVisible and NS.HUDGraph and NS.HUDGraph.Render then
+    NS.HUDGraph.Render(frame, snapshot, profile, NS.state and NS.state.events)
   end
 
   local header, paceText = NS.BuildHUDText(snapshot, {
