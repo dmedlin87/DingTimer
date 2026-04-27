@@ -290,6 +290,9 @@ newestGraphHitbox:GetScript("OnLeave")(newestGraphHitbox)
 assert_false(GameTooltip:IsShown(), "graph bar tooltip should hide when leaving the hovered bar")
 local graphTicker = C_Timer._lastTicker
 assert_true(graphTicker ~= nil, "graph profile with recent XP should keep the heartbeat ticker active")
+if graphTicker == nil then
+  error("graph profile with recent XP should keep the heartbeat ticker active")
+end
 assert_false(graphTicker.cancelled, "graph heartbeat ticker should still be live while XP is inside the rolling window")
 SetTime(395)
 graphTicker:Fire()
