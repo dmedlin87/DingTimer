@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.2
+
 - Removed the level-up sound toggle and preview from the HUD popup while keeping saved setting normalization and level-up sound coverage.
 - Trimmed slash-command compatibility handling into a smaller helper, removed the no-op logout event registration, and added explicit heartbeat ticker stop coverage.
 - Fixed Windows coverage setup when LuaRocks emits quoted environment assignments.
