@@ -22,5 +22,8 @@
     "Lua.diagnostics.globals": [
         "RegisterStateDriver",
         "UnregisterStateDriver"
+    ],
+    "Lua.diagnostics.disable": [
+        "assign-type-mismatch"
     ]
 }

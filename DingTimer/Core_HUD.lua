@@ -46,7 +46,7 @@ local math_min = math.min
 ---@field graphArea Frame?
 ---@field graphBackdrop DingTimerTexture?
 ---@field graphBars DingTimerTexture[]?
----@field graphHitboxes Frame[]?
+---@field graphHitboxes DingTimerGraphHitbox[]?
 ---@field graphBaseline DingTimerTexture?
 ---@field graphGuides DingTimerTexture[]?
 ---@field graphPeakText DingTimerTextRegion?
@@ -985,7 +985,7 @@ function NS.ensureFloat()
     graphBar:Hide()
     floatFrame.graphBars[i] = graphBar
 
-    local graphHitbox = CreateFrame("Button", nil, graphArea)
+    local graphHitbox = CreateFrame("Button", nil, graphArea) --[[@as DingTimerGraphHitbox]]
     graphHitbox:SetSize(graphBarWidth, HUD_PROFILES.graph.graphHeight)
     graphHitbox:SetPoint("BOTTOMLEFT", graphArea, "BOTTOMLEFT", graphPaddingX + math_floor((i - 1) * (graphBarWidth + graphGap)), 0)
     graphHitbox:EnableMouse(true)

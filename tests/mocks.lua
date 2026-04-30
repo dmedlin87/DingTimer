@@ -408,11 +408,15 @@ C_CurrencyInfo = {
 }
 
 local tooltipLines = {}
----@class TestGameTooltip: Frame
+---@class TestGameTooltip: GameTooltip
 ---@field _shown boolean
 ---@field _owner any
 ---@field _anchor string?
 ---@field SetOwner fun(self: TestGameTooltip, owner: any, anchor: string?)
+---@field SetText fun(self: TestGameTooltip, text: string)
+---@field AddLine fun(self: TestGameTooltip, text: string)
+---@field AddDoubleLine fun(self: TestGameTooltip, left: string?, right: string?)
+---@field ClearLines fun(self: TestGameTooltip)
 ---@field Show fun(self: TestGameTooltip)
 ---@field Hide fun(self: TestGameTooltip)
 ---@field IsShown fun(self: TestGameTooltip): boolean

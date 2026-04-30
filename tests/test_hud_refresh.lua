@@ -24,6 +24,9 @@ dofile("tests/mocks.lua")
 ---@field IsShown fun(self: TestFrameRegion): boolean
 ---@field GetScript fun(self: TestFrameRegion, scriptName: string): function?
 
+---@class TestGraphHitbox: TestFrameRegion
+---@field _dingGraphBucket DingTimerGraphBucket?
+
 ---@class TestHeartbeatTicker
 ---@field interval number
 ---@field callback fun()?
@@ -42,7 +45,7 @@ dofile("tests/mocks.lua")
 ---@field graphArea TestFrameRegion?
 ---@field graphBackdrop TestTextureRegion?
 ---@field graphBars TestTextureRegion[]?
----@field graphHitboxes TestFrameRegion[]?
+---@field graphHitboxes TestGraphHitbox[]?
 ---@field graphGuides TestTextureRegion[]?
 ---@field graphPeakText TestFontRegion?
 ---@field _dingGlow TestTextureRegion?
@@ -330,6 +333,9 @@ SetMoney(10000)
 NS.onMoneyUpdate()
 local goldTicker = C_Timer._lastTicker
 assert_true(goldTicker ~= nil, "money gain in gold mode should start the heartbeat ticker")
+if not goldTicker then
+  error("money gain in gold mode should start the heartbeat ticker")
+end
 assert_false(goldTicker.cancelled, "gold heartbeat ticker should remain active while money is inside the rolling window")
 assertStringMatch("/hr", frame.titleText:GetText(), "gold mode should show a rolling money rate")
 assertStringMatch("Window +1|cffffd700g|r", frame.subText:GetText(), "gold mode should show rolling-window income")
@@ -339,7 +345,11 @@ assert_false(frame.progressBar:IsShown(), "gold mode should keep the XP progress
 NS.SetHUDProfile("graph")
 assert_true(frame.graphArea:IsShown(), "gold graph mode should show the graph area")
 assertStringMatch("Peak bucket +1|cffffd700g|r", frame.graphPeakText:GetText(), "gold graph should label money buckets")
-assert_eq("money", frame.graphHitboxes[18]._dingGraphBucket.valueKey, "gold graph hitboxes should carry money tooltip data")
+local goldGraphHitbox = frame.graphHitboxes[18]
+if not goldGraphHitbox._dingGraphBucket then
+  error("gold graph hitbox should carry tooltip data")
+end
+assert_eq("money", goldGraphHitbox._dingGraphBucket.valueKey, "gold graph hitboxes should carry money tooltip data")
 
 DingTimerDB.hudTrackingMode = "xp"
 NS.InvalidateTickCache()

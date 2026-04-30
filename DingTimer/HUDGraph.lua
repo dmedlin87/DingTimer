@@ -7,6 +7,17 @@ local math_sqrt = math.sqrt
 local HUDGraph = NS.HUDGraph or {}
 NS.HUDGraph = HUDGraph
 
+---@class DingTimerGraphBucket
+---@field index number
+---@field count number
+---@field amount number
+---@field peak number
+---@field windowSeconds number
+---@field valueKey string
+
+---@class DingTimerGraphHitbox: Button
+---@field _dingGraphBucket DingTimerGraphBucket?
+
 local function normalizeWindowSeconds(windowSeconds)
   local value = tonumber(windowSeconds) or 1
   if value <= 0 then
