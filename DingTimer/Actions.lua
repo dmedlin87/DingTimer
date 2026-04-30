@@ -41,6 +41,19 @@ function NS.SetOutputMode(mode)
   return true, mode
 end
 
+function NS.SetHUDTrackingMode(mode)
+  if mode ~= "auto" and mode ~= "xp" and mode ~= "gold" then
+    return false, "Unknown track mode. Use 'auto', 'xp', or 'gold'."
+  end
+
+  DingTimerDB.hudTrackingMode = mode
+  if NS.InvalidateTickCache then
+    NS.InvalidateTickCache()
+  end
+  refreshSurfaces()
+  return true, mode
+end
+
 function NS.SetFloatEnabled(enabled)
   DingTimerDB.float = enabled == true
   if NS.setFloatVisible then

@@ -31,6 +31,104 @@ local tickCache = {
   snapshot = nil,
 }
 
+local VALID_HUD_TRACKING_MODES = {
+  auto = true,
+  xp = true,
+  gold = true,
+}
+
+local function callNumber(fn, ...)
+  if type(fn) ~= "function" then
+    return nil
+  end
+
+  local ok, value = pcall(fn, ...)
+  if ok then
+    return tonumber(value)
+  end
+  return nil
+end
+
+local function readGlobalNumber(name)
+  if not _G then
+    return nil
+  end
+  return tonumber(_G[name])
+end
+
+local function readInterfaceVersion()
+  if type(GetBuildInfo) ~= "function" then
+    return nil
+  end
+
+  local ok, _, _, _, interfaceVersion = pcall(GetBuildInfo)
+  if ok then
+    return tonumber(interfaceVersion)
+  end
+  return nil
+end
+
+local function readKnownInterfaceMaxLevel()
+  local interfaceVersion = readInterfaceVersion()
+  if not interfaceVersion then
+    return nil
+  end
+
+  if interfaceVersion >= 50000 and interfaceVersion < 60000 then
+    return 90
+  end
+  return nil
+end
+
+function NS.NormalizeHUDTrackingMode(mode)
+  if VALID_HUD_TRACKING_MODES[mode] then
+    return mode
+  end
+  return "auto"
+end
+
+function NS.GetHUDTrackingMode()
+  return NS.NormalizeHUDTrackingMode(DingTimerDB and DingTimerDB.hudTrackingMode)
+end
+
+function NS.ResolveHUDTrackingMode(mode, isMaxLevel)
+  mode = NS.NormalizeHUDTrackingMode(mode)
+  if mode == "auto" then
+    return isMaxLevel and "gold" or "xp"
+  end
+  return mode
+end
+
+function NS.GetEffectiveHUDTrackingMode(isMaxLevel)
+  return NS.ResolveHUDTrackingMode(NS.GetHUDTrackingMode(), isMaxLevel == true)
+end
+
+function NS.GetPlayerMaxLevel()
+  return callNumber(GetMaxPlayerLevel)
+    or readGlobalNumber("MAX_PLAYER_LEVEL")
+    or readGlobalNumber("MAX_LEVEL")
+    or readGlobalNumber("PLAYER_MAX_LEVEL")
+    or readKnownInterfaceMaxLevel()
+end
+
+function NS.IsPlayerMaxLevel(level, maxXP)
+  level = tonumber(level)
+  if not level and UnitLevel then
+    level = tonumber(UnitLevel("player"))
+  end
+  maxXP = tonumber(maxXP)
+  if maxXP == nil and UnitXPMax then
+    maxXP = tonumber(UnitXPMax("player"))
+  end
+
+  if level and level > 0 and maxXP and maxXP <= 0 then
+    return true
+  end
+
+  local maxLevel = NS.GetPlayerMaxLevel and NS.GetPlayerMaxLevel() or nil
+  return maxLevel ~= nil and level ~= nil and level >= maxLevel
+end
+
 function NS.GetRollingWindowSeconds()
   return tonumber(DingTimerDB and DingTimerDB.windowSeconds) or 600
 end
@@ -211,6 +309,9 @@ function NS.GetSessionSnapshot(now)
   local xp = UnitXP("player") or 0
   local maxXP = UnitXPMax("player") or 0
   local level = (UnitLevel and UnitLevel("player")) or 0
+  local isMaxLevel = NS.IsPlayerMaxLevel(level, maxXP)
+  local hudTrackingMode = NS.GetHUDTrackingMode()
+  local effectiveTrackingMode = NS.ResolveHUDTrackingMode(hudTrackingMode, isMaxLevel)
   local sessionStart = NS.state.sessionStartTime or now
   local sessionElapsed = math_max(1, now - sessionStart)
   local sessionXP = NS.state.sessionXP or 0
@@ -236,9 +337,11 @@ function NS.GetSessionSnapshot(now)
   local sessionXph = (sessionXP / sessionElapsed) * 3600
   local moneyPerHour = moneyRate.rawXph
   local remainingXP = math_max(0, maxXP - xp)
-  local ttl = (currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
+  local ttl = (not isMaxLevel and currentXph > 0) and (remainingXP / (currentXph / 3600)) or math_huge
   local gainsToLevel = nil
-  if lastXPGain and lastXPGain > 0 and remainingXP > 0 then
+  if isMaxLevel then
+    gainsToLevel = nil
+  elseif lastXPGain and lastXPGain > 0 and remainingXP > 0 then
     gainsToLevel = math_ceil(remainingXP / lastXPGain)
   elseif remainingXP == 0 then
     gainsToLevel = 0
@@ -247,13 +350,17 @@ function NS.GetSessionSnapshot(now)
   local snapshot = {
     now = now,
     level = level,
+    isMaxLevel = isMaxLevel,
+    hudTrackingMode = hudTrackingMode,
+    effectiveTrackingMode = effectiveTrackingMode,
     xp = xp,
     maxXP = maxXP,
     remainingXP = remainingXP,
-    progress = (maxXP > 0) and (xp / maxXP) or 0,
+    progress = (not isMaxLevel and maxXP > 0) and (xp / maxXP) or 0,
     sessionElapsed = sessionElapsed,
     sessionXP = sessionXP,
     sessionMoney = sessionMoney,
+    windowMoney = NS.state.windowMoney or 0,
     lastXPGain = lastXPGain,
     lastXPAt = lastXPAt,
     secondsSinceLastXP = secondsSinceLastXP,
@@ -292,6 +399,18 @@ function NS.HasRecentXPActivity(now)
   return (now - lastXPAt) <= NS.GetRollingWindowSeconds()
 end
 
+function NS.HasRecentMoneyActivity(now)
+  local events = NS.state.moneyEvents
+  local latest = events and events[#events]
+  local latestAt = latest and tonumber(latest.t)
+  if not latestAt then
+    return false
+  end
+
+  now = now or GetTime()
+  return (now - latestAt) <= NS.GetRollingWindowSeconds()
+end
+
 function NS.ShouldHeartbeatRun(now)
   if NS.IsFloatAnimating and NS.IsFloatAnimating() then
     return true
@@ -301,7 +420,12 @@ function NS.ShouldHeartbeatRun(now)
     return false
   end
 
-  return NS.HasRecentXPActivity(now)
+  if NS.HasRecentXPActivity(now) then
+    return true
+  end
+
+  local effectiveTrackingMode = NS.GetEffectiveHUDTrackingMode(NS.IsPlayerMaxLevel())
+  return effectiveTrackingMode == "gold" and NS.HasRecentMoneyActivity(now)
 end
 
 function NS.StartHeartbeatTicker()

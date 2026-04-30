@@ -1,14 +1,14 @@
 ## Interface: 120001, 50503
 ## Title: DingTimer
-## Notes: HUD XP/hr + Time-to-Level
+## Notes: HUD XP/hr + Time-to-Level + Gold/hr
 ## Author: dmedlin87
 ## Version: 1.1.2
 ## SavedVariables: DingTimerDB
 
 # HUD-first load order:
 # 1. Util.lua         - shared formatting, theme, and UI helpers
-# 2. Store.lua        - SavedVariables init and schema v10 cleanup
-# 3. Core_DingTimer   - rolling XP state, snapshot math, and heartbeat
+# 2. Store.lua        - SavedVariables init and current schema cleanup
+# 3. Core_DingTimer   - rolling XP/money state, snapshot math, and heartbeat
 # 4. HUDText.lua      - pure HUD text formatting helpers
 # 5. HUDGraph.lua     - HUD graph bucket math, rendering, and tooltip data
 # 6. Core_HUD.lua     - floating HUD frame, animation, and visibility

@@ -111,11 +111,46 @@ assert_eq(#NS.state.moneyEvents, 1, "spending should not create a rolling income
 
 local moneySnapshot = NS.GetSessionSnapshot(2060)
 assert_eq(900, moneySnapshot.sessionMoney, "snapshot should expose net session money")
+assert_eq(1500, moneySnapshot.windowMoney, "snapshot should expose rolling window income")
 assert_near(moneySnapshot.moneyPerHour, 1500 * 3600 / 60, 0.1, "snapshot should keep the rolling income rate based on earned money")
 
 local expiredMoneyRate = NS.computeMoneyPerHour(2601, 600)
 assert_near(expiredMoneyRate, 0, 0.1, "expired money gains should fall out of the rolling window")
 assert_eq(NS.state.windowMoney, 0, "windowMoney should decay to zero after the gain expires")
 assert_eq(#NS.state.moneyEvents, 0, "expired money events should be pruned")
+
+-- Test 8: HUD tracking mode resolution and max-level snapshot behavior
+SetMaxPlayerLevel(90)
+SetLevel(89)
+SetTime(3000)
+SetXP(400, 1000)
+DingTimerDB.hudTrackingMode = "auto"
+NS.resetXPState()
+local levelingSnapshot = NS.GetSessionSnapshot(3000)
+assert_false(levelingSnapshot.isMaxLevel, "level 89 should not be treated as max level")
+assert_eq("auto", levelingSnapshot.hudTrackingMode, "snapshot should expose the persisted HUD tracking mode")
+assert_eq("xp", levelingSnapshot.effectiveTrackingMode, "auto mode should track XP before max level")
+
+DingTimerDB.hudTrackingMode = "gold"
+NS.InvalidateTickCache()
+local forcedGoldSnapshot = NS.GetSessionSnapshot(3000)
+assert_eq("gold", forcedGoldSnapshot.effectiveTrackingMode, "manual gold mode should be honored before max level")
+
+SetLevel(90)
+SetXP(0, 0)
+DingTimerDB.hudTrackingMode = "auto"
+NS.InvalidateTickCache()
+local maxAutoSnapshot = NS.GetSessionSnapshot(3001)
+assert_true(maxAutoSnapshot.isMaxLevel, "level 90 should be max when the client max level is 90")
+assert_eq("gold", maxAutoSnapshot.effectiveTrackingMode, "auto mode should switch to gold at max level")
+assert_eq(math.huge, maxAutoSnapshot.ttl, "max-level snapshots should not calculate a fake TTL")
+assert_eq(nil, maxAutoSnapshot.gainsToLevel, "max-level snapshots should not estimate gains to level")
+
+DingTimerDB.hudTrackingMode = "xp"
+NS.InvalidateTickCache()
+local maxXPSnapshot = NS.GetSessionSnapshot(3002)
+assert_eq("xp", maxXPSnapshot.effectiveTrackingMode, "manual XP mode should be honored at max level")
+assert_eq(math.huge, maxXPSnapshot.ttl, "manual XP mode at max level should still suppress TTL math")
+SetMaxPlayerLevel(nil)
 
 print("Core_DingTimer tests passed!")

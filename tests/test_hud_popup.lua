@@ -92,6 +92,7 @@ it("updates DB values and HUD text immediately from popup controls", function()
 
   assert_eq(0.96, buttonFillAlpha(popup.controls.profileFull), "full profile should be active by default")
   assert_eq("Graph", popup.controls.profileGraph:GetText(), "graph profile button should use the full label")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.trackAuto), "auto tracking should be active by default")
   assert_true(popup.controls.dingSoundEnabled == nil, "popup should not expose the level-up sound toggle")
   assert_true(popup.controls.previewSound == nil, "popup should not expose the level-up sound preview button")
   popup.controls.profileCompact:GetScript("OnClick")(popup.controls.profileCompact)
@@ -118,6 +119,15 @@ it("updates DB values and HUD text immediately from popup controls", function()
   assert_eq(385, floatFrame:GetWidth(), "full profile button should restore the full HUD width")
   assert_true(floatFrame.subText:IsShown(), "full profile button should restore the HUD detail line")
   assert_false(floatFrame.graphArea:IsShown(), "full profile button should hide the HUD graph")
+
+  popup.controls.trackGold:GetScript("OnClick")(popup.controls.trackGold)
+  assert_eq("gold", DingTimerDB.hudTrackingMode, "gold tracking button should update the HUD tracking mode")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.trackGold), "gold tracking button should become active")
+  assertStringMatch("No gold", floatFrame.titleText:GetText(), "gold tracking should refresh the HUD into gold mode")
+
+  popup.controls.trackAuto:GetScript("OnClick")(popup.controls.trackAuto)
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "auto tracking button should restore automatic HUD tracking")
+  assert_eq(0.96, buttonFillAlpha(popup.controls.trackAuto), "auto tracking button should become active")
 
   popup.controls.window1m:GetScript("OnClick")(popup.controls.window1m)
   assert_eq(60, DingTimerDB.windowSeconds, "window quick button should update the rolling window")

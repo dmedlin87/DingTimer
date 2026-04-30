@@ -4,6 +4,7 @@ local playerXP = 0
 local playerMaxXP = 1000
 local playerMoney = 0
 local playerLevel = 1
+local maxPlayerLevel = nil
 local playerName = "TestPlayer"
 local playerRealm = "TestRealm"
 local playerClassLocalized = "Mage"
@@ -52,6 +53,14 @@ end
 
 function SetLevel(level)
   playerLevel = level
+end
+
+function GetMaxPlayerLevel()
+  return maxPlayerLevel
+end
+
+function SetMaxPlayerLevel(level)
+  maxPlayerLevel = level
 end
 
 function UnitName(unit)

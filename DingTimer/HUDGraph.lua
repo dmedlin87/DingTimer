@@ -23,9 +23,11 @@ local function normalizeBucketCount(bucketCount)
   return value
 end
 
-function HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount)
+function HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount, valueKey)
   local buckets = {}
   local peak = 0
+  local newestEventTime = nil
+  valueKey = valueKey or "xp"
   now = tonumber(now) or 0
   windowSeconds = normalizeWindowSeconds(windowSeconds)
   bucketCount = normalizeBucketCount(bucketCount)
@@ -38,10 +40,27 @@ function HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount)
   for i = 1, #(events or {}) do
     local event = events[i]
     local eventTime = tonumber(event and event.t)
-    local amount = tonumber(event and event.xp)
+    local amount = tonumber(event and event[valueKey])
     local age = eventTime and (now - eventTime) or nil
     if amount and amount > 0 and age and age >= 0 and age <= windowSeconds then
-      local index = bucketCount - math_floor(age / bucketSeconds)
+      if not newestEventTime or eventTime > newestEventTime then
+        newestEventTime = eventTime
+      end
+    end
+  end
+
+  if not newestEventTime then
+    return buckets, peak
+  end
+
+  for i = 1, #(events or {}) do
+    local event = events[i]
+    local eventTime = tonumber(event and event.t)
+    local amount = tonumber(event and event[valueKey])
+    local age = eventTime and (now - eventTime) or nil
+    if amount and amount > 0 and age and age >= 0 and age <= windowSeconds then
+      local graphAge = newestEventTime - eventTime
+      local index = bucketCount - math_floor(graphAge / bucketSeconds)
       if index < 1 then
         index = 1
       elseif index > bucketCount then
@@ -90,26 +109,34 @@ function HUDGraph.ShowTooltip(self)
   end
 
   local amount = tonumber(data.amount) or 0
+  local valueKey = data.valueKey or "xp"
+  local isMoney = valueKey == "money"
   local colors = NS.C or {}
   local formatNumber = NS.FormatNumber or function(value)
     return tostring(value)
+  end
+  local formatAmount = function(value)
+    if isMoney and NS.fmtMoney then
+      return NS.fmtMoney(value)
+    end
+    return formatNumber(value)
   end
 
   GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
   if GameTooltip.ClearLines then
     GameTooltip:ClearLines()
   end
-  GameTooltip:AddLine((colors.base or "") .. "DingTimer Graph" .. (colors.r or ""))
+  GameTooltip:AddLine((colors.base or "") .. (isMoney and "DingTimer Gold" or "DingTimer Graph") .. (colors.r or ""))
   if amount > 0 then
-    GameTooltip:AddLine("+" .. formatNumber(amount) .. " XP", 1, 1, 1)
+    GameTooltip:AddLine("+" .. formatAmount(amount) .. (isMoney and "" or " XP"), 1, 1, 1)
   else
-    GameTooltip:AddLine("No XP", 1, 1, 1)
+    GameTooltip:AddLine(isMoney and "No gold" or "No XP", 1, 1, 1)
   end
   GameTooltip:AddLine(HUDGraph.FormatBucketRange(data), 0.82, 0.88, 0.92)
 
   local peak = tonumber(data.peak) or 0
   if peak > 0 then
-    GameTooltip:AddLine("Peak bucket +" .. formatNumber(peak), 0.78, 0.9, 0.95)
+    GameTooltip:AddLine("Peak bucket +" .. formatAmount(peak) .. (isMoney and "" or " XP"), 0.78, 0.9, 0.95)
   end
   GameTooltip:Show()
 end
@@ -120,7 +147,7 @@ function HUDGraph.HideTooltip()
   end
 end
 
-function HUDGraph.UpdateTooltipData(frame, buckets, peak, snapshot, bucketCount)
+function HUDGraph.UpdateTooltipData(frame, buckets, peak, snapshot, bucketCount, valueKey)
   if not frame or not frame.graphHitboxes then
     return
   end
@@ -135,20 +162,22 @@ function HUDGraph.UpdateTooltipData(frame, buckets, peak, snapshot, bucketCount)
         amount = buckets and buckets[i] or 0,
         peak = peak or 0,
         windowSeconds = snapshot and snapshot.rollingWindow or 0,
+        valueKey = valueKey or "xp",
       }
     end
   end
 end
 
-function HUDGraph.Render(frame, snapshot, profile, events)
+function HUDGraph.Render(frame, snapshot, profile, events, valueKey)
   if not frame or not frame.graphBars or not snapshot or not profile then
     return
   end
 
+  valueKey = valueKey or "xp"
   local graphHeight = profile.graphHeight or 28
   local usableHeight = math_max(6, graphHeight - ((profile.graphBarBaseY or 1) + 5))
   local bucketCount = normalizeBucketCount(profile.graphBucketCount or #frame.graphBars)
-  local buckets, peak = HUDGraph.BuildBuckets(events, snapshot.now, snapshot.rollingWindow, bucketCount)
+  local buckets, peak = HUDGraph.BuildBuckets(events, snapshot.now, snapshot.rollingWindow, bucketCount, valueKey)
   local minimumHeight = 3
 
   for i = 1, #frame.graphBars do
@@ -176,20 +205,28 @@ function HUDGraph.Render(frame, snapshot, profile, events)
     end
   end
 
-  HUDGraph.UpdateTooltipData(frame, buckets, peak, snapshot, bucketCount)
+  HUDGraph.UpdateTooltipData(frame, buckets, peak, snapshot, bucketCount, valueKey)
 
   if frame.graphPeakText then
     local formatNumber = NS.FormatNumber or function(value)
       return tostring(value)
     end
+    local formatAmount = formatNumber
+    if valueKey == "money" and NS.fmtMoney then
+      formatAmount = NS.fmtMoney
+    end
     if peak > 0 then
-      frame.graphPeakText:SetText("Peak bucket +" .. formatNumber(peak))
+      frame.graphPeakText:SetText("Peak bucket +" .. formatAmount(peak))
     else
-      frame.graphPeakText:SetText("No XP")
+      frame.graphPeakText:SetText(valueKey == "money" and "No gold" or "No XP")
     end
   end
 end
 
 function NS.BuildXPGraphBuckets(events, now, windowSeconds, bucketCount)
-  return HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount)
+  return HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount, "xp")
+end
+
+function NS.BuildMoneyGraphBuckets(events, now, windowSeconds, bucketCount)
+  return HUDGraph.BuildBuckets(events, now, windowSeconds, bucketCount, "money")
 end

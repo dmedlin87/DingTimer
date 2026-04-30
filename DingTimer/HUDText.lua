@@ -27,6 +27,23 @@ local function formatHUDNumber(value, compact)
   return sign .. string_format("%.0fK", n / 1000)
 end
 
+local function formatHUDMoney(value)
+  local n = tonumber(value) or 0
+  if n > 0 then
+    return "+" .. NS.fmtMoney(n)
+  end
+  return NS.fmtMoney(n)
+end
+
+local function formatHUDMoneyRate(value)
+  local n = tonumber(value) or 0
+  if n <= 0 then
+    return nil
+  end
+  local rounded = NS.Round and NS.Round(n) or n
+  return NS.fmtMoney(rounded) .. "/hr"
+end
+
 local function buildHUDPaceText(snapshot, compact)
   local paceParts = {}
 
@@ -48,6 +65,23 @@ local function buildHUDPaceText(snapshot, compact)
   return table.concat(paceParts, "  |  ")
 end
 
+local function buildHUDGoldTitle(snapshot)
+  local rateText = formatHUDMoneyRate(snapshot.moneyPerHour)
+  if rateText then
+    return rateText
+  end
+  return "No gold in " .. NS.fmtTime(snapshot.rollingWindow or 0)
+end
+
+local function buildHUDGoldPaceText(snapshot)
+  return "Window "
+    .. formatHUDMoney(snapshot.windowMoney or 0)
+    .. " / "
+    .. NS.fmtTime(snapshot.rollingWindow or 0)
+    .. "  |  Session "
+    .. formatHUDMoney(snapshot.sessionMoney or 0)
+end
+
 local function buildHUDIdleTitleSuffix(snapshot)
   if snapshot.currentXph
     and snapshot.currentXph > 0
@@ -61,6 +95,21 @@ end
 
 function NS.BuildHUDText(snapshot, options)
   options = options or {}
+  if snapshot.effectiveTrackingMode == "gold" then
+    local title = buildHUDGoldTitle(snapshot)
+    if options.shortTTL then
+      return title, ""
+    end
+    return title, buildHUDGoldPaceText(snapshot)
+  end
+
+  if snapshot.isMaxLevel then
+    if options.shortTTL then
+      return "Max level", ""
+    end
+    return "Max level", "XP tracking complete"
+  end
+
   if options.shortTTL then
     return NS.fmtTime(snapshot.ttl), ""
   end

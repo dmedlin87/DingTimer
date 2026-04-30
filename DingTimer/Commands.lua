@@ -31,6 +31,7 @@ local function showHelp(_arg)
   NS.chat("  " .. NS.C.val .. "/ding settings" .. NS.C.r .. " - Open the HUD popup")
   NS.chat("  " .. NS.C.val .. "/ding on|off" .. NS.C.r .. " - Toggle chat output")
   NS.chat("  " .. NS.C.val .. "/ding mode full|ttl" .. NS.C.r .. " - Change chat output mode")
+  NS.chat("  " .. NS.C.val .. "/ding track auto|xp|gold" .. NS.C.r .. " - Change HUD tracking mode")
   NS.chat("  " .. NS.C.val .. "/ding window <seconds>" .. NS.C.r .. " - Set the rolling window")
   NS.chat("  " .. NS.C.val .. "/ding float on|off|lock|unlock|reset" .. NS.C.r .. " - Manage the HUD")
   NS.chat("  " .. NS.C.val .. "/ding reset" .. NS.C.r .. " - Reset the current session")
@@ -82,6 +83,19 @@ ROOT_COMMANDS.mode = function(arg)
     return
   end
   chat("mode controls are unavailable.")
+end
+
+ROOT_COMMANDS.track = function(arg)
+  if NS.SetHUDTrackingMode then
+    local ok, result = NS.SetHUDTrackingMode(arg)
+    if not ok then
+      chat(result)
+      return
+    end
+    chat("track = " .. result)
+    return
+  end
+  chat("track controls are unavailable.")
 end
 
 ROOT_COMMANDS.window = function(arg)

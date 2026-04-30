@@ -7,18 +7,18 @@ local NS = {
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/HUDGraph.lua", NS)
 
-it("builds wall-clock rolling XP buckets", function()
+it("builds stable XP buckets anchored to the newest gain", function()
   local buckets, peak = NS.HUDGraph.BuildBuckets({ { t = 100, xp = 25 } }, 100, 60, 6)
   assert_eq(6, #buckets, "graph helper should create the requested number of buckets")
   assert_eq(25, buckets[6], "new XP should land in the newest bucket")
   assert_eq(25, peak, "single-bucket graph should report that bucket as the peak")
 
-  local movedBuckets = NS.HUDGraph.BuildBuckets({ { t = 100, xp = 25 } }, 110, 60, 6)
-  assert_eq(25, movedBuckets[5], "XP should move left as wall-clock time advances")
-  assert_eq(0, movedBuckets[6], "newest bucket should clear when no current XP happened")
+  local idleBuckets = NS.HUDGraph.BuildBuckets({ { t = 100, xp = 25 } }, 110, 60, 6)
+  assert_eq(25, idleBuckets[6], "XP should stay in place while only wall-clock time advances")
+  assert_eq(0, idleBuckets[5], "older buckets should not fill from idle heartbeat drift")
 
   local retainedBuckets = NS.HUDGraph.BuildBuckets({ { t = 100, xp = 25 } }, 160, 60, 6)
-  assert_eq(25, retainedBuckets[1], "XP exactly at the rolling-window edge should stay visible")
+  assert_eq(25, retainedBuckets[6], "XP exactly at the rolling-window edge should stay visible without idle drift")
 
   local expiredBuckets, expiredPeak = NS.HUDGraph.BuildBuckets({ { t = 100, xp = 25 } }, 161, 60, 6)
   assert_eq(0, expiredBuckets[1], "XP older than the rolling window should drop out")
@@ -40,7 +40,7 @@ it("sums same-slice gains and ignores invalid events", function()
   }, 110, 60, 6)
 
   assert_eq(25, buckets[6], "graph helper should sum multiple valid gains in the same bucket")
-  assert_eq(70, buckets[4], "graph helper should keep older valid gains in their wall-clock bucket")
+  assert_eq(70, buckets[5], "graph helper should keep older valid gains in their newest-gain-relative bucket")
   assert_eq(70, peak, "graph helper should ignore corrupt events when computing the peak")
 end)
 
@@ -63,6 +63,36 @@ it("formats bucket ranges and keeps the compatibility wrapper", function()
   local buckets, peak = NS.BuildXPGraphBuckets({ { t = 20, xp = 5 } }, 20, 60, 6)
   assert_eq(5, buckets[6], "legacy graph helper wrapper should delegate to HUDGraph")
   assert_eq(5, peak, "legacy graph helper wrapper should return the delegated peak")
+end)
+
+it("builds and labels rolling gold buckets", function()
+  local buckets, peak = NS.BuildMoneyGraphBuckets({
+    { t = 20, money = 10000 },
+    { t = 10, money = 2500 },
+    { t = 9, xp = 999 },
+  }, 20, 60, 6)
+
+  assert_eq(10000, buckets[6], "money graph helper should read money amounts")
+  assert_eq(2500, buckets[5], "money graph helper should keep older money gains in relative buckets")
+  assert_eq(10000, peak, "money graph helper should ignore XP-only events")
+
+  ClearTooltip()
+  NS.HUDGraph.ShowTooltip({
+    _dingGraphBucket = {
+      index = 6,
+      count = 6,
+      amount = 10000,
+      peak = 10000,
+      windowSeconds = 60,
+      valueKey = "money",
+    },
+  })
+
+  local tooltipLines = GetTooltipLines()
+  assert_true(GameTooltip:IsShown(), "money graph hover should show a tooltip")
+  assertStringMatch("DingTimer Gold", tooltipLines[1], "money graph tooltip should identify gold tracking")
+  assertStringMatch("+1|cffffd700g|r", tooltipLines[2], "money graph tooltip should format gold bucket income")
+  assertStringMatch("Peak bucket +1|cffffd700g|r", tooltipLines[4], "money graph tooltip should format the gold peak")
 end)
 
 run_tests()

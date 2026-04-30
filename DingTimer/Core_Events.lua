@@ -31,7 +31,10 @@ function NS.onXPUpdate()
     NS.state.lastXPAt = now
     events[#events + 1] = { t = now, xp = delta }
     NS.state.windowXP = (NS.state.windowXP or 0) + delta
-    if NS.TriggerFloatGainPulse then
+    if NS.TriggerFloatGainPulse
+      and (not NS.GetEffectiveHUDTrackingMode
+        or NS.GetEffectiveHUDTrackingMode(NS.IsPlayerMaxLevel and NS.IsPlayerMaxLevel(nil, maxXP)) == "xp")
+    then
       NS.TriggerFloatGainPulse((maxXP > 0) and (xp / maxXP) or 0)
     end
   end
@@ -97,7 +100,9 @@ function NS.onMoneyUpdate()
   end
 
   NS.InvalidateTickCache()
-  if NS.UpdateHeartbeatTicker then
+  if NS.RunHeartbeat then
+    NS.RunHeartbeat(now)
+  elseif NS.UpdateHeartbeatTicker then
     NS.UpdateHeartbeatTicker(now)
   end
 end

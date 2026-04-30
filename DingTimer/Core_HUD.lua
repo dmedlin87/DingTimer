@@ -1121,9 +1121,25 @@ function NS.RefreshFloatingHUD(now)
     return
   end
 
-  setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
+  local effectiveTrackingMode = snapshot.effectiveTrackingMode or "xp"
+  local showProgress = profile.graphVisible ~= true
+    and effectiveTrackingMode == "xp"
+    and snapshot.isMaxLevel ~= true
+  if showProgress then
+    setProgressWidgetsShown(frame, true)
+    setFloatProgress(frame, snapshot.progress, frame._displayedProgress ~= nil)
+  else
+    frame._gainPulse = nil
+    frame._progressAnim = nil
+    frame:SetScript("OnUpdate", nil)
+    updateFloatBarVisual(frame, 0, 0)
+    setProgressWidgetsShown(frame, false)
+  end
+
   if profile.graphVisible and NS.HUDGraph and NS.HUDGraph.Render then
-    NS.HUDGraph.Render(frame, snapshot, profile, NS.state and NS.state.events)
+    local graphValueKey = effectiveTrackingMode == "gold" and "money" or "xp"
+    local graphEvents = graphValueKey == "money" and (NS.state and NS.state.moneyEvents) or (NS.state and NS.state.events)
+    NS.HUDGraph.Render(frame, snapshot, profile, graphEvents, graphValueKey)
   end
 
   local header, paceText = NS.BuildHUDText(snapshot, {

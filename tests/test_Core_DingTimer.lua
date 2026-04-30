@@ -189,6 +189,14 @@ local function test_lazy_heartbeat_decision_logic()
 
     assert_false(NS.ShouldHeartbeatRun(10), "visible HUD without live XP activity should not require a ticker")
 
+    DingTimerDB = { windowSeconds = 60, hudTrackingMode = "gold" }
+    NS.state.moneyEvents = { { t = 5, money = 100 } }
+    NS.state.lastXPAt = nil
+    assert_true(NS.ShouldHeartbeatRun(10), "visible gold HUD with recent money activity should require a ticker")
+
+    DingTimerDB = { windowSeconds = 60, hudTrackingMode = "auto" }
+    assert_false(NS.ShouldHeartbeatRun(10), "auto HUD below max level should not tick for money-only activity")
+
     NS.state.lastXPAt = 5
     assert_true(NS.ShouldHeartbeatRun(10), "visible HUD with recent XP activity should require a ticker")
 

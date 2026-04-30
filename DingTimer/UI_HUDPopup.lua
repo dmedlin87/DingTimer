@@ -123,7 +123,7 @@ function NS.InitHUDPopup()
 
   local frame = CreateFrame("Frame", "DingTimerHUDPopup", UIParent, "BackdropTemplate") --[[@as DingTimerHUDPopup]]
   popupFrame = frame
-  popupFrame:SetSize(292, 264)
+  popupFrame:SetSize(292, 294)
   popupFrame:EnableMouse(true)
   popupFrame:SetClampedToScreen(true)
   if NS.ApplyThemeToFrame then
@@ -184,33 +184,50 @@ function NS.InitHUDPopup()
     end
   end)
 
-  popupFrame.labels.mode = createLabel(popupFrame, 14, -148, "Chat mode")
-  popupFrame.controls.modeFull = createButton(popupFrame, 86, -142, 56, "Full", function()
+  popupFrame.labels.track = createLabel(popupFrame, 14, -148, "Track")
+  popupFrame.controls.trackAuto = createButton(popupFrame, 72, -142, 48, "Auto", function()
+    if NS.SetHUDTrackingMode then
+      NS.SetHUDTrackingMode("auto")
+    end
+  end)
+  popupFrame.controls.trackXP = createButton(popupFrame, 124, -142, 36, "XP", function()
+    if NS.SetHUDTrackingMode then
+      NS.SetHUDTrackingMode("xp")
+    end
+  end)
+  popupFrame.controls.trackGold = createButton(popupFrame, 164, -142, 52, "Gold", function()
+    if NS.SetHUDTrackingMode then
+      NS.SetHUDTrackingMode("gold")
+    end
+  end)
+
+  popupFrame.labels.mode = createLabel(popupFrame, 14, -178, "Chat mode")
+  popupFrame.controls.modeFull = createButton(popupFrame, 86, -172, 56, "Full", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("full")
     end
   end)
-  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -142, 56, "TTL", function()
+  popupFrame.controls.modeTTL = createButton(popupFrame, 148, -172, 56, "TTL", function()
     if NS.SetOutputMode then
       NS.SetOutputMode("ttl")
     end
   end)
 
-  popupFrame.labels.window = createLabel(popupFrame, 14, -178, "Window")
-  popupFrame.controls.window1m = createButton(popupFrame, 72, -172, 36, "1m", function()
+  popupFrame.labels.window = createLabel(popupFrame, 14, -208, "Window")
+  popupFrame.controls.window1m = createButton(popupFrame, 72, -202, 36, "1m", function()
     NS.SetRollingWindowSeconds(60)
   end)
-  popupFrame.controls.window5m = createButton(popupFrame, 112, -172, 36, "5m", function()
+  popupFrame.controls.window5m = createButton(popupFrame, 112, -202, 36, "5m", function()
     NS.SetRollingWindowSeconds(300)
   end)
-  popupFrame.controls.window10m = createButton(popupFrame, 152, -172, 44, "10m", function()
+  popupFrame.controls.window10m = createButton(popupFrame, 152, -202, 44, "10m", function()
     NS.SetRollingWindowSeconds(600)
   end)
-  popupFrame.controls.window15m = createButton(popupFrame, 198, -172, 44, "15m", function()
+  popupFrame.controls.window15m = createButton(popupFrame, 198, -202, 44, "15m", function()
     NS.SetRollingWindowSeconds(900)
   end)
 
-  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -204, 264, "Reset session", "|cffff4040Confirm reset|r", function()
+  popupFrame.controls.reset = createConfirmButton(popupFrame, 14, -234, 264, "Reset session", "|cffff4040Confirm reset|r", function()
     if NS.ResetSession then
       NS.ResetSession("MANUAL_RESET")
     end
@@ -230,6 +247,11 @@ function NS.InitHUDPopup()
       NS.UI.SetButtonActive(self.controls.profileCompact, profile == "compact")
       NS.UI.SetButtonActive(self.controls.profileBarTTL, profile == "bar_ttl")
       NS.UI.SetButtonActive(self.controls.profileGraph, profile == "graph")
+
+      local trackMode = DingTimerDB and DingTimerDB.hudTrackingMode or "auto"
+      NS.UI.SetButtonActive(self.controls.trackAuto, trackMode == "auto")
+      NS.UI.SetButtonActive(self.controls.trackXP, trackMode == "xp")
+      NS.UI.SetButtonActive(self.controls.trackGold, trackMode == "gold")
 
       NS.UI.SetButtonActive(self.controls.modeFull, (DingTimerDB and DingTimerDB.mode or "full") == "full")
       NS.UI.SetButtonActive(self.controls.modeTTL, (DingTimerDB and DingTimerDB.mode or "full") == "ttl")

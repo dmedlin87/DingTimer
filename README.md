@@ -9,7 +9,7 @@
 ╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝
 ```
 
-HUD-first XP tracking and time-to-level for World of Warcraft.
+HUD-first XP tracking, time-to-level, and max-level gold tracking for World of Warcraft.
 
 ## Project Docs
 
@@ -22,15 +22,16 @@ HUD-first XP tracking and time-to-level for World of Warcraft.
 
 ## What DingTimer Is Now
 
-DingTimer is now a compact leveling HUD addon.
+DingTimer is now a compact leveling HUD addon with a max-level gold tracking view.
 
 The addon centers on one floating HUD and one tiny settings popup. The old tabbed dashboard, minimap launcher, graph view, history view, PvP mode, and coach-heavy surfaces are not part of the active build anymore.
 
 ## Features
 
 - Floating HUD with live `TTL`, rolling `XP/hr`, an animated current-level XP bar, last gain, and XP needed to level
+- Automatic max-level gold tracking so capped characters see rolling `gold/hr` instead of fake next-level math
 - Built-in HUD profiles: `Full`, `Compact`, `Bar+TTL`, and `Graph`
-- Tiny popup for HUD visibility, lock state, combat visibility, HUD profile, chat mode, window presets, and reset
+- Tiny popup for HUD visibility, lock state, combat visibility, HUD profile, HUD tracking mode, chat mode, window presets, and reset
 - Rolling-window XP tracking instead of stale long-session pace
 - Optional chat output in `full` or `ttl` mode
 - Level-up announcement with time spent in level and net money
@@ -79,6 +80,9 @@ All commands work with either `/ding` or `/dt`.
 | `/ding off` | Disable chat output |
 | `/ding mode full` | Print gain, `XP/hr`, and `TTL` to chat |
 | `/ding mode ttl` | Print only `TTL` to chat |
+| `/ding track auto` | Track XP while leveling and gold at max level |
+| `/ding track xp` | Force the HUD to XP tracking |
+| `/ding track gold` | Force the HUD to gold tracking |
 | `/ding window <seconds>` | Set the rolling window, from `30` to `86400` seconds |
 | `/ding float on` | Show the HUD |
 | `/ding float off` | Hide the HUD |
@@ -108,6 +112,7 @@ The default `Full` floating HUD has two text lines plus an XP bar strip:
 - Bottom line: rolling `XP/hr`, idle age when the rate is from older retained XP, the most recent XP gain with an estimated number of same-size gains left in parentheses, and XP still needed
 - XP bar: current level progress, with a short glow pulse when XP is gained
 - When the rolling window is empty, the HUD shows `No XP in <window>`
+- At max level in `Auto` mode, the HUD switches to gold tracking and hides XP-only progress/next-level text
 
 The HUD hides automatically in combat unless `Show in combat` is enabled in the popup.
 
@@ -118,6 +123,12 @@ HUD profiles are selected from the popup:
 - `Bar+TTL`: focused TTL label plus XP bar, without the detail line
 - `Graph`: rolling XP gain bars over the selected window, hover tooltips for each bar, plus the TTL/detail labels
 
+HUD tracking mode is selected from the popup or `/ding track`:
+
+- `Auto`: XP while leveling, gold at max level
+- `XP`: XP HUD even when not auto-selected; at max level this shows `Max level` instead of TTL
+- `Gold`: rolling gold/hr HUD at any level
+
 ## Popup Controls
 
 The popup contains only these controls:
@@ -127,6 +138,7 @@ The popup contains only these controls:
 - `Show in combat`
 - `Chat on/off`
 - `HUD` profile: `Full`, `Compact`, `Bar`, `Graph`
+- `Track` mode: `Auto`, `XP`, `Gold`
 - `Chat mode` with `Full` and `TTL`
 - `Window` presets: `1m`, `5m`, `10m`, `15m`
 - `Reset session` with a confirm-on-second-click safety step
@@ -150,11 +162,25 @@ When retained XP is still inside the rolling window but no fresh XP has arrived 
 
 This keeps the HUD responsive to what you are doing now instead of what you were doing half an hour ago.
 
+## How Gold/hr Is Calculated
+
+Gold tracking uses the same rolling window as XP tracking:
+
+```text
+1. Record positive money gains inside the current window
+2. Sum those gains as rolling income
+3. Show rolling income per hour from the active window
+4. Track net session money separately, so spending lowers session net but does not subtract from rolling income/hr
+```
+
+In the `Graph` HUD profile, gold mode graphs rolling money gains instead of XP gains.
+
 ## Saved Variables
 
 `DingTimerDB` stores:
 
 - HUD visibility, lock state, combat visibility, profile, and position
+- HUD tracking mode: `auto`, `xp`, or `gold`
 - Level-up sound enablement
 - Rolling window setting
 - Chat output enablement and mode

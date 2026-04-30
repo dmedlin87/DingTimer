@@ -21,11 +21,12 @@ local DEFAULTS = {
   minXPDeltaToPrint = 1,
   mode = "full",
   hudProfile = "full",
+  hudTrackingMode = "auto",
   float = true,
   floatShowInCombat = false,
   floatLocked = true,
   floatPosition = nil,
-  schemaVersion = 10,
+  schemaVersion = 11,
   meta = {
     addonVersion = ADDON_VERSION,
   },
@@ -69,11 +70,24 @@ local VALID_HUD_PROFILES = {
   graph = true,
 }
 
+local VALID_HUD_TRACKING_MODES = {
+  auto = true,
+  xp = true,
+  gold = true,
+}
+
 local function normalizeHUDProfile(profile)
   if VALID_HUD_PROFILES[profile] then
     return profile
   end
   return DEFAULTS.hudProfile
+end
+
+local function normalizeHUDTrackingMode(mode)
+  if VALID_HUD_TRACKING_MODES[mode] then
+    return mode
+  end
+  return DEFAULTS.hudTrackingMode
 end
 
 local VALID_ANCHOR_POINTS = {
@@ -149,6 +163,7 @@ local function normalizeActiveSettings(db)
   db.minXPDeltaToPrint = normalizeMinXPDeltaToPrint(db.minXPDeltaToPrint)
   db.mode = normalizeOutputMode(db.mode)
   db.hudProfile = normalizeHUDProfile(db.hudProfile)
+  db.hudTrackingMode = normalizeHUDTrackingMode(db.hudTrackingMode)
   if db.float == nil then
     db.float = DEFAULTS.float
   else
@@ -176,17 +191,15 @@ local function updateMetadata(db)
   db.meta.lastSeenAt = nil
 end
 
-local function migrateTo10(db)
+local function migrateToCurrentSchema(db)
   clearDeadSurfaceState(db)
   db.schemaVersion = DEFAULTS.schemaVersion
 end
 
 local function migrateStore(db)
   local schemaVersion = tonumber(db.schemaVersion) or 0
-  if schemaVersion < 10 then
-    migrateTo10(db)
-  elseif schemaVersion == 10 then
-    migrateTo10(db)
+  if schemaVersion <= DEFAULTS.schemaVersion then
+    migrateToCurrentSchema(db)
   else
     db.schemaVersion = DEFAULTS.schemaVersion
   end

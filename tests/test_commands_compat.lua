@@ -84,6 +84,11 @@ it("applies active slash command state changes and reports the result", function
   assertStringMatch("mode = ttl", lastChatLine(), "mode command should report the selected mode")
 
   ClearChatLog()
+  SlashCmdList.DINGTIMER("track gold")
+  assert_eq("gold", DingTimerDB.hudTrackingMode, "track gold should update the persisted HUD tracking mode")
+  assertStringMatch("track = gold", lastChatLine(), "track command should report the selected mode")
+
+  ClearChatLog()
   SlashCmdList.DINGTIMER("window 300")
   assert_eq(300, DingTimerDB.windowSeconds, "window command should update the rolling window")
   assertStringMatch("windowSeconds = 300", lastChatLine(), "window command should report the normalized window")
@@ -123,6 +128,12 @@ it("rejects invalid slash command arguments without mutating persisted settings"
   SlashCmdList.DINGTIMER("mode compact")
   assert_eq("full", DingTimerDB.mode, "invalid mode should not mutate the persisted chat mode")
   assertStringMatch("Unknown mode. Use 'full' or 'ttl'.", lastChatLine(), "invalid mode should explain valid choices")
+
+  ClearChatLog()
+  DingTimerDB.hudTrackingMode = "auto"
+  SlashCmdList.DINGTIMER("track honor")
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "invalid tracking mode should not mutate the persisted HUD tracking mode")
+  assertStringMatch("Unknown track mode. Use 'auto', 'xp', or 'gold'.", lastChatLine(), "invalid track mode should explain valid choices")
 
   ClearChatLog()
   DingTimerDB.windowSeconds = 600

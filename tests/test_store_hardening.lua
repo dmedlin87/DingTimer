@@ -23,7 +23,8 @@ it("initializes fresh SavedVariables with the active HUD defaults", function()
   assert_eq(600, DingTimerDB.windowSeconds, "rolling window should default to 10 minutes")
   assert_eq("full", DingTimerDB.mode, "chat output mode should default to full")
   assert_eq("full", DingTimerDB.hudProfile, "HUD profile should default to the full profile")
-  assert_eq(10, DingTimerDB.schemaVersion, "fresh stores should use the current schema")
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "HUD tracking mode should default to auto")
+  assert_eq(11, DingTimerDB.schemaVersion, "fresh stores should use the current schema")
   assert_eq(nil, DingTimerDB.meta.createdAt, "fresh metadata should not persist misleading uptime timestamps")
   assert_eq(nil, DingTimerDB.meta.lastSeenAt, "fresh metadata should not persist misleading uptime timestamps")
 end)
@@ -34,6 +35,7 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
     minXPDeltaToPrint = true,
     mode = "weird",
     hudProfile = "enormous",
+    hudTrackingMode = "quests",
     dingSoundEnabled = "yes",
     mainWindowVisible = true,
     lastOpenTab = 4,
@@ -53,6 +55,7 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
   assert_eq(1, DingTimerDB.minXPDeltaToPrint, "minXPDeltaToPrint should fall back to the minimum safe value")
   assert_eq("full", DingTimerDB.mode, "invalid output modes should normalize to full")
   assert_eq("full", DingTimerDB.hudProfile, "invalid HUD profiles should normalize to full")
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "invalid HUD tracking modes should normalize to auto")
   assert_false(DingTimerDB.dingSoundEnabled, "non-boolean level-up sound values should normalize to false")
   assert_eq(nil, DingTimerDB.mainWindowVisible, "legacy main-window state should be removed")
   assert_eq(nil, DingTimerDB.lastOpenTab, "legacy tab state should be removed")
@@ -60,12 +63,12 @@ it("sanitizes corrupted SavedVariables during store init and drops dead surface 
   assert_eq(nil, DingTimerDB.graphScaleMode, "legacy graph scale state should be removed")
   assert_eq(nil, DingTimerDB.graphFixedMaxXPH, "legacy graph cap state should be removed")
   assert_eq(nil, DingTimerDB.minimapHidden, "legacy minimap state should be removed")
-  assert_eq(10, DingTimerDB.schemaVersion, "schemaVersion should advance to v10")
+  assert_eq(11, DingTimerDB.schemaVersion, "schemaVersion should advance to the current schema")
   assert_true(type(DingTimerDB.meta) == "table", "corrupted addon metadata should be repaired")
   assert_eq("1.1.2", DingTimerDB.meta["addonVersion"], "stored addon metadata should match the current release version")
 end)
 
-it("re-applies schema v10 cleanup idempotently without losing preserved legacy history", function()
+it("re-applies current schema cleanup idempotently without losing preserved legacy history", function()
   DingTimerDB = {
     schemaVersion = 10,
     enabled = true,
@@ -73,6 +76,7 @@ it("re-applies schema v10 cleanup idempotently without losing preserved legacy h
     windowSeconds = 600,
     mode = "full",
     hudProfile = "graph",
+    hudTrackingMode = "gold",
     graphVisible = true,
     mainWindowVisible = true,
     xp = {
@@ -107,8 +111,9 @@ it("re-applies schema v10 cleanup idempotently without losing preserved legacy h
   NS.InitStore()
   NS.InitStore()
 
-  assert_eq(10, DingTimerDB.schemaVersion, "schema should remain at v10 after repeated init")
+  assert_eq(11, DingTimerDB.schemaVersion, "schema should remain current after repeated init")
   assert_eq("graph", DingTimerDB.hudProfile, "valid HUD profile selections should be preserved")
+  assert_eq("gold", DingTimerDB.hudTrackingMode, "valid HUD tracking mode selections should be preserved")
   assert_eq(nil, DingTimerDB.graphVisible, "dead graph state should stay cleared")
   assert_eq(nil, DingTimerDB.mainWindowVisible, "dead main-window state should stay cleared")
   assert_eq("xp-keep", DingTimerDB.xp.profiles.default.sessions[1].id, "legacy XP history should be preserved")
@@ -159,6 +164,7 @@ it("preserves valid persisted HUD positions with numeric offsets", function()
   assert_eq(15, DingTimerDB.floatPosition.xOfs, "string numeric x offset should normalize to a number")
   assert_eq(-25.5, DingTimerDB.floatPosition.yOfs, "numeric y offset should be preserved")
   assert_eq("full", DingTimerDB.hudProfile, "missing HUD profile should be added without losing the saved HUD position")
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "missing HUD tracking mode should be added without losing the saved HUD position")
 end)
 
 it("protects runtime consumers from sanitized chat print thresholds", function()

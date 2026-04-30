@@ -28,8 +28,8 @@ Older files such as `UI_MainWindow.lua`, `UI_SettingsWindow.lua`, `UI_XPGraphWin
 DingTimer/
   DingTimer.toc      # Active load order
   Util.lua           # Formatting, colors, shared UI helpers
-  Store.lua          # SavedVariables init and schema v10 cleanup
-  Core_DingTimer.lua # Rolling XP state, snapshot math, and lazy heartbeat ticker
+  Store.lua          # SavedVariables init and current schema cleanup
+  Core_DingTimer.lua # Rolling XP/money state, snapshot math, and lazy heartbeat ticker
   HUDText.lua        # Pure HUD title/subtext formatting
   HUDGraph.lua       # HUD graph bucket math, rendering, and tooltip data
   Core_HUD.lua       # Floating HUD frame, animation, and visibility
@@ -45,22 +45,23 @@ tests/
 
 ## Current Product Contract
 
-- DingTimer is leveling-only in the active build.
+- DingTimer is a HUD-first leveling addon with max-level gold tracking.
 - The floating HUD is the primary interface.
 - The popup is the only active settings surface.
+- HUD tracking mode supports `auto`, `xp`, and `gold`; `auto` tracks XP while leveling and gold at max level.
 - Removed dashboard commands must print `Removed in HUD-first build; use /ding settings`.
 - Runtime reset, level-up, and logout must not write history, coach, or PvP recap data.
 - Legacy `xp`, `pvp`, and `coach` tables in `DingTimerDB` must be preserved if they already exist, but no new records should be added by this build.
 
 ## Important Runtime Details
 
-- `Core_DingTimer.lua` owns rolling state, snapshot math, and the lazy 1-second ticker.
+- `Core_DingTimer.lua` owns rolling XP/money state, snapshot math, max-level detection, and the lazy 1-second ticker.
 - `HUDText.lua` owns pure HUD text formatting and should stay free of frame mutation.
 - `HUDGraph.lua` owns HUD graph bucket math, rendering, and tooltip data.
 - `Core_HUD.lua` owns the floating HUD frame, animation, and visibility behavior.
 - `Core_Events.lua` owns XP and money event mutation.
-- `NS.GetSessionSnapshot()` is still derived from rolling XP events and remains the source for HUD text.
-- `Store.lua` now migrates to `schemaVersion = 10` and clears dead window, graph, minimap, and tab state.
+- `NS.GetSessionSnapshot()` is derived from rolling XP and money events and remains the source for HUD text.
+- `Store.lua` now migrates to the current schema and clears dead window, graph, minimap, and tab state.
 - The popup has no persisted position. It anchors below the HUD when the HUD is visible and centers on `UIParent` otherwise.
 - New installs should land in the HUD-first flow. Existing saved HUD preferences must still win.
 

@@ -4,7 +4,7 @@ local NS = {}
 LoadAddonFile("DingTimer/Util.lua", NS)
 LoadAddonFile("DingTimer/Store.lua", NS)
 
-it("migrates legacy surface state to schema v10 while preserving HUD settings and old history data", function()
+it("migrates legacy surface state to the current schema while preserving HUD settings and old history data", function()
   DingTimerDB = {
     schemaVersion = 9,
     enabled = false,
@@ -67,13 +67,14 @@ it("migrates legacy surface state to schema v10 while preserving HUD settings an
 
   NS.InitStore()
 
-  assert_eq(10, DingTimerDB.schemaVersion, "schema should migrate to v10")
+  assert_eq(11, DingTimerDB.schemaVersion, "schema should migrate to the current version")
   assert_false(DingTimerDB.enabled, "existing chat setting should be preserved")
   assert_true(DingTimerDB.float, "HUD visibility should be preserved")
   assert_false(DingTimerDB.floatLocked, "HUD lock state should be preserved")
   assert_true(DingTimerDB.floatShowInCombat, "combat visibility should be preserved")
   assert_eq(300, DingTimerDB.windowSeconds, "rolling window should be normalized and preserved")
   assert_eq("ttl", DingTimerDB.mode, "chat mode should be preserved")
+  assert_eq("auto", DingTimerDB.hudTrackingMode, "missing HUD tracking mode should default to auto")
   assert_eq("TOP", DingTimerDB.floatPosition.point, "HUD position should be preserved")
 
   assert_eq(nil, DingTimerDB.activeMode, "legacy active dashboard mode should be removed")
